@@ -1,0 +1,71 @@
+@startuml microservices-component
+!theme plain
+title Nexus Battles VI — Componentes y propiedad de datos
+
+skinparam defaultFontName sans-serif
+skinparam component {
+  BackgroundColor<<alfa>> #E3F2FD
+  BackgroundColor<<beta>> #F3E5F5
+  BackgroundColor<<gama>> #E8F5E9
+  BackgroundColor<<compartido>> #FFF3E0
+}
+skinparam database {
+  BackgroundColor #FAFAFA
+}
+
+component "Web\n:8080\nAlfa + Beta + Gama" <<compartido>> as web
+
+package "Team Alfa" {
+  component "Account\n:3000" <<alfa>> as account
+  component "Player/Inventory\n:3002" <<alfa>> as inventory
+  component "Notifications\nworker" <<alfa>> as notifications
+}
+
+package "Team Gama" {
+  component "Catalog\n:3003" <<gama>> as catalog
+  component "Community\n:3004" <<gama>> as community
+}
+
+package "Team Beta" {
+  component "Commerce\n:3005" <<beta>> as commerce
+}
+
+database "PostgreSQL\naccount" as dbAccount
+database "MongoDB\ninventory" as dbInventory
+database "MongoDB\ncatalog" as dbCatalog
+database "PostgreSQL\ncommunity" as dbCommunity
+database "PostgreSQL\ncommerce" as dbCommerce
+
+account --> dbAccount
+inventory --> dbInventory
+catalog --> dbCatalog
+community --> dbCommunity
+commerce --> dbCommerce
+
+web --> account : /api/accounts
+web --> inventory : /api/inventories
+web --> catalog : /api/products
+web --> community : /api/threads
+web --> commerce : /api/orders
+
+commerce ..> catalog : ProductPricingPort\n(sincrono, por API)
+account ..> notifications : NotificationRequestPort\n(asincrono)
+commerce ..> inventory : reserva\n**SAGA NO IMPLEMENTADA**
+
+note as N1
+  **Propiedad exclusiva de datos**
+  Ningun servicio accede al almacen de otro.
+  Sin claves foraneas entre servicios.
+  Commerce pregunta el precio por API,
+  nunca por JOIN.
+end note
+
+note as N2
+  **Estado real Sprint 1**
+  Los seis servicios operan con
+  repositorios EN MEMORIA.
+  Los servicios NO se comunican
+  entre si todavia (ADR-006).
+end note
+
+@enduml

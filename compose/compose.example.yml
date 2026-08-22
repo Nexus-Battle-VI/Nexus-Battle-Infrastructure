@@ -1,0 +1,172 @@
+# Composición de referencia del sistema completo.
+#
+# Reproduce en una máquina de desarrollo la misma topología que la arquitectura
+# de demo: un proxy inverso al frente, seis servicios detrás y las bases de
+# datos como contenedores con volúmenes propios.
+#
+# ATENCIÓN — este fichero NO es apto para producción:
+#   - las credenciales son de ejemplo y están en claro;
+#   - no hay TLS, réplica, copias de seguridad ni límites de recursos;
+#   - los servicios no verifican quién realiza la petición (ver ADR-004).
+#
+# Se copia a `compose.yml` y se ajusta antes de usarlo.
+
+name: nexus-battles-vi
+
+services:
+  # ---------------------------------------------------------------------
+  # Entrada
+  # ---------------------------------------------------------------------
+  proxy:
+    image: caddy:2-alpine
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - web
+      - account
+      - inventory
+      - catalog
+      - community
+      - commerce
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-web:latest
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------
+  # Servicios
+  # ---------------------------------------------------------------------
+  account:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-account:latest
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      LOG_LEVEL: info
+      # El adaptador PostgreSQL depende de ADR-005. Con `memory`, el servicio
+      # arranca sin base de datos; con `postgres`, valida la configuración y
+      # advierte de que el adaptador todavía no existe.
+      PERSISTENCE_DRIVER: memory
+      DATABASE_URL: postgres://account:cambiar@postgres:5432/account
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  inventory:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-player-inventory:latest
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: memory
+      MONGODB_URI: mongodb://mongo:27017/player-inventory
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  catalog:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-catalog:latest
+    environment:
+      NODE_ENV: production
+      PORT: 3003
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: memory
+      MONGODB_URI: mongodb://mongo:27017/catalog
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  community:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-community:latest
+    environment:
+      NODE_ENV: production
+      PORT: 3004
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: memory
+      DATABASE_URL: postgres://community:cambiar@postgres:5432/community
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  commerce:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-commerce:latest
+    environment:
+      NODE_ENV: production
+      PORT: 3005
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: memory
+      DATABASE_URL: postgres://commerce:cambiar@postgres:5432/commerce
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  notifications:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-notifications:latest
+    environment:
+      NODE_ENV: production
+      HEALTH_PORT: 3001
+      LOG_LEVEL: info
+      # Mailpit permite ver los correos sin enviarlos a nadie.
+      EMAIL_DRIVER: smtp
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      EMAIL_FROM: no-reply@nexus-battles.local
+      # El adaptador SQS depende de ADR-006.
+      QUEUE_DRIVER: memory
+    depends_on:
+      - mailpit
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------
+  # Persistencia
+  #
+  # Cada servicio conserva base lógica y credenciales propias aunque el motor
+  # sea compartido. Compartir host es una concesión de coste; compartir
+  # esquema sería renunciar a la arquitectura.
+  # ---------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: cambiar
+      POSTGRES_DB: nexus
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nexus']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------
+  # Correo de desarrollo
+  # ---------------------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '8025:8025' # interfaz web para inspeccionar los correos
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  mongo-data:

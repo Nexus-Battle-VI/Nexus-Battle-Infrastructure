@@ -1,0 +1,89 @@
+@startuml sequence-checkout
+!theme plain
+title Checkout — implementado frente a saga pendiente
+
+skinparam defaultFontName sans-serif
+
+actor Jugador
+participant "Web" as web
+participant "Commerce" as commerce
+participant "ProductPricingPort" as pricing
+participant "Player/Inventory" as inventory
+participant "Notifications" as notifications
+
+== Implementado hoy ==
+
+Jugador -> web : abrir pedido
+web -> commerce : POST /api/orders
+commerce --> web : 201 DRAFT, total 0
+
+Jugador -> web : anadir producto
+web -> commerce : POST /api/orders/:id/lines\n{ sku, quantity }
+activate commerce
+
+note right of commerce
+  El contrato NO acepta el precio.
+  Lo determina el catalogo.
+end note
+
+commerce -> pricing : priceOf(sku)
+activate pricing
+pricing --> commerce : { amount, currency }
+deactivate pricing
+note right of pricing
+  LocalCatalogPricing.
+  El adaptador HTTP depende
+  de ADR-006.
+  NUNCA lee la base de datos
+  de Catalog.
+end note
+
+alt producto no esta a la venta
+  commerce --> web : 422 Unprocessable
+end
+
+commerce -> commerce : order.addLine(sku, precio, cantidad)
+note right
+  **El precio se CONGELA aqui.**
+  Un cambio posterior en Catalog
+  no altera este pedido.
+end note
+
+commerce --> web : 200 total recalculado
+deactivate commerce
+
+Jugador -> web : confirmar
+web -> commerce : POST /api/orders/:id/confirmation
+activate commerce
+commerce -> commerce : order.confirm()
+note right
+  total = suma de subtotales,
+  calculado, no almacenado.
+  A partir de aqui el pedido
+  es INMUTABLE.
+end note
+commerce -> commerce : emite commerce.order.confirmed
+commerce --> web : 200 CONFIRMED
+deactivate commerce
+
+== SAGA NO IMPLEMENTADA — depende de ADR-006 ==
+
+commerce -[#gray]-> inventory : reservar unidades
+inventory -[#gray]-> commerce : reservado / sin existencias
+commerce -[#gray]-> inventory : **compensacion**: liberar reserva
+commerce -[#gray]-> notifications : confirmar por correo
+
+note over commerce, notifications
+  El evento commerce.order.confirmed EXISTE
+  y transporta lo necesario para iniciarla.
+
+  Faltan el orquestador, las compensaciones
+  y el transporte. Implementarlos contra un
+  transporte no elegido produciria codigo
+  que habria que rehacer.
+
+  **Tampoco hay pago.** El alcance llega
+  hasta la confirmacion.
+end note
+
+@enduml

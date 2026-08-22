@@ -1,0 +1,21 @@
+# Propiedad del código — Nexus-Battle-Infrastructure
+#
+# Este repositorio NO es un servicio: es la fuente de verdad técnica del
+# sistema. No tiene un Team de desarrollo propietario, y no se inventa uno.
+#
+# Lo custodian Scrum Masters y Product Owners, que son roles reales y
+# existentes en la organización. Los Teams de desarrollo participan en la
+# revisión de las decisiones que les afectan, pero la custodia del documento
+# es de gobierno.
+
+*                              @Nexus-Battle-VI/scrum-master @Nexus-Battle-VI/product-owner
+
+# Las decisiones arquitectónicas afectan a los tres Teams y a gobierno.
+/docs/adr/                     @Nexus-Battle-VI/scrum-master @Nexus-Battle-VI/product-owner
+
+# El gobierno del repositorio y la protección de ramas son de Scrum Masters.
+/.github/                      @Nexus-Battle-VI/scrum-master
+/docs/governance/              @Nexus-Battle-VI/scrum-master
+
+# Los costes requieren aprobación de gobierno del producto.
+/docs/costs/                   @Nexus-Battle-VI/product-owner @Nexus-Battle-VI/scrum-master

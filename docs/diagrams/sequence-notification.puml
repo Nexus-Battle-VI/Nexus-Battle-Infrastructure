@@ -1,0 +1,86 @@
+@startuml sequence-notification
+!theme plain
+title Notificaciones — consumo idempotente con reintentos y DLQ
+
+skinparam defaultFontName sans-serif
+
+participant "Cola\n(MessageQueuePort)" as queue
+participant "NotificationConsumer" as consumer
+participant "SendTransactionalEmail" as useCase
+participant "IdempotencyStorePort" as idem
+participant "TemplateRendererPort" as tpl
+participant "EmailSenderPort" as email
+
+consumer -> queue : receive(batchSize)
+activate queue
+queue --> consumer : mensajes\n+ receivedCount
+deactivate queue
+
+note right of queue
+  **receivedCount es clave.**
+  Equivale a ApproximateReceiveCount
+  en SQS. Sin el, el agregado se
+  reconstruiria desde cero en cada
+  entrega y la politica de reintentos
+  NUNCA se agotaria.
+  (Defecto real detectado por prueba.)
+end note
+
+consumer -> consumer : parseNotificationMessage(body)
+alt mensaje malformado
+  consumer -> queue : deadLetter(reason)
+  note right: nunca se reintenta:\nel contenido no mejorara
+end
+
+consumer -> useCase : execute({..., deliveryAttempt: receivedCount})
+activate useCase
+
+useCase -> idem : reserve(key, ttl)
+alt ya procesado
+  idem --> useCase : false
+  useCase --> consumer : DUPLICATED
+  consumer -> queue : acknowledge()
+  note right: el correo NO se envia dos veces
+end
+
+useCase -> tpl : render(templateId, variables)
+alt plantilla inexistente
+  tpl --> useCase : TemplateNotFoundError
+  note right
+    NO reintentable: es un defecto
+    de configuracion, reintentarlo
+    produciria el mismo error.
+  end note
+end
+
+useCase -> email : send(correo)
+
+alt entrega correcta
+  email --> useCase : providerMessageId
+  useCase -> idem : confirm(key)
+  useCase --> consumer : SENT
+  consumer -> queue : acknowledge()
+
+else fallo transitorio (4xx, red)
+  email --> useCase : EmailDeliveryError(retryable)
+  useCase -> idem : release(key)
+  note right: se libera para permitir\nel reintento
+  useCase --> consumer : RETRY + retroceso exponencial
+  consumer -> queue : requeue(delay)
+
+else fallo permanente (5xx SMTP) o intentos agotados
+  email --> useCase : EmailDeliveryError(no retryable)
+  useCase -> idem : confirm(key)
+  note right
+    se CONSERVA la clave: impide que
+    una reentrega tardia vuelva a
+    intentar una notificacion ya
+    abandonada.
+  end note
+  useCase --> consumer : DISCARDED
+  consumer -> queue : deadLetter(reason)
+end
+
+deactivate useCase
+
+@enduml

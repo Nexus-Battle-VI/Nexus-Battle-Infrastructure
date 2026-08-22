@@ -1,0 +1,84 @@
+@startuml sequence-login-2fa
+!theme plain
+title Registro, verificacion y RBAC — estado actual frente a objetivo
+
+skinparam defaultFontName sans-serif
+skinparam sequence {
+  LifeLineBorderColor #999999
+}
+
+actor Jugador
+participant "Web" as web
+participant "Account" as account
+participant "IdentityProviderPort" as idp
+participant "NotificationRequestPort" as notify
+participant "Notifications" as notifications
+
+== Implementado hoy ==
+
+Jugador -> web : registrarse
+web -> account : POST /api/accounts
+activate account
+
+account -> account : EmailAddress.create()\nDisplayName.create()
+note right: falla temprano, sin efectos
+
+account -> account : existsByEmail()
+alt correo duplicado
+  account --> web : 409 Conflict
+end
+
+account -> idp : register(email)
+activate idp
+idp --> account : IdentitySubject
+deactivate idp
+note right of idp
+  FakeIdentityProvider
+  Sin credenciales.
+  ADR-004 pendiente.
+end note
+
+account -> account : Account.register()\nestado PENDING_VERIFICATION\nrol PLAYER
+
+group compensacion explicita
+  account -> account : save()
+  alt falla la persistencia
+    account -> idp : revoke(subject)
+    note right: evita identidades huerfanas
+    account --> web : error
+  end
+end
+
+account -> notify : request(account-welcome)
+note right of notify
+  NO participa de la compensacion:
+  la cuenta ya es valida.
+end note
+notify -> notifications : (registro estructurado)\nADR-006 pendiente
+
+account --> web : 201 PENDING_VERIFICATION
+deactivate account
+
+Jugador -> web : verificar cuenta
+web -> account : POST /api/accounts/:id/verification
+account -> account : verify() -> ACTIVE
+account --> web : 200 ACTIVE
+
+== NO implementado — depende de ADR-004 ==
+
+note over Jugador, notifications
+  **Falta todo esto:**
+  1. Autenticacion real contra el IdP
+  2. Segundo factor por correo
+  3. Emision y validacion de JWT
+  4. Guard de RBAC en el borde de cada servicio
+
+  Las reglas de roles YA existen en el dominio
+  de Account. Lo que falta es la identidad
+  verificable que las active.
+
+  No se anadio un guard sobre un identificador
+  no verificado: eso seria seguridad aparente.
+end note
+
+@enduml

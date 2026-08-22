@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# El token del workflow solo necesita leer el repositorio. Este repositorio no
+# contiene codigo ejecutable ni publica artefactos.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    name: Validacion de documentacion
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verificar que existen los documentos exigidos
+        run: |
+          missing=0
+          required="
+          docs/architecture/SAD.md
+          docs/architecture/system-context.md
+          docs/architecture/microservices.md
+          docs/architecture/sprint-demo-deployment.md
+          docs/architecture/target-scale-deployment.md
+          docs/architecture/data-ownership.md
+          docs/architecture/integration.md
+          docs/architecture/security.md
+          docs/architecture/observability.md
+          docs/architecture/testing.md
+          docs/architecture/developer-workflow.md
+          docs/architecture/branching-and-release.md
+          docs/architecture/cost-constraints.md
+          docs/diagrams/system-context.puml
+          docs/diagrams/microservices-component.puml
+          docs/diagrams/sprint-demo-aws-deployment.puml
+          docs/diagrams/target-scale-aws-deployment.puml
+          docs/diagrams/sequence-login-2fa.puml
+          docs/diagrams/sequence-checkout.puml
+          docs/diagrams/sequence-notification.puml
+          docs/adr/ADR-001-repository-strategy.md
+          docs/adr/ADR-002-backend-stack.md
+          docs/adr/ADR-003-frontend-stack.md
+          docs/adr/ADR-004-identity-directory.md
+          docs/adr/ADR-005-data-strategy.md
+          docs/adr/ADR-006-messaging.md
+          docs/adr/ADR-007-aws-cost-optimized-platform.md
+          docs/adr/ADR-008-iac.md
+          docs/adr/ADR-009-observability.md
+          docs/adr/ADR-010-reverse-proxy.md
+          docs/costs/assumptions.md
+          docs/costs/sprint-demo-estimate.md
+          docs/contracts/service-catalog.md
+          docs/contracts/event-catalog.md
+          docs/governance/rulesets/main-protection.template.json
+          compose/compose.example.yml
+          "
+          for file in $required; do
+            if [ ! -f "$file" ]; then
+              echo "FALTA: $file"
+              missing=$((missing + 1))
+            fi
+          done
+          if [ "$missing" -gt 0 ]; then
+            echo "Faltan ${missing} documentos exigidos por el plan de Foundation."
+            exit 1
+          fi
+          echo "Los 36 documentos exigidos estan presentes."
+
+      - name: Verificar que todo ADR declara su estado
+        run: |
+          missing=0
+          for file in docs/adr/ADR-*.md; do
+            if ! grep -qE '^\- \*\*Estado:\*\*' "$file"; then
+              echo "SIN ESTADO: $file"
+              missing=$((missing + 1))
+            fi
+          done
+          if [ "$missing" -gt 0 ]; then
+            echo "Todo ADR debe declarar su estado de forma explicita."
+            exit 1
+          fi
+          echo "Todos los ADR declaran su estado."
+
+      # El placeholder existe para que nadie aplique la plantilla sin sustituir
+      # el nombre del check. Aplicarla tal cual bloquearia todas las
+      # integraciones de forma permanente.
+      - name: Verificar que la plantilla de ruleset conserva su placeholder
+        run: |
+          if ! grep -q 'REEMPLAZAR-POR-CHECK-REAL-DEL-REPOSITORIO' docs/governance/rulesets/main-protection.template.json; then
+            echo "La plantilla de ruleset debe conservar el placeholder del check."
+            echo "Un ruleset con un nombre de check inventado bloquea todas las integraciones."
+            exit 1
+          fi
+          echo "La plantilla conserva su placeholder."
+
+      - name: Verificar sintaxis JSON y YAML
+        run: |
+          for file in $(find docs compose -name '*.json'); do
+            node -e "JSON.parse(require('fs').readFileSync('$file','utf8'))" || exit 1
+            echo "JSON valido: $file"
+          done
+          for file in $(find compose .github -name '*.yml' -o -name '*.yaml'); do
+            node -e "
+              const fs = require('fs')
+              const text = fs.readFileSync('$file', 'utf8')
+              if (text.includes('\t')) {
+                console.error('YAML con tabulaciones: $file')
+                process.exit(1)
+              }
+            " || exit 1
+            echo "YAML sin tabulaciones: $file"
+          done
+
+      - name: Verificar ausencia de secretos
+        run: |
+          # Se excluyen las credenciales de ejemplo, que estan declaradas como
+          # tales y acompanadas de la instruccion de sustituirlas.
+          if grep -rniE '(aws_secret_access_key|BEGIN [A-Z ]*PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})' \
+               --exclude-dir=.git . ; then
+            echo "Se detecto un posible secreto."
+            exit 1
+          fi
+          echo "Sin secretos detectados."

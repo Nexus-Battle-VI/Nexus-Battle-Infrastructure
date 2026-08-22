@@ -1,0 +1,39 @@
+# Proxy inverso de la composicion de referencia.
+#
+# Reproduce el papel que Caddy cumple en la arquitectura de demo: un unico
+# origen para el navegador, con /api enrutado hacia cada servicio.
+#
+# La aplicacion web nunca conoce la topologia: habla siempre con el mismo
+# origen. Esa indireccion es lo que permite que la demo corra en una maquina y
+# la arquitectura objetivo detras de un balanceador sin cambiar el frontend.
+
+:8080 {
+	handle /api/accounts* {
+		reverse_proxy account:3000
+	}
+
+	handle /api/inventories* {
+		reverse_proxy inventory:3002
+	}
+
+	handle /api/products* {
+		reverse_proxy catalog:3003
+	}
+
+	handle /api/threads* {
+		reverse_proxy community:3004
+	}
+
+	handle /api/orders* {
+		reverse_proxy commerce:3005
+	}
+
+	# Los estaticos y el enrutado en el cliente los resuelve la propia imagen
+	# de Web, que ya devuelve index.html para rutas desconocidas.
+	handle {
+		reverse_proxy web:8080
+	}
+
+	encode gzip zstd
+	log
+}
