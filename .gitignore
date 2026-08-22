@@ -1,0 +1,23 @@
+# Este repositorio contiene documentacion, no codigo.
+
+# Salidas de renderizado de diagramas
+*.png
+*.svg
+!docs/diagrams/*.svg
+
+# Composicion local derivada del ejemplo
+compose/compose.yml
+
+# Editores y sistema
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# Terraform, cuando ADR-008 se apruebe
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example

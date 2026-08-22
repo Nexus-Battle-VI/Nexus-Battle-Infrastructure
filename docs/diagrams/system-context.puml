@@ -1,0 +1,60 @@
+@startuml system-context
+!theme plain
+title Nexus Battles VI — Contexto del sistema (Sprint 1)
+
+skinparam defaultFontName sans-serif
+skinparam rectangle {
+  BackgroundColor<<sistema>> #E8F0FE
+  BackgroundColor<<pendiente>> #FFF4E5
+  BorderColor<<pendiente>> #E0A800
+}
+skinparam note {
+  BackgroundColor #FFF9E6
+  BorderColor #E0A800
+}
+
+actor "Jugador" as jugador
+actor "Moderador" as moderador
+actor "Administrador" as admin
+
+rectangle "Nexus Battles VI" <<sistema>> as sistema {
+  rectangle "Aplicacion Web" as web
+  rectangle "Account\nIdentity" as account
+  rectangle "Player\nInventory" as inventory
+  rectangle "Catalog" as catalog
+  rectangle "Community" as community
+  rectangle "Commerce" as commerce
+  rectangle "Notifications" as notifications
+}
+
+rectangle "Proveedor de identidad" <<pendiente>> as idp
+rectangle "Proveedor de correo" <<pendiente>> as mail
+rectangle "Directorio corporativo" <<pendiente>> as ad
+
+jugador --> web : HTTPS
+moderador --> web : HTTPS
+admin --> web : HTTPS
+
+web --> account
+web --> inventory
+web --> catalog
+web --> community
+web --> commerce
+
+account ..> idp : IdentityProviderPort\n**NO EXISTE**
+notifications ..> mail : EmailSenderPort\n**NO INTEGRADO**
+idp ..> ad : **NO PROVISIONADO**\n(coste)
+
+note bottom of idp
+  BLOCKER — ADR-004
+  Sin proveedor de identidad autorizado.
+  Ningun servicio verifica quien realiza
+  la peticion.
+end note
+
+note bottom of mail
+  Opera FakeEmailSender.
+  En local, Mailpit por SMTP.
+end note
+
+@enduml

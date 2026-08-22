@@ -1,0 +1,64 @@
+@startuml sprint-demo-aws-deployment
+!theme plain
+title Despliegue Sprint/Demo — PROPUESTO, NO PROVISIONADO — cap USD 100/mes
+
+skinparam defaultFontName sans-serif
+skinparam node {
+  BackgroundColor<<aws>> #FFF4E5
+  BorderColor<<aws>> #E0A800
+}
+skinparam rectangle {
+  BackgroundColor<<container>> #E8F0FE
+}
+
+cloud "Internet" as internet
+
+node "AWS — una sola region, una sola AZ" <<aws>> {
+  node "EC2 pequena\nsubred publica + IP elastica" as ec2 {
+    rectangle "Caddy\nproxy inverso + TLS + estaticos" <<container>> as caddy
+    rectangle "Account :3000" <<container>> as account
+    rectangle "Notifications :3001\n(solo salud)" <<container>> as notifications
+    rectangle "Player/Inventory :3002" <<container>> as inventory
+    rectangle "Catalog :3003" <<container>> as catalog
+    rectangle "Community :3004" <<container>> as community
+    rectangle "Commerce :3005" <<container>> as commerce
+    rectangle "PostgreSQL" <<container>> as postgres
+    rectangle "MongoDB" <<container>> as mongo
+  }
+  storage "EBS\nvolumenes Docker" as ebs
+}
+
+cloud "GHCR\nimagenes" as ghcr
+cloud "SQS\nCANDIDATO — no adoptado" as sqs #LightGray
+
+internet --> caddy : HTTPS 443
+
+caddy --> account
+caddy --> inventory
+caddy --> catalog
+caddy --> community
+caddy --> commerce
+
+postgres --> ebs
+mongo --> ebs
+ec2 ..> ghcr : docker pull
+notifications ..> sqs : ADR-006 pendiente
+
+note bottom of ec2
+  **PUNTO UNICO DE FALLO TOTAL**
+  Una sola instancia, una sola AZ.
+  Sin autoescalado. Sin replica.
+  Sin conmutacion por error.
+  Sin recuperacion ante desastres.
+
+  **NO cumple los RNF del producto**
+  (100k concurrentes, 99,95 %).
+end note
+
+note top of internet
+  **NO DESPLEGAR sin resolver ADR-004**
+  Ningun servicio verifica quien
+  realiza la peticion.
+end note
+
+@enduml

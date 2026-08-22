@@ -1,0 +1,63 @@
+@startuml target-scale-aws-deployment
+!theme plain
+title Arquitectura objetivo — NO IMPLEMENTADA, NO PROVISIONADA
+
+skinparam defaultFontName sans-serif
+skinparam node {
+  BackgroundColor<<futuro>> #F0F0F0
+  BorderColor<<futuro>> #999999
+  BorderStyle dashed
+}
+
+cloud "Internet" as internet
+
+node "AWS — multi-AZ" <<futuro>> {
+  node "Route 53 + WAF" <<futuro>> as dns
+  node "CloudFront" <<futuro>> as cdn
+  storage "S3\nestaticos Web" <<futuro>> as s3
+  node "ALB multi-AZ" <<futuro>> as alb
+
+  node "AZ-a" <<futuro>> {
+    node "ECS Fargate\nservicios + autoescalado" <<futuro>> as ecsA
+  }
+  node "AZ-b" <<futuro>> {
+    node "ECS Fargate\nreplicas" <<futuro>> as ecsB
+  }
+
+  database "RDS PostgreSQL\nMulti-AZ + replicas lectura" <<futuro>> as rds
+  database "DocumentDB\nreplica set" <<futuro>> as docdb
+  database "ElastiCache Redis" <<futuro>> as cache
+  queue "SQS + DLQ" <<futuro>> as sqs
+  node "Notifications\nworkers escalables" <<futuro>> as workers
+  node "CloudWatch + OpenTelemetry" <<futuro>> as obs
+  storage "ECR" <<futuro>> as ecr
+  node "Secrets Manager" <<futuro>> as secrets
+}
+
+internet --> dns
+dns --> cdn
+cdn --> s3
+cdn --> alb
+alb --> ecsA
+alb --> ecsB
+ecsA --> rds
+ecsA --> docdb
+ecsA --> cache
+ecsB --> rds
+ecsA --> sqs
+sqs --> workers
+ecsA ..> obs
+ecsA ..> ecr
+ecsA ..> secrets
+
+note bottom
+  **NADA DE ESTO EXISTE.**
+  Coste muy por encima del techo de USD 100/mes.
+
+  Lo que sobrevive del trabajo actual:
+  dominio, casos de uso, puertos, contratos
+  y frontend — sin cambios.
+  Solo se sustituyen los adaptadores.
+end note
+
+@enduml
