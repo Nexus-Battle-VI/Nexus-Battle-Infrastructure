@@ -91,7 +91,7 @@ Ningún repositorio contiene secretos. `.env` está ignorado y `.env.example` do
 | Control | Aplicado |
 | --- | --- |
 | Multi-etapa | Sí, en los siete |
-| Usuario sin privilegios | Sí (`node` o `caddy`) |
+| Usuario sin privilegios | Sí. `node` en los servicios; en Web se **crea** el usuario `web`, porque la imagen de Caddy corre como root y no trae uno |
 | Solo dependencias de producción | Sí |
 | Sin ficheros de entorno en la imagen | Sí, vía `.dockerignore` |
 | Healthcheck | Sí |

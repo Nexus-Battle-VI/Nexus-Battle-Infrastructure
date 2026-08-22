@@ -127,10 +127,14 @@ jobs:
 
       - name: Verificar ausencia de secretos
         run: |
-          # Se excluyen las credenciales de ejemplo, que estan declaradas como
-          # tales y acompanadas de la instruccion de sustituirlas.
-          if grep -rniE '(aws_secret_access_key|BEGIN [A-Z ]*PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})' \
-               --exclude-dir=.git . ; then
+          # Se excluye .github porque este mismo workflow contiene los patrones
+          # de busqueda y coincidiria consigo mismo.
+          #
+          # Las credenciales de la composicion de referencia no se detectan
+          # porque son literalmente la palabra "cambiar": estan declaradas como
+          # ejemplo y acompanadas de la instruccion de sustituirlas.
+          if grep -rniE 'aws_secret_access_key|BEGIN [A-Z ]*PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}' \
+               --exclude-dir=.git --exclude-dir=.github . ; then
             echo "Se detecto un posible secreto."
             exit 1
           fi
