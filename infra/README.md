@@ -90,6 +90,16 @@ Mientras el estado sea local: **no está compartido y no está respaldado**. Es 
 
 `activate_cost_allocation_tags` es `false` a propósito. AWS solo permite activar una etiqueta que ya ha visto en algún recurso, y tarda hasta 24 h en exponerla. Ponerlo a `true` en la primera aplicación falla.
 
+## El job de Terraform del CI exige una acción en la lista permitida
+
+El repositorio tiene `allowed_actions: selected`: **solo se pueden usar las acciones de una lista explícita**. Es un control de cadena de suministro deliberado, y tiene una consecuencia que conviene conocer porque su síntoma despista.
+
+Cuando una acción no está en la lista, el workflow **no falla: no llega a arrancar**. Aparece como `startup_failure` con cero segundos de duración y sin ningún registro que leer, lo que se parece mucho a un error de sintaxis en el YAML y no lo es.
+
+`hashicorp/setup-terraform@*` se añadió a la lista de **este repositorio y solo de este**: es el único con código de Terraform. Los otros siete conservan su lista original.
+
+La acción sigue fijada por SHA de commit completo en el workflow. La lista permitida es un control grueso; el anclaje por SHA es el fino. Los dos se complementan y ninguno sustituye al otro.
+
 ## Coste de lo que este código crearía
 
 | Concepto | Mensual |
