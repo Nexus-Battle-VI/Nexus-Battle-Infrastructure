@@ -1,0 +1,42 @@
+# Se copia a `terraform.tfvars` y se rellena. El fichero real esta ignorado por
+# git: este repositorio es publico y `terraform.tfvars` contiene el identificador
+# de cuenta y una direccion de correo.
+
+account_id  = "000000000000"
+alert_email = "alertas@ejemplo.invalid"
+
+# Topologia T2 (ADR-011): plano sin estado separado del plano con estado.
+#
+# El criterio no es cuantos microservicios hay, sino que componentes tienen
+# ciclos de vida operativos opuestos: las aplicaciones se redespliegan en cada
+# integracion, las bases de datos no deben reiniciarse nunca.
+#
+# Cambiar de topologia es editar este mapa y ejecutar `terraform plan`.
+# Para una instancia por servicio, anadir un nodo con rol "app" por cada uno.
+# ADR-011 explica por que no se hizo: consume el 92 % del techo mensual y
+# multiplica por ocho la probabilidad de que algo este caido, sin ganar alta
+# disponibilidad, porque sigue habiendo una sola zona y ningun reemplazo
+# automatico.
+nodes = {
+  app = {
+    instance_type = "t4g.small" # 1340 MiB necesarios de 2048
+    role          = "app"
+    volume_gb     = 20
+  }
+  data = {
+    instance_type = "t4g.small" # 972 MiB necesarios de 2048
+    role          = "data"
+    volume_gb     = 20
+  }
+}
+
+# VACIO A PROPOSITO. Ver ADR-004: mientras ningun servicio verifique quien
+# realiza la peticion, abrir esto publica un sistema donde cualquiera puede
+# confirmar pedidos a nombre de otra persona, ocultar mensajes o cambiar precios.
+#
+# Cuando el BLOCKER se cierre, aqui van los origenes autorizados.
+public_ingress_cidrs = []
+
+# Segunda aplicacion, un dia despues: AWS necesita ver la etiqueta en un recurso
+# real antes de permitir activarla.
+activate_cost_allocation_tags = false
