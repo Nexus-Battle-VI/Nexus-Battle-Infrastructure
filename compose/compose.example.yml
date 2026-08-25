@@ -6,7 +6,7 @@
 #
 # ATENCIÓN — este fichero NO es apto para producción:
 #   - las credenciales son de ejemplo y están en claro;
-#   - no hay TLS, réplica, copias de seguridad ni límites de recursos;
+#   - no hay TLS, réplica ni copias de seguridad;
 #   - los servicios no verifican quién realiza la petición (ver ADR-004).
 #
 # Se copia a `compose.yml` y se ajusta antes de usarlo.
@@ -19,6 +19,8 @@ services:
   # ---------------------------------------------------------------------
   proxy:
     image: caddy:2-alpine
+    mem_limit: 64m
+    pids_limit: 64
     ports:
       - '8080:8080'
     volumes:
@@ -34,6 +36,8 @@ services:
 
   web:
     image: ghcr.io/nexus-battle-vi/nexus-battle-web:latest
+    mem_limit: 48m
+    pids_limit: 64
     restart: unless-stopped
 
   # ---------------------------------------------------------------------
@@ -41,6 +45,8 @@ services:
   # ---------------------------------------------------------------------
   account:
     image: ghcr.io/nexus-battle-vi/nexus-battle-account:latest
+    mem_limit: 160m
+    pids_limit: 128
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -57,12 +63,14 @@ services:
 
   inventory:
     image: ghcr.io/nexus-battle-vi/nexus-battle-player-inventory:latest
+    mem_limit: 160m
+    pids_limit: 128
     environment:
       NODE_ENV: production
       PORT: 3002
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: memory
-      MONGODB_URI: mongodb://mongo:27017/player-inventory
+      MONGODB_URI: mongodb://inventory:cambiar@mongo:27017/player-inventory?authSource=player-inventory
     depends_on:
       mongo:
         condition: service_healthy
@@ -70,12 +78,14 @@ services:
 
   catalog:
     image: ghcr.io/nexus-battle-vi/nexus-battle-catalog:latest
+    mem_limit: 160m
+    pids_limit: 128
     environment:
       NODE_ENV: production
       PORT: 3003
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: memory
-      MONGODB_URI: mongodb://mongo:27017/catalog
+      MONGODB_URI: mongodb://catalog:cambiar@mongo:27017/catalog?authSource=catalog
     depends_on:
       mongo:
         condition: service_healthy
@@ -83,6 +93,8 @@ services:
 
   community:
     image: ghcr.io/nexus-battle-vi/nexus-battle-community:latest
+    mem_limit: 160m
+    pids_limit: 128
     environment:
       NODE_ENV: production
       PORT: 3004
@@ -96,6 +108,8 @@ services:
 
   commerce:
     image: ghcr.io/nexus-battle-vi/nexus-battle-commerce:latest
+    mem_limit: 160m
+    pids_limit: 128
     environment:
       NODE_ENV: production
       PORT: 3005
@@ -109,6 +123,8 @@ services:
 
   notifications:
     image: ghcr.io/nexus-battle-vi/nexus-battle-notifications:latest
+    mem_limit: 128m
+    pids_limit: 128
     environment:
       NODE_ENV: production
       HEALTH_PORT: 3001
@@ -133,6 +149,8 @@ services:
   # ---------------------------------------------------------------------
   postgres:
     image: postgres:17-alpine
+    mem_limit: 288m
+    pids_limit: 256
     environment:
       POSTGRES_USER: nexus
       POSTGRES_PASSWORD: cambiar
@@ -149,10 +167,32 @@ services:
 
   mongo:
     image: mongo:8
+    mem_limit: 384m
+    pids_limit: 256
+    # Definir el usuario raiz es lo que ACTIVA la autenticacion en la imagen
+    # oficial. Sin estas variables Mongo arranca abierto y cualquier servicio
+    # puede leer la base de otro, aunque cada uno use la suya.
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: cambiar
     volumes:
       - mongo-data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
     healthcheck:
-      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping")']
+      test:
+        [
+          'CMD',
+          'mongosh',
+          '--quiet',
+          '--username',
+          'root',
+          '--password',
+          'cambiar',
+          '--authenticationDatabase',
+          'admin',
+          '--eval',
+          'db.adminCommand("ping")',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -163,6 +203,8 @@ services:
   # ---------------------------------------------------------------------
   mailpit:
     image: axllent/mailpit:latest
+    mem_limit: 64m
+    pids_limit: 64
     ports:
       - '8025:8025' # interfaz web para inspeccionar los correos
     restart: unless-stopped

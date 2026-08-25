@@ -67,6 +67,31 @@ En la demo, PostgreSQL y MongoDB corren como contenedores en la misma instancia.
 
 Compartir host es una concesión de coste. Compartir esquema sería renunciar a la arquitectura.
 
+### La regla tiene que aplicarla el motor, no la convención
+
+Una versión anterior de la composición de referencia **incumplía este apartado en MongoDB**, y conviene dejarlo escrito porque el fallo es fácil de repetir:
+
+| Motor | Antes | Ahora |
+| --- | --- | --- |
+| PostgreSQL | Usuario y base por servicio, con `REVOKE` sobre el esquema público | Igual |
+| MongoDB | Base por servicio pero **sin autenticación**: `catalog` podía leer y escribir la base de `player-inventory` | Usuario por servicio con `readWrite` acotado a su propia base |
+
+Las URI eran `mongodb://mongo:27017/catalog`, sin credenciales. Bases distintas, sí, pero **nada impedía cruzar la frontera**: bastaba cambiar el nombre de la base en la cadena de conexión.
+
+La separación existía en el documento y en el nombre de la base, no en el motor. Eso no es propiedad de datos: es una convención que el primer error de programación se salta sin avisar.
+
+`compose/init-mongo.js` es ahora el equivalente exacto de `init-postgres.sql`. **Definir `MONGO_INITDB_ROOT_USERNAME` es lo que activa la autenticación** en la imagen oficial; sin esa variable Mongo arranca abierto.
+
+## Aislamiento de fallos entre servicios
+
+Los seis servicios y las dos bases comparten instancia. Sin límites de recursos, **un solo servicio con una fuga de memoria agota la RAM del host y se lleva por delante a todos los demás, incluidas las bases de datos**.
+
+Cada contenedor declara ahora `mem_limit` y `pids_limit`. El efecto es concreto: cuando un contenedor supera su techo, el núcleo mata **ese** contenedor, y `restart: unless-stopped` lo levanta de nuevo en segundos. El resto del sistema no se entera.
+
+**La CPU no se limita a propósito.** La contención de CPU degrada el rendimiento pero no mata procesos, y poner un techo por contenedor en una instancia de núcleos compartidos provocaría estrangulamiento en ráfagas legítimas. El riesgo que hay que contener es la memoria, no el cómputo.
+
+Suma de techos: 1 712 MiB, más unos 300 MiB de sistema y Docker. **No cabe en una instancia de 2 GiB** con margen razonable, y es el argumento técnico para dimensionar la instancia, por encima de cualquier preferencia.
+
 ## Lo que falta
 
 La elección de ORM u ODM queda **deliberadamente abierta** ([ADR-005](../adr/ADR-005-data-strategy.md)). De ella dependen el esquema, las migraciones y los índices.
