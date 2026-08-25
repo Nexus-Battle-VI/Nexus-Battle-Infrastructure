@@ -4,7 +4,9 @@ Toda estimación depende de supuestos. Los de esta se declaran aquí para que pu
 
 ## Estado
 
-**Coste incurrido a la fecha: USD 0.** No hay cuenta de AWS configurada ni recurso provisionado.
+**Cuenta de AWS designada el 2026-08-25:** `658430303197`, perfil `nexus-battles`, región `us-east-1`.
+
+**Recursos provisionados: ninguno.** El coste del mes en curso es `0.000025 USD`, íntegramente cubierto por créditos.
 
 ## Supuestos de uso
 
@@ -31,15 +33,17 @@ Los números salen del uso previsto de una demostración académica, no de una m
 | No hace falta caché | Sin latencia problemática al volumen previsto |
 | Sin balanceador | Un único destino que balancear |
 | Sin NAT Gateway | La instancia va en subred pública con IP elástica |
+| La IP pública tiene coste | 0,005 USD/h **esté en uso o no**, desde el 2024-02-01 |
 
 ## Supuestos de precio
 
 | Supuesto | Riesgo |
 | --- | --- |
-| Región de coste medio | Cambiar de región altera todos los precios |
+| Región `us-east-1` | Cambiar de región **invalida todos los precios** de la estimación |
 | Bajo demanda, sin compromiso | Un plan de ahorro reduciría el coste a cambio de compromiso anual |
 | Capa gratuita **no** asumida | Deliberado: sus límites caducan y superarlos genera coste sin aviso |
-| Precios de la fecha del documento | AWS los revisa periódicamente |
+| Precios de la **Price List API** al 2026-08-25 | AWS los revisa periódicamente; hay que reconsultarlos, no recordarlos |
+| Instancias `t4g` son Arm64 | Las imágenes deben construirse para `linux/arm64` |
 
 **No se asume capa gratuita.** Es una decisión consciente: una estimación que depende de ella deja de ser válida en cuanto caduca, y esa caducidad no avisa.
 
@@ -61,7 +65,7 @@ En orden de probabilidad:
 1. **Adoptar RDS o DocumentDB.** Solo RDS ya excede el techo completo.
 2. **Añadir un balanceador.** Coste fijo por hora.
 3. **Añadir NAT Gateway.** Coste fijo elevado.
-4. **Dejar la instancia encendida de forma continua** en lugar de aplicar la política de apagado.
+4. **Dejar la instancia encendida de forma continua** en lugar de aplicar la política de apagado. Es la diferencia entre 18,31 y 6,39 USD/mes en `t4g.small`.
 5. **Tráfico real muy superior al previsto.** La transferencia de salida es la partida que más se dispara.
 6. **Migrar hacia la arquitectura objetivo.** Es otro orden de magnitud, no un ajuste.
 
