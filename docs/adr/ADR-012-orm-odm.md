@@ -1,8 +1,8 @@
 # ADR-012 — Selección de ORM y ODM
 
-- **Estado:** Proposed — **decisión pendiente del equipo**
+- **Estado:** **Accepted** el 2026-08-25
 - **Fecha:** 2026-08-25
-- **Decide:** Arquitectura, con ratificación del equipo
+- **Decide:** Arquitectura, ratificado por el equipo
 - **Relacionado:** [ADR-005](ADR-005-data-strategy.md), [ADR-008](ADR-008-iac.md)
 
 ## Contexto
@@ -11,7 +11,7 @@
 
 La consecuencia se paga cada día: **los seis servicios operan con repositorios en memoria y un reinicio pierde todos los datos.** Es la limitación más visible del sistema después del blocker de identidad.
 
-Este ADR aporta los criterios, las alternativas y una recomendación. **No la cierra**: la ratifica el equipo.
+Este ADR aporta los criterios, las alternativas y la decisión. El equipo la ratificó el 2026-08-25.
 
 ## Lo que la arquitectura ya decidió por nosotros
 
@@ -86,7 +86,7 @@ No es un impedimento —se resuelve fijando `7.10.0` en ambos paquetes, que es l
 
 El driver oficial entrega documentos planos, que es justo la forma de la instantánea que el repositorio ya maneja.
 
-## Recomendación
+## Decisión
 
 **PostgreSQL: Kysely. MongoDB: driver oficial.**
 
@@ -100,7 +100,7 @@ Kysely obliga a escribir la consulta. Igual que Terraform obliga a nombrar el re
 
 Lo que se gana además: sin paso de generación de código, sin binario de motor en la imagen, sin segunda fuente de verdad, y migraciones que son TypeScript revisable en un PR.
 
-### La alternativa defendible, y cuándo elegirla
+### La alternativa que se consideró y no se eligió
 
 **Prisma para PostgreSQL** es una elección razonable si el equipo prioriza el acompañamiento sobre la explicitud. Tiene la mejor documentación del grupo y las migraciones más pulidas, y su cliente devuelve objetos planos, así que **no compromete la arquitectura hexagonal**.
 
