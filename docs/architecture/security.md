@@ -6,7 +6,17 @@ Ver [ADR-004](../adr/ADR-004-identity-directory.md).
 
 **Ningún servicio verifica quién realiza la petición.**
 
-No es un descuido: no existe un proveedor de identidad autorizado ni presupuesto aprobado para un directorio corporativo. Es un **BLOCKER declarado**.
+No es un descuido. Es un **BLOCKER declarado**, y al 2026-08-25 su estado es este:
+
+| Paso | Estado |
+| --- | --- |
+| Elegir proveedor y presupuesto | **Hecho**: Cognito, plan Essentials |
+| Implementar el adaptador OIDC | Pendiente |
+| Emitir y validar el JWT | Pendiente |
+| Validar el testimonio en cada servicio | Pendiente |
+| Activar RBAC en operaciones sensibles | Pendiente |
+
+**Elegir el proveedor no protege ni un solo endpoint.** Todo lo que sigue en esta sección continúa siendo cierto hasta completar los cuatro pasos pendientes.
 
 | Servicio | Qué queda sin proteger |
 | --- | --- |
