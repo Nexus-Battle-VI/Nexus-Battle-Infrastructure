@@ -67,6 +67,8 @@ jobs:
           docs/contracts/event-catalog.md
           docs/governance/rulesets/main-protection.template.json
           compose/compose.example.yml
+          compose/init-postgres.sql
+          compose/init-mongo.js
           "
           for file in $required; do
             if [ ! -f "$file" ]; then
@@ -74,11 +76,12 @@ jobs:
               missing=$((missing + 1))
             fi
           done
+          total=$(echo "$required" | grep -c .)
           if [ "$missing" -gt 0 ]; then
-            echo "Faltan ${missing} documentos exigidos por el plan de Foundation."
+            echo "Faltan ${missing} de ${total} ficheros exigidos por el plan de Foundation."
             exit 1
           fi
-          echo "Los 36 documentos exigidos estan presentes."
+          echo "Los ${total} ficheros exigidos estan presentes."
 
       - name: Verificar que todo ADR declara su estado
         run: |
