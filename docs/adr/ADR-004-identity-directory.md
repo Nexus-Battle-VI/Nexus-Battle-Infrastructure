@@ -1,7 +1,7 @@
 # ADR-004 — Identidad, directorio y control de acceso
 
-- **Estado:** Proposed — **contiene un BLOCKER activo**
-- **Fecha:** 2026-08-21
+- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **El BLOCKER sigue ACTIVO** hasta que el adaptador esté implementado
+- **Fecha:** 2026-08-21, aceptado el 2026-08-25
 - **Decide:** Arquitectura, con aprobación obligatoria de gobierno del proyecto y presupuesto
 - **Relacionado:** [ADR-007](ADR-007-aws-cost-optimized-platform.md)
 
@@ -35,7 +35,11 @@ Las otras cuatro dependen de un proveedor que **no existe todavía**.
 
 ## BLOCKER — Identity provider approval
 
-**No existe un proveedor de identidad autorizado ni presupuesto aprobado para un directorio corporativo.**
+**Estado del blocker al 2026-08-25: la aprobación existe, la implementación no.**
+
+Ya hay proveedor autorizado y presupuesto ([ADR-007](ADR-007-aws-cost-optimized-platform.md) está `Accepted`). Eso resuelve el paso 1 del camino de resolución y **solo el paso 1**.
+
+**Elegir el proveedor no protege ni un solo endpoint.** Mientras el adaptador OIDC no sustituya a `FakeIdentityProvider` y los servicios no validen el testimonio, todo lo que sigue continúa siendo cierto sin ningún matiz.
 
 Consecuencia directa y declarada en todos los servicios afectados:
 
@@ -54,24 +58,53 @@ Se decidió **no añadir comprobaciones de rol sin identidad verificable**. Un `
 ## Camino de resolución
 
 ```text
-1. Aprobar un proveedor de identidad        -> gobierno del proyecto + presupuesto
+1. Aprobar un proveedor de identidad        -> HECHO el 2026-08-25: Cognito Essentials
 2. Implementar el adaptador OIDC             -> sustituye a FakeIdentityProvider
-3. Account emite o valida el testimonio      -> JWT verificable
+3. Account emite o valida el testimonio      -> JWT verificable contra el JWKS del pool
 4. Cada servicio valida el testimonio        -> guard comun en el borde HTTP
 5. Activar RBAC en las operaciones sensibles -> las reglas ya existen en Account
 ```
 
-Los pasos 1 y 2 son los únicos bloqueados. Del 3 al 5 son trabajo conocido que puede planificarse en cuanto el 1 se desbloquee.
+El paso 1 está resuelto. Del 2 al 5 son trabajo conocido y ya no bloqueado: es implementación pendiente, no incertidumbre.
 
-Opciones a evaluar cuando haya decisión, en orden de coste creciente:
+**Hasta completar el paso 5, el sistema sigue sin poder exponerse a internet.**
 
-| Opción | Coste aproximado | Nota |
+Notas de implementación que condicionan los pasos 2 a 4:
+
+- El pool se provisiona con **Terraform** ([ADR-008](ADR-008-iac.md)), no a mano, para que no haya deriva entre el entorno y el código.
+- El cliente de aplicación de Web es **público: sin secreto de cliente**, con *authorization code grant* y **PKCE**. Un secreto en el navegador no es un secreto.
+- La validación del JWT se hace **contra el JWKS del pool**, comprobando `iss`, `aud`, `token_use` y `exp`, con biblioteca mantenida. No se implementa verificación de firma a mano.
+- El identificador estable del sujeto es el `sub` del pool, que es lo que `IdentityProviderPort` ya modela. El correo **no** sirve como identificador: puede cambiar y puede repetirse entre proveedores.
+
+## Decisión de proveedor: Amazon Cognito, plan Essentials
+
+Opciones evaluadas, con precios reales de la Price List API en `us-east-1` al 2026-08-25:
+
+| Opción | Coste real | Veredicto |
 | --- | --- | --- |
-| Cognito user pool | Gratuito hasta un umbral de usuarios activos | No es un directorio corporativo, pero sí un IdP con OIDC |
-| IdP autoalojado en la misma EC2 | Solo el coste de cómputo ya presupuestado | Añade operación y responsabilidad de custodia |
-| Managed Microsoft AD | Muy por encima del techo del Sprint | Cumple el requisito literal de Directorio Activo |
+| **Cognito user pool, plan Essentials** | 0,015 USD/MAU | **Seleccionada** |
+| Cognito user pool, plan Lite | 0,0055 USD/MAU | Descartada: no incluye MFA por correo |
+| Cognito user pool, plan Plus | 0,020 USD/MAU | Descartada: su valor añadido es protección frente a amenazas, que no es el problema a resolver |
+| IdP autoalojado en la misma EC2 | Solo cómputo ya presupuestado | Descartada: añade custodia de credenciales, justo lo que este ADR evita |
+| Managed Microsoft AD | Varias veces el techo mensual completo | Descartada por coste |
 
-Ninguna se selecciona en este ADR: la elección exige aprobación de presupuesto.
+### Por qué Essentials y no Lite
+
+El requisito contempla **segundo factor por correo**. La documentación de AWS es explícita: Essentials incorpora *«advanced authentication features like choice-based sign-in and email MFA»*, y Lite es un plan de autenticación básica que no las incluye.
+
+Lite costaría menos de un tercio, pero **no cumple el requisito**. Elegirlo obligaría a implementar el segundo factor por cuenta propia, es decir, a custodiar secretos de segundo factor: exactamente lo que la decisión 2 de este ADR prohíbe.
+
+### Coste, sin asumir capa gratuita
+
+| Usuarios activos al mes | Coste mensual |
+| --- | --- |
+| 30 | 0,45 USD |
+| 100 | 1,50 USD |
+| 500 | 7,50 USD |
+
+**No se asume capa gratuita**, en coherencia con [assumptions.md](../costs/assumptions.md). Si existe, el coste real será menor que el estimado, nunca mayor.
+
+A la escala prevista de la demo el coste es marginal frente al cómputo. **El coste nunca fue la razón por la que faltaba identidad**: faltaba una decisión.
 
 ## Consecuencias
 
@@ -83,7 +116,8 @@ Ninguna se selecciona en este ADR: la elección exige aprobación de presupuesto
 
 **Lo que cuesta**
 
-- El sistema **no es desplegable públicamente** en su estado actual. Es la limitación más relevante del Sprint 1 y así se reporta.
+- El sistema **no es desplegable públicamente** hasta completar los pasos 2 a 5. Es la limitación más relevante del Sprint 1 y así se reporta.
+- Cognito **no es un Directorio Activo**. Es un IdP con OIDC. El requisito literal de directorio corporativo sigue sin cumplirse, y esta decisión no lo disimula.
 - El requisito de Directorio Activo queda sin cumplir, con su justificación de coste registrada.
 
 ## Evidencia
