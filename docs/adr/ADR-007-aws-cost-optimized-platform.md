@@ -1,13 +1,13 @@
 # ADR-007 — Plataforma AWS optimizada por coste para Sprint y demo
 
-- **Estado:** Proposed — **no se ha provisionado nada**
-- **Fecha:** 2026-08-21
+- **Estado:** **Accepted** el 2026-08-25 — cuenta designada y presupuesto aprobado. **Sigue sin provisionarse ningún recurso**
+- **Fecha:** 2026-08-21, aceptado el 2026-08-25
 - **Decide:** Arquitectura, con aprobación obligatoria de presupuesto
 - **Relacionado:** [ADR-004](ADR-004-identity-directory.md), [ADR-005](ADR-005-data-strategy.md), [ADR-006](ADR-006-messaging.md), [ADR-010](ADR-010-reverse-proxy.md)
 
 ## Contexto
 
-El Sprint y la demo tienen un techo de **USD 100 al mes**. Los requisitos no funcionales del producto objetivo hablan de 100 000 usuarios concurrentes, 99,95 % de disponibilidad, autoescalado y alta disponibilidad multi-AZ.
+El Sprint y la demo tienen un techo de **USD 100 al mes**, con el objetivo explícito de gastar lo mínimo para que el presupuesto **aguante todo el proyecto**. El techo es un límite, no un objetivo de gasto. Los requisitos no funcionales del producto objetivo hablan de 100 000 usuarios concurrentes, 99,95 % de disponibilidad, autoescalado y alta disponibilidad multi-AZ.
 
 **Esas dos cosas no caben en la misma arquitectura**, y este ADR existe precisamente para no fingir que sí.
 
@@ -18,7 +18,9 @@ Se documentan **dos arquitecturas distintas y explícitamente separadas**:
 - **Demo** — la que cabe en USD 100/mes. Descrita aquí y en [sprint-demo-deployment.md](../architecture/sprint-demo-deployment.md).
 - **Objetivo** — la que cumple los RNF. Descrita en [target-scale-deployment.md](../architecture/target-scale-deployment.md).
 
-**En esta ejecución no se ha provisionado ningún recurso de AWS.** No existe cuenta configurada, no se ha ejecutado IaC y no hay coste incurrido.
+**No se ha provisionado ningún recurso de AWS.** La cuenta `658430303197` quedó designada el 2026-08-25 y el acceso está configurado bajo el perfil `nexus-battles` en `us-east-1`, pero no se ha ejecutado IaC y el coste del mes está íntegramente cubierto por créditos.
+
+Los precios reales, consultados a la Price List API, están en [sprint-demo-estimate.md](../costs/sprint-demo-estimate.md). El régimen de operación mueve el coste entre **6,05 y 30,58 USD/mes**, y la palanca dominante es la política de apagado.
 
 ### Arquitectura de demo
 
@@ -87,14 +89,15 @@ ECR cobra almacenamiento y transferencia. GHCR está incluido y las imágenes ya
 
 Ninguna provisión ocurre sin completar esta lista:
 
-- [ ] Cuenta de AWS designada y con responsable
+- [x] Cuenta de AWS designada y con responsable
+- [x] Estimación calculada con precios reales de la Price List API
 - [ ] **Presupuesto de AWS Budgets creado** con el techo mensual
 - [ ] **Alertas de coste** al 50 %, 80 % y 100 % del techo
-- [ ] Estimación revisada contra la calculadora oficial
 - [ ] Lista cerrada de servicios a provisionar
 - [ ] Supuesto de tráfico documentado
 - [ ] **Política de apagado** para el periodo sin demo
 - [ ] Etiquetado de recursos para imputación de coste
+- [ ] **MFA en la cuenta root** y usuario o rol IAM dedicado en lugar de root
 
 La estimación y los supuestos están en [docs/costs](../costs/assumptions.md).
 
@@ -120,6 +123,8 @@ La estimación y los supuestos están en [docs/costs](../costs/assumptions.md).
 | Todo en contenedores sobre EC2 | Dentro del techo | **Seleccionada** |
 | Alojamiento fuera de AWS | Menor | El requisito académico fija AWS como destino |
 
-## Pendiente de aprobación
+## Qué desbloquea esta aceptación
 
-Este ADR permanece en `Proposed` hasta que exista **aprobación de presupuesto** y cuenta de AWS designada. Hasta entonces no se provisiona ningún recurso.
+[ADR-008](ADR-008-iac.md) declaraba que **no se escribe IaC hasta que ADR-007 esté aprobado**. Esa condición queda cumplida: puede escribirse Terraform, aunque ADR-008 sigue en `Proposed` a la espera de ratificación del equipo.
+
+**Lo que esta aceptación NO desbloquea:** exponer el sistema a internet. El BLOCKER de [ADR-004](ADR-004-identity-directory.md) sigue activo y es independiente del presupuesto.
