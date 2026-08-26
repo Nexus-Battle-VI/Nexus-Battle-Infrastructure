@@ -50,8 +50,14 @@ resource "aws_instance" "node" {
   vpc_security_group_ids = [var.security_group_ids[each.value.role]]
   iam_instance_profile   = aws_iam_instance_profile.node.name
 
-  # Necesaria para descargar imagenes: no hay NAT Gateway. Su coste esta
-  # contabilizado y es identico con la instancia encendida o apagada.
+  # Necesaria para descargar imagenes: no hay NAT Gateway.
+  #
+  # Es AUTOASIGNADA y no elastica, y la diferencia importa para el coste: AWS
+  # libera la direccion al apagar la instancia, de modo que se cobra por hora
+  # ENCENDIDA, igual que el computo. Una IP elastica se cobraria tambien parada.
+  #
+  # La contrapartida de apagar no es economica sino operativa: al arrancar se
+  # asigna otra distinta. Hoy no importa porque ningun nombre DNS apunta aqui.
   associate_public_ip_address = true
 
   # IMDSv2 obligatorio. Con IMDSv1 basta una vulnerabilidad de peticion del lado

@@ -35,35 +35,48 @@ Obtenidos de la **AWS Price List API** el **2026-08-25** para `us-east-1`, bajo 
 
 Las instancias `t4g` son Graviton (Arm64). Las imágenes del proyecto deben construirse para `linux/arm64` o la instancia no las ejecutará.
 
-## Corrección: la IP pública se cobra siempre
+## La IPv4 pública: qué se cobra y cuándo
 
-**Versiones anteriores de este documento afirmaban que una IP elástica no cuesta mientras está asociada a una instancia en marcha. Eso es falso desde el 1 de febrero de 2024.**
+Este documento se ha equivocado **dos veces** en el mismo punto, en direcciones opuestas. Queda la tercera versión, y esta sí está contrastada con la documentación de AWS y no solo con la Price List API.
 
-AWS cobra **toda** dirección IPv4 pública, esté en uso o no, al mismo precio. La Price List API lo confirma: `PublicIPv4:InUseAddress` y `PublicIPv4:IdleAddress` cuestan ambas 0,005 USD/h.
+**Primera versión — falsa.** Decía que una IP elástica no cuesta mientras está asociada a una instancia en marcha. Es falso desde el 1 de febrero de 2024: AWS cobra 0,005 USD/h por toda IPv4 pública asociada a un recurso en ejecución.
 
-La conclusión que se derivaba de aquel dato erróneo **queda invertida**:
+**Segunda versión — sobrecorregida.** De que `PublicIPv4:InUseAddress` y `PublicIPv4:IdleAddress` cuesten lo mismo se dedujo que la IP se paga igual con la instancia apagada. **El dato de precios es correcto; la inferencia no.** `IdleAddress` se refiere a una IP **elástica** reservada y sin asociar. No es el caso aquí.
 
-- **Antes se decía:** apagar la instancia ahorra cómputo pero activa el cargo por IP, así que hay que sopesarlo.
-- **Lo correcto:** el cargo por IP existe igual encendida que apagada. Apagar la instancia **ahorra sin contrapartida alguna**.
+**Lo que hay desplegado usa una IP autoasignada** (`associate_public_ip_address = true`), no elástica. Y la documentación de AWS es explícita:
+
+> We release the public IP address when the instance is stopped, hibernated, or terminated.
+
+Al apagar, la dirección se libera y **deja de cobrarse**. Al arrancar de nuevo se asigna **otra distinta**.
+
+Consecuencia práctica: **la IPv4 no es un coste fijo, sino por hora encendida**, exactamente igual que el cómputo. El único suelo real es el disco.
+
+La contrapartida de apagar no es económica sino operativa: se pierde la dirección. Hoy no importa —ningún nombre DNS apunta a ella—, y el día que importe la respuesta es una IP elástica, que **entonces sí** se paga esté o no asociada.
 
 ## Coste por régimen de operación
 
 Cálculo determinista sobre los precios de la tabla anterior: `t4g` + 30 GB de `gp3` + una IPv4 pública.
 
-| Instancia | Régimen | Cómputo | Fijos | **Total/mes** | % del techo |
+Cómputo e IPv4 van juntos en la columna «por hora» porque **ambos dependen de las horas encendida**: 0,0168 + 0,005 = 0,0218 USD/h en `t4g.small`, y 0,0336 + 0,005 = 0,0386 en `t4g.medium`. El disco es el único fijo: 30 GB × 0,08 = **2,40 USD/mes**.
+
+| Instancia | Régimen | Por hora encendida | Disco | **Total/mes** | % del techo |
 | --- | --- | ---: | ---: | ---: | ---: |
-| `t4g.small` | 24/7 encendida | 12,26 | 6,05 | **18,31** | 18,3 % |
-| `t4g.small` | Lun-Vie 8 h/día (174 h) | 2,92 | 6,05 | **8,97** | 9,0 % |
-| `t4g.small` | Solo demos (~20 h/mes) | 0,34 | 6,05 | **6,39** | 6,4 % |
-| `t4g.small` | Apagada todo el mes | 0,00 | 6,05 | **6,05** | 6,1 % |
-| `t4g.medium` | 24/7 encendida | 24,53 | 6,05 | **30,58** | 30,6 % |
-| `t4g.medium` | Lun-Vie 8 h/día (174 h) | 5,85 | 6,05 | **11,90** | 11,9 % |
-| `t4g.medium` | Solo demos (~20 h/mes) | 0,67 | 6,05 | **6,72** | 6,7 % |
-| `t4g.medium` | Apagada todo el mes | 0,00 | 6,05 | **6,05** | 6,1 % |
+| `t4g.small` | 24/7 encendida | 15,91 | 2,40 | **18,31** | 18,3 % |
+| `t4g.small` | Lun-Vie 8 h/día (174 h) | 3,79 | 2,40 | **6,19** | 6,2 % |
+| `t4g.small` | Solo demos (~20 h/mes) | 0,44 | 2,40 | **2,84** | 2,8 % |
+| `t4g.small` | Apagada todo el mes | 0,00 | 2,40 | **2,40** | 2,4 % |
+| `t4g.medium` | 24/7 encendida | 28,18 | 2,40 | **30,58** | 30,6 % |
+| `t4g.medium` | Lun-Vie 8 h/día (174 h) | 6,72 | 2,40 | **9,12** | 9,1 % |
+| `t4g.medium` | Solo demos (~20 h/mes) | 0,77 | 2,40 | **3,17** | 3,2 % |
+| `t4g.medium` | Apagada todo el mes | 0,00 | 2,40 | **2,40** | 2,4 % |
 
-**El dato que decide la política de apagado:** los 6,05 USD/mes de EBS más IPv4 **se pagan aunque la instancia esté apagada todo el mes**. Apagar reduce el cómputo a cero, pero no baja de ese suelo.
+Los totales de **24/7 no cambian** respecto a la versión anterior: con la instancia encendida, la IPv4 se cobra igual. Lo que cambia es todo lo demás, y mucho.
 
-Para bajar de 6,05 hay que **liberar la IP y borrar el volumen**, lo que implica reconstruir el entorno en el siguiente despliegue. Es una decisión de operación, no de arquitectura, y depende de cuánto tiempo vaya a estar parado.
+**El dato que decide la política de apagado:** el suelo con la instancia apagada es **2,40 USD/mes**, no 6,05. La versión anterior lo sobrestimaba en un 152 %, y con ello desanimaba precisamente la palanca de ahorro que este documento identifica como la principal.
+
+Bajar de 2,40 exige **borrar el volumen**, lo que implica reconstruir el entorno en el siguiente despliegue. Eso sí es una decisión de operación que depende de cuánto tiempo vaya a estar parado.
+
+> Lo desplegado hoy usa **20 GB**, no 30, así que su suelo real es **1,60 USD/mes por instancia**. La tabla mantiene 30 GB para no mezclar la estimación con la topología concreta, que puede cambiar.
 
 ## Qué no está incluido en estas cifras
 

@@ -55,12 +55,33 @@ Con precios reales de la Price List API y los techos de memoria ya fijados en la
 
 | Topología | Nodos | 24/7 | Solo demos | Duración de un mes de techo |
 | --- | ---: | ---: | ---: | ---: |
-| T1 · una instancia | 1 | 30,58 | 6,72 | 14,9 meses |
-| **T2 · apps \| datos** | **2** | **35,03** | **11,17** | **9,0 meses** |
-| T3 · borde \| apps \| datos | 3 | 45,61 | 15,79 | 6,3 meses |
-| T4 · una EC2 por servicio | 8 | 92,39 | 38,71 | 2,6 meses |
+| T1 · una instancia | 1 | 30,58 | 3,17 | 31,5 meses |
+| **T2 · apps \| datos** | **2** | **35,03** | **4,07** | **24,6 meses** |
+| T3 · borde \| apps \| datos | 3 | 45,61 | 5,14 | 19,5 meses |
+| T4 · una EC2 por servicio | 8 | 92,39 | 10,31 | 9,7 meses |
 
-T4 consume el **92 % del techo mensual** encendida, y en régimen de demos sigue costando 3,5 veces más que T2. El motivo no es el cómputo: son las **direcciones IPv4**. Cada nodo necesita una para descargar imágenes de GHCR —no hay NAT Gateway, prohibido por coste— y **la IPv4 se cobra igual apagada que encendida**. Con ocho nodos, apagar deja de ser una palanca de ahorro.
+T4 consume el **92 % del techo mensual** encendida, y en régimen de demos sigue costando 2,5 veces más que T2.
+
+### La columna «Solo demos» estuvo mal, y el motivo importa
+
+La primera versión de esta tabla afirmaba que **la IPv4 se cobra igual apagada que encendida**, y de ahí concluía que con ocho nodos «apagar deja de ser una palanca de ahorro».
+
+**Era falso.** Lo desplegado usa direcciones **autoasignadas**, no elásticas, y AWS las libera al apagar la instancia. La confusión venía de que `PublicIPv4:InUseAddress` y `PublicIPv4:IdleAddress` cuestan lo mismo en la Price List API: cierto, pero `IdleAddress` describe una IP **elástica reservada y sin asociar**, que no es el caso.
+
+El error era exactamente **3,55 USD por nodo y mes** —las 710 horas apagado a 0,005 USD/h—, así que la corrección es aritmética y no una reestimación:
+
+| Topología | Antes | Corrección | Ahora |
+| --- | ---: | ---: | ---: |
+| T1 | 6,72 | −3,55 | 3,17 |
+| T2 | 11,17 | −7,10 | 4,07 |
+| T3 | 15,79 | −10,65 | 5,14 |
+| T4 | 38,71 | −28,40 | 10,31 |
+
+**La decisión no cambia**, y conviene decir por qué: T2 se eligió por ciclos de vida operativos opuestos —las aplicaciones se redespliegan en cada integración, las bases de datos no deben reiniciarse nunca—, no por ser la más barata. El orden de la tabla tampoco cambia.
+
+**Lo que sí cambia es un argumento.** «Apagar deja de ser una palanca de ahorro con ocho nodos» era la frase que más peso hacía contra T4, y era incorrecta: apagar **sigue siendo** la palanca dominante en cualquier topología. Lo que crece con el número de nodos no es la IPv4 parada, sino el **disco**, que es el único coste que de verdad se paga con la instancia apagada. T4 sigue costando más que T2 en régimen de demos, pero por 2,5 veces y no por 3,5.
+
+Cada nodo necesita su IPv4 para descargar imágenes de GHCR —no hay NAT Gateway, prohibido por coste—, y ese cargo existe **mientras el nodo está encendido**, igual que el cómputo.
 
 ## Decisión
 
@@ -92,7 +113,7 @@ Se hace así deliberadamente: si el tráfico real desmiente los supuestos, o si 
 - El plano de datos queda aislado del despliegue y del parcheo del plano de aplicación.
 - El aislamiento de recursos entre servicios ya existe, a coste cero, vía *cgroups*.
 - La topología es configuración, no arquitectura tallada en piedra.
-- En régimen de demos, 11,17 USD/mes: el presupuesto de un mes cubre nueve.
+- En régimen de demos, 4,07 USD/mes: el presupuesto de un mes cubre veinticuatro.
 
 **Lo que cuesta**
 

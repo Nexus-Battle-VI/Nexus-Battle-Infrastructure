@@ -20,7 +20,7 @@ Se documentan **dos arquitecturas distintas y explícitamente separadas**:
 
 **No se ha provisionado ningún recurso de AWS.** La cuenta `658430303197` quedó designada el 2026-08-25 y el acceso está configurado bajo el perfil `nexus-battles` en `us-east-1`, pero no se ha ejecutado IaC y el coste del mes está íntegramente cubierto por créditos.
 
-Los precios reales, consultados a la Price List API, están en [sprint-demo-estimate.md](../costs/sprint-demo-estimate.md). El régimen de operación mueve el coste entre **6,05 y 30,58 USD/mes**, y la palanca dominante es la política de apagado.
+Los precios reales, consultados a la Price List API, están en [sprint-demo-estimate.md](../costs/sprint-demo-estimate.md). El régimen de operación mueve el coste entre **2,40 y 30,58 USD/mes**, y la palanca dominante es la política de apagado. El suelo es solo el disco: la IPv4 autoasignada se libera al apagar la instancia y deja de cobrarse.
 
 ### Arquitectura de demo
 
