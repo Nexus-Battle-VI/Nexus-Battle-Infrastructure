@@ -15,9 +15,15 @@ compose/compose.yml
 .DS_Store
 Thumbs.db
 
-# Terraform, cuando ADR-008 se apruebe
+# Terraform. El fichero de bloqueo SI se versiona: fija las versiones de los
+# proveedores para que todo el mundo planifique contra las mismas.
 .terraform/
 *.tfstate
 *.tfstate.*
+tfplan
+*.tfplan
+crash.log
+# `terraform.tfvars` contiene identificador de cuenta y correo, y este
+# repositorio es publico. Solo se versiona el ejemplo.
 *.tfvars
 !*.tfvars.example
