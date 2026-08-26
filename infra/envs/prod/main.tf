@@ -1,7 +1,8 @@
 # ---------------------------------------------------------------------------
 # Entorno de demo. Topologia T2 de ADR-011: plano de aplicacion y plano de datos.
 #
-# NADA de esto esta aplicado. Ver infra/README.md.
+# APLICADO desde el 2026-08-26. El estado vive en local mientras ADR-008 no
+# pase el respaldo a S3; `terraform.tfstate` esta fuera del control de versiones.
 # ---------------------------------------------------------------------------
 
 locals {
@@ -49,14 +50,55 @@ module "identity" {
   tags = local.tags
 }
 
+# Lo que cada rol de nodo escribe en disco al arrancar.
+#
+# Los ficheros se LEEN de `compose/`, no se duplican aqui. Es la unica forma de
+# que el mismo `docker compose config` que valida el CI valide lo que de verdad
+# acaba en la instancia: una copia dentro de Terraform seria una copia que se
+# desvia sin que nada se queje.
+locals {
+  compose_dir = "${path.root}/../../../compose"
+
+  bootstrap = {
+    app = {
+      compose = file("${local.compose_dir}/nodes/app.yml")
+      ficheros = {
+        "Caddyfile" = file("${local.compose_dir}/Caddyfile")
+      }
+      entorno = {
+        DATA_HOST            = var.nodes["data"].private_ip
+        DB_PASSWORD          = var.db_password
+        AUTH_MODE            = var.auth_mode
+        COGNITO_USER_POOL_ID = module.identity.user_pool_id
+        COGNITO_CLIENT_ID    = module.identity.client_id
+      }
+    }
+
+    data = {
+      compose = file("${local.compose_dir}/nodes/data.yml")
+      ficheros = {
+        "init-postgres.sql" = file("${local.compose_dir}/init-postgres.sql")
+        "init-mongo.js"     = file("${local.compose_dir}/init-mongo.js")
+      }
+      entorno = {
+        DB_PASSWORD = var.db_password
+      }
+    }
+  }
+}
+
 module "compute" {
   source = "../../modules/compute"
 
-  name               = local.name
-  tags               = local.tags
-  subnet_id          = module.network.subnet_id
-  security_group_ids = module.network.security_group_ids
-  nodes              = var.nodes
+  name                  = local.name
+  tags                  = local.tags
+  subnet_id             = module.network.subnet_id
+  security_group_ids    = module.network.security_group_ids
+  nodes                 = var.nodes
+  bootstrap             = local.bootstrap
+  arrancar_stack        = var.arrancar_stack
+  compose_plugin_url    = var.compose_plugin_url
+  compose_plugin_sha256 = var.compose_plugin_sha256
 
   # El presupuesto y las alertas existen antes que cualquier recurso de computo.
   # Esta dependencia lo convierte en una garantia del grafo, no en una costumbre.

@@ -92,7 +92,15 @@ La versión se expone en tiempo de ejecución en `/version`, lo que permite conf
 
 **GHCR**, no ECR. Está incluido en el plan de la organización, mientras que ECR cobra almacenamiento y transferencia. Ver [ADR-007](../adr/ADR-007-aws-cost-optimized-platform.md).
 
-**Hoy CI construye las imágenes pero no las publica.** Publicar requiere decidir la política de etiquetado y el destino de despliegue, y ambos dependen de la aprobación de infraestructura.
+La infraestructura ya está aprobada y aplicada, y el destino de despliegue existe: el nodo `app` de [ADR-011](../adr/ADR-011-deployment-topology.md). Con eso, la política de etiquetado queda decidida así:
+
+| Etiqueta | Responde a |
+| --- | --- |
+| `latest` | lo que la composición de referencia trae por defecto |
+| `sha-<12>` | de qué commit exacto salió esa imagen |
+| `<semver>` | qué versión declara el paquete, la misma que sirve `/version` |
+
+Publica el job `publish`, **solo desde `main`** y nunca desde un pull request, con `packages: write` concedido en el propio job y no en la cabecera del workflow. Surte efecto cuando entran los siete PR que lo añaden.
 
 ## Inmutabilidad de las publicaciones
 
