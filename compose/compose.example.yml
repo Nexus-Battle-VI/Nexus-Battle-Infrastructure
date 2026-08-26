@@ -13,8 +13,17 @@
 # un binario con `NODE_ENV=production` y `AUTH_MODE=disabled` **NO ARRANCA**.
 # Es deliberado —la traducción en código del BLOCKER de ADR-004— y significa que
 # este stack, tal cual, no se puede desplegar de cara a internet aunque alguien
-# lo intente. Para hacerlo hay que poner `AUTH_MODE: jwt` con un pool de Cognito
-# real, y entonces `NODE_ENV: production` vuelve a ser correcto.
+# lo intente.
+#
+# El pool de Cognito YA está aprovisionado, así que activar la verificación de
+# identidad ya no exige editar cinco bloques de este fichero: se copia
+# `.env.example` a `.env` junto a este compose y se pone `AUTH_MODE=jwt`. Con
+# eso, `NODE_ENV: production` vuelve a ser correcto.
+#
+# Lo que NO se puede cambiar desde aquí es la identidad de `web`. Sus variables
+# `VITE_` se resuelven al COMPILAR la imagen, no al arrancar el contenedor:
+# ponerlas en `environment` no haría nada, y aparentar que sí lo hace sería peor
+# que no ponerlas. Para cambiarlas hay que reconstruir la imagen.
 #
 # Se copia a `compose.yml` y se ajusta antes de usarlo.
 
@@ -60,6 +69,12 @@ services:
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: postgres
       DATABASE_URL: postgres://account:cambiar@postgres:5432/account
+      # `disabled` por defecto: es el estado que describe el BLOCKER de ADR-004.
+      # Con el pool ya aprovisionado, activarlo es UNA variable en `.env`, no cinco
+      # ediciones de este fichero.
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
     depends_on:
       # El esquema tiene que existir ANTES de que el servicio acepte peticiones.
       # Migrar desde el arranque del propio servicio haría que varias réplicas
@@ -78,6 +93,12 @@ services:
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
       MONGODB_URI: mongodb://inventory:cambiar@mongo:27017/player-inventory?authSource=player-inventory
+      # `disabled` por defecto: es el estado que describe el BLOCKER de ADR-004.
+      # Con el pool ya aprovisionado, activarlo es UNA variable en `.env`, no cinco
+      # ediciones de este fichero.
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
     depends_on:
       inventory-migrate:
         condition: service_completed_successfully
@@ -93,6 +114,12 @@ services:
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
       MONGODB_URI: mongodb://catalog:cambiar@mongo:27017/catalog?authSource=catalog
+      # `disabled` por defecto: es el estado que describe el BLOCKER de ADR-004.
+      # Con el pool ya aprovisionado, activarlo es UNA variable en `.env`, no cinco
+      # ediciones de este fichero.
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
     depends_on:
       catalog-migrate:
         condition: service_completed_successfully
@@ -108,6 +135,12 @@ services:
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: postgres
       DATABASE_URL: postgres://community:cambiar@postgres:5432/community
+      # `disabled` por defecto: es el estado que describe el BLOCKER de ADR-004.
+      # Con el pool ya aprovisionado, activarlo es UNA variable en `.env`, no cinco
+      # ediciones de este fichero.
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
     depends_on:
       community-migrate:
         condition: service_completed_successfully
@@ -123,6 +156,12 @@ services:
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: postgres
       DATABASE_URL: postgres://commerce:cambiar@postgres:5432/commerce
+      # `disabled` por defecto: es el estado que describe el BLOCKER de ADR-004.
+      # Con el pool ya aprovisionado, activarlo es UNA variable en `.env`, no cinco
+      # ediciones de este fichero.
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
     depends_on:
       commerce-migrate:
         condition: service_completed_successfully

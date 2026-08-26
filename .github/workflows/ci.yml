@@ -99,6 +99,7 @@ jobs:
           docs/contracts/event-catalog.md
           docs/governance/rulesets/main-protection.template.json
           compose/compose.example.yml
+          compose/.env.example
           compose/init-postgres.sql
           compose/init-mongo.js
           "
