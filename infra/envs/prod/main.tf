@@ -22,6 +22,17 @@ module "governance" {
   alert_email = var.alert_email
 }
 
+/**
+ * La identidad de operacion se declara ANTES que el computo, igual que el
+ * presupuesto: crear veintidos recursos a nombre de root deja un rastro de
+ * auditoria que despues no se puede reescribir.
+ */
+module "iam" {
+  source = "../../modules/iam"
+
+  allowed_instance_types = var.allowed_instance_types
+}
+
 module "network" {
   source = "../../modules/network"
 
