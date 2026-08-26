@@ -46,3 +46,15 @@ variable "activate_cost_allocation_tags" {
   type        = bool
   default     = false
 }
+
+variable "allowed_instance_types" {
+  description = <<-DESC
+    Tipos de instancia que la politica de IAM permite lanzar.
+
+    El presupuesto avisa DESPUES de gastar; esto impide antes. Debe incluir todo
+    lo que aparezca en `nodes`, o el `apply` fallara al lanzar la instancia — que
+    es exactamente el comportamiento buscado.
+  DESC
+  type        = list(string)
+  default     = ["t4g.nano", "t4g.micro", "t4g.small", "t4g.medium"]
+}

@@ -26,3 +26,13 @@ output "expuesto_a_internet" {
 output "coste_mensual_ipv4_usd" {
   value = module.compute.monthly_public_ipv4_usd
 }
+
+output "identidad_de_operacion" {
+  description = "Usuario con el que operar en lugar de root. La clave de acceso NO la crea Terraform: la guardaria en texto plano en el fichero de estado."
+  value       = module.iam.user_name
+}
+
+output "limites_aplicados_por_iam" {
+  description = "Lo que la politica impide de verdad, no lo que un documento pide que no se haga."
+  value       = module.iam.servicios_denegados
+}
