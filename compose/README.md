@@ -47,7 +47,13 @@ Este fichero **no es apto para produccion**:
 - sin replica, copias de seguridad ni limites de recursos;
 - **los servicios no verifican quien realiza la peticion** (ver [ADR-004](../docs/adr/ADR-004-identity-directory.md)).
 
-Las imagenes referenciadas todavia **no se publican en GHCR**: CI las construye y verifica su arranque, pero publicarlas requiere decidir la politica de etiquetado y el destino de despliegue.
+La politica de publicacion **ya esta decidida**: cada integracion en `main` publica en GHCR con tres etiquetas —`latest`, `sha-<12>` y la version de `package.json`—. Surte efecto cuando entran los siete PR que anaden el job `publish` a cada repositorio de servicio. Hasta entonces, `ghcr.io/nexus-battle-vi/...` no existe y hay que construir en local.
+
+## Composiciones por nodo
+
+`nodes/app.yml` y `nodes/data.yml` son la particion de este mismo fichero segun la topologia T2 de [ADR-011](../docs/adr/ADR-011-deployment-topology.md). Las escribe Terraform en cada instancia por `user_data`, y el CI las valida con el mismo `docker compose config` que valida esta.
+
+La diferencia estructural con este fichero no es cosmetica: aqui las migraciones esperan a `postgres` con `service_healthy` porque el motor esta al lado; en `nodes/app.yml` el motor esta en otra maquina, asi que esa espera no puede existir.
 
 Para ejecutar con imagenes locales, se construyen antes en cada repositorio:
 

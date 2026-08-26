@@ -1,0 +1,87 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# Arranque del nodo. Lo ejecuta cloud-init una sola vez, en el primer boot.
+#
+# Todo lo que hace este script esta en Terraform y no en un comando escrito a
+# mano por SSM: un nodo que se recrea vuelve al mismo estado sin que nadie
+# recuerde que hizo la vez anterior.
+# ---------------------------------------------------------------------------
+set -euo pipefail
+
+exec > >(tee -a /var/log/nexus-bootstrap.log) 2>&1
+echo "[nexus] arranque del nodo '${rol}' a las $(date --iso-8601=seconds)"
+
+# ---------------------------------------------------------------------------
+# Docker
+#
+# `docker` SI esta en los repositorios de AL2023 (25.0.16 a fecha de hoy,
+# comprobado con `dnf list --available` en el propio nodo).
+# ---------------------------------------------------------------------------
+dnf install -y docker
+systemctl enable --now docker
+
+# ---------------------------------------------------------------------------
+# El complemento `compose`
+#
+# NO esta en los repositorios de AL2023: la misma comprobacion que encontro
+# `docker` no devolvio `docker-compose-plugin`. Se descarga del proyecto
+# oficial, con la version FIJADA y la huella verificada antes de darle permiso
+# de ejecucion.
+#
+# Fijar la version importa: `latest` convierte cada recreacion del nodo en una
+# actualizacion no decidida. Y verificar la huella importa mas: sin esa linea,
+# el nodo ejecuta como root lo que le haya devuelto la red.
+# ---------------------------------------------------------------------------
+install -d /usr/local/lib/docker/cli-plugins
+curl -fsSL -o /tmp/docker-compose "${compose_url}"
+echo "${compose_sha256}  /tmp/docker-compose" | sha256sum -c -
+install -m 0755 /tmp/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+rm -f /tmp/docker-compose
+
+docker compose version
+
+# ---------------------------------------------------------------------------
+# La composicion del nodo
+# ---------------------------------------------------------------------------
+install -d /opt/nexus
+cat > /opt/nexus/compose.yml <<'NEXUS_COMPOSE_EOF'
+${compose}
+NEXUS_COMPOSE_EOF
+
+%{ for nombre, contenido in ficheros ~}
+cat > /opt/nexus/${nombre} <<'NEXUS_FICHERO_EOF'
+${contenido}
+NEXUS_FICHERO_EOF
+%{ endfor ~}
+
+# El `.env` que acompana a la composicion. Se escribe con permisos 0600: lleva
+# la contrasena de las bases, y `user_data` ya es legible desde la instancia por
+# quien pueda consultar los metadatos, asi que no hace falta ampliarlo mas.
+umask 077
+cat > /opt/nexus/.env <<'NEXUS_ENV_EOF'
+%{ for clave, valor in entorno ~}
+${clave}=${valor}
+%{ endfor ~}
+NEXUS_ENV_EOF
+chmod 0600 /opt/nexus/.env
+umask 022
+
+# ---------------------------------------------------------------------------
+# Arrancar, o no
+#
+# `arrancar_stack` es `false` por defecto y NO es una precaucion generica: la
+# composicion de referencia declara las contrasenas de las bases como la
+# palabra literal `cambiar`. Levantar con eso un nodo real seria crear un
+# sistema con credenciales conocidas y llamarlo desplegado.
+#
+# El nodo queda listo —Docker instalado, complemento verificado, composicion
+# escrita— y el ultimo paso espera a que exista un origen real de credenciales.
+# ---------------------------------------------------------------------------
+%{ if arrancar_stack ~}
+cd /opt/nexus
+docker compose up -d
+echo "[nexus] stack arrancado"
+%{ else ~}
+echo "[nexus] nodo preparado; el stack NO se arranca (arrancar_stack = false)"
+echo "[nexus] para arrancarlo a mano: cd /opt/nexus && docker compose up -d"
+%{ endif ~}

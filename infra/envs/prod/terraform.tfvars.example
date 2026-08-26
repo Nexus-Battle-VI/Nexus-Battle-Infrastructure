@@ -22,11 +22,16 @@ nodes = {
     instance_type = "t4g.small" # 1340 MiB necesarios de 2048
     role          = "app"
     volume_gb     = 20
+    # Direccion FIJA: el plano de aplicacion necesita saber donde esta el de
+    # datos antes de arrancar, y leerlo del otro recurso seria una
+    # autorreferencia dentro del mismo `for_each`.
+    private_ip    = "10.42.1.10"
   }
   data = {
     instance_type = "t4g.small" # 972 MiB necesarios de 2048
     role          = "data"
     volume_gb     = 20
+    private_ip    = "10.42.1.20"
   }
 }
 

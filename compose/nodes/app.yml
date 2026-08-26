@@ -1,0 +1,234 @@
+# Composición del nodo `app` de la topología T2 (ADR-011).
+#
+# Es la mitad de `compose.example.yml` que corre en el plano de aplicación: el
+# proxy, la web, los seis servicios y los contenedores de migración. Las bases
+# de datos viven en el nodo `data` y se alcanzan por su IP privada.
+#
+# La diferencia con la composición de referencia NO es cosmética. Ahí las
+# migraciones esperan a `postgres` con `service_healthy`, porque el motor está
+# en la misma máquina. Aquí el motor está en otra, así que esa espera no puede
+# existir: si el nodo de datos no responde, el contenedor de migración falla,
+# el servicio que depende de él no arranca, y eso se ve. Es preferible a una
+# espera que no puede cumplirse.
+#
+# Este fichero lo escribe `user_data` en `/opt/nexus/compose.yml`, junto con un
+# `.env` que Terraform genera con `DATA_HOST` y la configuración de identidad.
+
+name: nexus-battles-vi
+
+services:
+  # ---------------------------------------------------------------------
+  # Entrada
+  # ---------------------------------------------------------------------
+  proxy:
+    image: caddy:2-alpine
+    mem_limit: 64m
+    pids_limit: 64
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - web
+      - account
+      - inventory
+      - catalog
+      - community
+      - commerce
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-web:latest
+    mem_limit: 48m
+    pids_limit: 64
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------
+  # Servicios
+  # ---------------------------------------------------------------------
+  account:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-account:latest
+    mem_limit: 160m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://account:${DB_PASSWORD}@${DATA_HOST}:5432/account
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+    depends_on:
+      account-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  inventory:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-player-inventory:latest
+    mem_limit: 160m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: mongo
+      MONGODB_URI: mongodb://inventory:${DB_PASSWORD}@${DATA_HOST}:27017/player-inventory?authSource=player-inventory
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+    depends_on:
+      inventory-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  catalog:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-catalog:latest
+    mem_limit: 160m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: mongo
+      MONGODB_URI: mongodb://catalog:${DB_PASSWORD}@${DATA_HOST}:27017/catalog?authSource=catalog
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+    depends_on:
+      catalog-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  community:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-community:latest
+    mem_limit: 160m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://community:${DB_PASSWORD}@${DATA_HOST}:5432/community
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+    depends_on:
+      community-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  commerce:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-commerce:latest
+    mem_limit: 160m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      PORT: 3005
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://commerce:${DB_PASSWORD}@${DATA_HOST}:5432/commerce
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+    depends_on:
+      commerce-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  notifications:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-notifications:latest
+    mem_limit: 128m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      HEALTH_PORT: 3001
+      LOG_LEVEL: info
+      EMAIL_DRIVER: smtp
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      EMAIL_FROM: no-reply@nexus-battles.local
+      # El adaptador SQS depende de ADR-006.
+      QUEUE_DRIVER: memory
+    depends_on:
+      - mailpit
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------
+  # Migraciones
+  #
+  # Un contenedor por servicio, de un solo uso, que lleva el esquema al ultimo
+  # estado y sale. Usan la MISMA imagen que el servicio con otro punto de
+  # entrada: es lo que garantiza que las migraciones aplicadas son exactamente
+  # las que lleva el binario que arranca despues.
+  # ---------------------------------------------------------------------
+  account-migrate:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-account:latest
+    command: ['node', 'dist/infrastructure/persistence/migrate.js']
+    mem_limit: 128m
+    pids_limit: 64
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://account:${DB_PASSWORD}@${DATA_HOST}:5432/account
+    restart: 'no'
+
+  community-migrate:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-community:latest
+    command: ['node', 'dist/infrastructure/persistence/migrate.js']
+    mem_limit: 128m
+    pids_limit: 64
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://community:${DB_PASSWORD}@${DATA_HOST}:5432/community
+    restart: 'no'
+
+  commerce-migrate:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-commerce:latest
+    command: ['node', 'dist/infrastructure/persistence/migrate.js']
+    mem_limit: 128m
+    pids_limit: 64
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://commerce:${DB_PASSWORD}@${DATA_HOST}:5432/commerce
+    restart: 'no'
+
+  catalog-migrate:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-catalog:latest
+    command: ['node', 'dist/infrastructure/persistence/migrate.js']
+    mem_limit: 128m
+    pids_limit: 64
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: mongo
+      MONGODB_URI: mongodb://catalog:${DB_PASSWORD}@${DATA_HOST}:27017/catalog?authSource=catalog
+    restart: 'no'
+
+  inventory-migrate:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-player-inventory:latest
+    command: ['node', 'dist/infrastructure/persistence/migrate.js']
+    mem_limit: 128m
+    pids_limit: 64
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: mongo
+      MONGODB_URI: mongodb://inventory:${DB_PASSWORD}@${DATA_HOST}:27017/player-inventory?authSource=player-inventory
+    restart: 'no'
+
+  # ---------------------------------------------------------------------
+  # Correo de desarrollo
+  # ---------------------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit:latest
+    mem_limit: 64m
+    pids_limit: 64
+    ports:
+      - '8025:8025' # interfaz web para inspeccionar los correos
+    restart: unless-stopped

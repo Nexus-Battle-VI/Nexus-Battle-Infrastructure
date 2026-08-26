@@ -41,6 +41,34 @@ resource "aws_iam_instance_profile" "node" {
   tags = var.tags
 }
 
+# ---------------------------------------------------------------------------
+# Arranque de cada nodo.
+#
+# El guion se compone aqui y no se ejecuta a mano por SSM: un nodo recreado
+# vuelve al mismo estado sin que nadie tenga que recordar lo que hizo la vez
+# anterior. Es la misma razon por la que ADR-008 eligio Terraform.
+#
+# `user_data` es legible desde la propia instancia a traves de los metadatos.
+# Con IMDSv2 obligatorio y un limite de un salto no lo alcanza un contenedor por
+# accidente, pero conviene saber que la contrasena de las bases viaja ahi.
+# ---------------------------------------------------------------------------
+locals {
+  arranque = {
+    for clave, nodo in var.nodes : clave => templatefile(
+      "${path.module}/templates/bootstrap.sh.tftpl",
+      {
+        rol            = nodo.role
+        compose        = var.bootstrap[nodo.role].compose
+        ficheros       = var.bootstrap[nodo.role].ficheros
+        entorno        = var.bootstrap[nodo.role].entorno
+        arrancar_stack = var.arrancar_stack
+        compose_url    = var.compose_plugin_url
+        compose_sha256 = var.compose_plugin_sha256
+      }
+    )
+  }
+}
+
 resource "aws_instance" "node" {
   for_each = var.nodes
 
@@ -49,6 +77,16 @@ resource "aws_instance" "node" {
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [var.security_group_ids[each.value.role]]
   iam_instance_profile   = aws_iam_instance_profile.node.name
+
+  # Direccion privada FIJA, y no la que asigne la subred.
+  #
+  # El nodo `app` necesita saber donde esta el de datos antes de arrancar, y
+  # leerlo de `aws_instance.node["data"]` desde el mismo `for_each` seria una
+  # autorreferencia que Terraform rechaza. Fijarla en el mapa de nodos rompe el
+  # ciclo y ademas deja la topologia legible en un solo sitio.
+  private_ip = each.value.private_ip
+
+  user_data = local.arranque[each.key]
 
   # Necesaria para descargar imagenes: no hay NAT Gateway.
   #

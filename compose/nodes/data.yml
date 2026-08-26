@@ -1,0 +1,66 @@
+# Composición del nodo `data` de la topología T2 (ADR-011).
+#
+# PostgreSQL y MongoDB, cada uno con su volumen. Nada más: este nodo no sirve
+# tráfico de aplicación.
+#
+# Los puertos se publican en el nodo, no solo en la red de Docker, porque quien
+# los consume está en OTRA máquina. Lo que impide que los alcance cualquiera no
+# es el binding sino el grupo de seguridad: `data` solo acepta 5432 y 27017
+# desde el grupo `app`, referenciado por identificador y no por CIDR. Está en
+# `modules/network/main.tf` y se puede leer ahí.
+#
+# Sigue sin haber réplica ni copias de seguridad, y ADR-011 lo dice: perder el
+# volumen EBS de este nodo es perder los datos.
+
+name: nexus-battles-vi-data
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    mem_limit: 288m
+    pids_limit: 256
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: nexus
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nexus']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:8
+    mem_limit: 384m
+    pids_limit: 256
+    ports:
+      - '27017:27017'
+    # Definir el usuario raiz es lo que ACTIVA la autenticacion en la imagen
+    # oficial. Sin estas variables Mongo arranca abierto y cualquier servicio
+    # puede leer la base de otro, aunque cada uno use la suya.
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'mongosh --quiet --username root --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval ''db.adminCommand("ping")''',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  mongo-data:

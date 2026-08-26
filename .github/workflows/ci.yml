@@ -100,6 +100,8 @@ jobs:
           docs/governance/rulesets/main-protection.template.json
           compose/compose.example.yml
           compose/.env.example
+          compose/nodes/app.yml
+          compose/nodes/data.yml
           compose/init-postgres.sql
           compose/init-mongo.js
           "
@@ -215,4 +217,15 @@ jobs:
           cp compose/compose.example.yml compose/compose.yml
           docker compose -f compose/compose.yml config > /dev/null
           rm compose/compose.yml
-          echo "Composicion valida."
+          echo "Composicion de referencia valida."
+
+          # Las composiciones por nodo se validan IGUAL que la de referencia, y
+          # es lo unico que impide que se desvien de ella sin que nadie se
+          # entere: son las que Terraform escribe en las instancias.
+          #
+          # Las variables se dan aqui solo para que la sustitucion tenga algo
+          # que poner. Lo que se comprueba es la estructura, no los valores.
+          for nodo in app data; do
+            DATA_HOST=10.0.0.1 DB_PASSWORD=validacion               docker compose -f "compose/nodes/$nodo.yml" config > /dev/null
+            echo "Composicion del nodo $nodo valida."
+          done

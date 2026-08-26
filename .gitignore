@@ -5,8 +5,9 @@
 *.svg
 !docs/diagrams/*.svg
 
-# Composicion local derivada del ejemplo
+# Composicion local derivada del ejemplo, y el `.env` que la acompana
 compose/compose.yml
+compose/.env
 
 # Editores y sistema
 .idea/
