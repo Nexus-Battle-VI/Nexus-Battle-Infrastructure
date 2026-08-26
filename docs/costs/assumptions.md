@@ -65,7 +65,7 @@ En orden de probabilidad:
 1. **Adoptar RDS o DocumentDB.** Solo RDS ya excede el techo completo.
 2. **Añadir un balanceador.** Coste fijo por hora.
 3. **Añadir NAT Gateway.** Coste fijo elevado.
-4. **Dejar la instancia encendida de forma continua** en lugar de aplicar la política de apagado. Es la diferencia entre 18,31 y 6,39 USD/mes en `t4g.small`.
+4. **Dejar la instancia encendida de forma continua** en lugar de aplicar la política de apagado. Es la diferencia entre 18,31 y 2,84 USD/mes en `t4g.small`: la palanca es aún mayor de lo que este documento decía, porque la IPv4 se libera al apagar y deja de cobrarse.
 5. **Tráfico real muy superior al previsto.** La transferencia de salida es la partida que más se dispara.
 6. **Migrar hacia la arquitectura objetivo.** Es otro orden de magnitud, no un ajuste.
 
