@@ -30,14 +30,64 @@ resource "aws_cognito_user_pool" "this" {
   # cuando Web implemente el flujo.
   mfa_configuration = "OPTIONAL"
 
-  email_mfa_configuration {
-    message = "Tu codigo de verificacion de Nexus Battles VI es {####}"
-    subject = "Codigo de verificacion - Nexus Battles VI"
+  /**
+   * El segundo factor: aplicacion autenticadora, NO correo.
+   *
+   * ADR-004 eligio Cognito Essentials contando con el MFA por correo. Al
+   * provisionarlo, Cognito lo rechaza:
+   *
+   *   Cannot set EmailMfaConfiguration when user pool EmailConfiguration
+   *   contains an EmailSendingAccount of COGNITO_DEFAULT.
+   *
+   * Es decir: **el MFA por correo exige SES**. El emisor por defecto de Cognito
+   * no sirve para eso, y SES pide una identidad verificada y salir del entorno
+   * de pruebas antes de escribir a cualquiera.
+   *
+   * El codigo temporal de aplicacion no necesita nada de eso, no cuesta nada y
+   * es mas fuerte: un codigo por correo lo intercepta quien tenga el correo, que
+   * en esta configuracion es justo el canal que se querria proteger.
+   *
+   * Cambiarlo a correo es poner `email` en `mfa_method` y aprovisionar SES.
+   * ADR-004 tiene que registrar esta correccion.
+   */
+  dynamic "software_token_mfa_configuration" {
+    for_each = var.mfa_method == "software_token" ? [1] : []
+
+    content {
+      enabled = true
+    }
   }
 
+  dynamic "email_mfa_configuration" {
+    for_each = var.mfa_method == "email" ? [1] : []
+
+    content {
+      message = "Tu codigo de verificacion de Nexus Battles VI es {####}"
+      subject = "Codigo de verificacion - Nexus Battles VI"
+    }
+  }
+
+  /**
+   * Recuperacion por administrador, y NO por correo verificado.
+   *
+   * Cognito rechaza la combinacion "MFA por correo + recuperacion solo por
+   * correo verificado", y el rechazo es legitimo: si el correo es a la vez el
+   * segundo factor y el unico modo de recuperar la cuenta, el circulo se cierra
+   * sobre si mismo. Quien tenga acceso al correo puede saltarse el MFA pidiendo
+   * una recuperacion, de modo que el segundo factor deja de ser un segundo
+   * factor.
+   *
+   * La alternativa que AWS admite es un mecanismo por telefono, y eso exige SMS:
+   * un rol para SNS, salida del entorno de pruebas y coste por mensaje. Con el
+   * techo de este proyecto no compensa para una demo.
+   *
+   * `admin_only` no se puede combinar con otros mecanismos, y esa es
+   * precisamente la propiedad util aqui: no hay autoservicio de recuperacion, y
+   * eso queda dicho en lugar de aparentar que lo hay.
+   */
   account_recovery_setting {
     recovery_mechanism {
-      name     = "verified_email"
+      name     = "admin_only"
       priority = 1
     }
   }
@@ -111,11 +161,34 @@ resource "aws_cognito_user_pool_client" "web" {
 
   refresh_token_rotation {
     feature = "ENABLED"
+
+    # Explicito aunque cero sea el valor por defecto del servidor: omitirlo hace
+    # que el proveedor devuelva "inconsistent result after apply", porque en la
+    # configuracion es nulo y AWS lo materializa como 0.
+    #
+    # Cero significa que el token anterior deja de valer en cuanto se canjea,
+    # sin ventana de gracia. Es lo estricto, y es lo que se quiere: la ventana
+    # existe para clientes que reintentan en paralelo, y aqui no los hay.
+    retry_grace_period_seconds = 0
   }
 
-  # Solo los flujos que Web necesita. Los de contrasena directa quedan fuera:
-  # obligarian al frontend a manejar credenciales en lugar de delegarlas.
-  explicit_auth_flows = ["ALLOW_REFRESH_TOKEN_AUTH", "ALLOW_USER_SRP_AUTH"]
+  /**
+   * Solo los flujos que Web necesita. Los de contrasena directa quedan fuera:
+   * obligarian al frontend a manejar credenciales en lugar de delegarlas.
+   *
+   * `ALLOW_REFRESH_TOKEN_AUTH` NO aparece, y no es un olvido: Cognito rechaza
+   * la creacion del cliente si se declara junto con la rotacion del token de
+   * refresco.
+   *
+   *   ALLOW_REFRESH_TOKEN_AUTH is not a permitted ExplicitAuthFlow
+   *   when refresh token rotation is enabled.
+   *
+   * Tiene sentido. Con rotacion, el canje de un token de refresco deja de ser un
+   * flujo que el cliente pueda invocar a voluntad y pasa a estar gobernado por
+   * la propia rotacion: cada canje invalida el anterior. Declararlo como flujo
+   * explicito describiria un comportamiento que ya no existe.
+   */
+  explicit_auth_flows = ["ALLOW_USER_SRP_AUTH"]
 
   prevent_user_existence_errors = "ENABLED"
 }
