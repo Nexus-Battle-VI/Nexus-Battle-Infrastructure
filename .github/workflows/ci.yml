@@ -90,6 +90,7 @@ jobs:
           docs/adr/ADR-009-observability.md
           docs/adr/ADR-010-reverse-proxy.md
           docs/adr/ADR-011-deployment-topology.md
+          docs/adr/ADR-012-orm-odm.md
           infra/README.md
           infra/envs/prod/terraform.tfvars.example
           docs/costs/assumptions.md
