@@ -16,6 +16,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  terraform:
+    name: Validacion de Terraform
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+
+      - name: Formato
+        run: terraform fmt -check -recursive -diff infra/
+
+      # `-backend=false` y `validate` no necesitan credenciales de AWS: la
+      # validacion de CI no toca la cuenta ni puede provisionar nada.
+      - name: Inicializar sin backend
+        run: terraform -chdir=infra/envs/prod init -backend=false -input=false
+
+      - name: Validar
+        run: terraform -chdir=infra/envs/prod validate
+
   docs:
     name: Validacion de documentacion
     runs-on: ubuntu-latest
@@ -61,6 +89,9 @@ jobs:
           docs/adr/ADR-008-iac.md
           docs/adr/ADR-009-observability.md
           docs/adr/ADR-010-reverse-proxy.md
+          docs/adr/ADR-011-deployment-topology.md
+          infra/README.md
+          infra/envs/prod/terraform.tfvars.example
           docs/costs/assumptions.md
           docs/costs/sprint-demo-estimate.md
           docs/contracts/service-catalog.md
@@ -127,6 +158,31 @@ jobs:
             " || exit 1
             echo "YAML sin tabulaciones: $file"
           done
+
+      - name: Verificar que ADR-008 y ADR-011 acompanan al codigo de infraestructura
+        run: |
+          # Escribir IaC bajo un ADR que sigue en Proposed produce codigo que
+          # nadie ha ratificado. Si existe infra/, sus ADR deben estar Accepted.
+          if [ -d infra ]; then
+            for adr in docs/adr/ADR-008-iac.md docs/adr/ADR-011-deployment-topology.md; do
+              if ! grep -qE '^\- \*\*Estado:\*\* \*\*Accepted\*\*' "$adr"; then
+                echo "Existe infra/ pero ${adr} no esta Accepted."
+                exit 1
+              fi
+            done
+            echo "Los ADR que respaldan infra/ estan Accepted."
+          fi
+
+      - name: Verificar que la infraestructura no abre ingreso publico
+        run: |
+          # El BLOCKER de ADR-004 impide exponer el sistema a internet. Esta
+          # comprobacion existe para que abrirlo requiera un cambio consciente
+          # que falla en CI, y no un descuido que nadie ve en la revision.
+          if grep -rn '0\.0\.0\.0/0' infra/ --include='*.tfvars.example' ; then
+            echo "El ejemplo de variables abre ingreso publico. Ver ADR-004."
+            exit 1
+          fi
+          echo "El ejemplo de variables no abre ingreso publico."
 
       - name: Verificar ausencia de secretos
         run: |
