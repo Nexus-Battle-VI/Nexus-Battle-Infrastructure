@@ -1,6 +1,6 @@
 # ADR-004 — Identidad, directorio y control de acceso
 
-- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **El BLOCKER sigue ACTIVO** hasta que el adaptador esté implementado
+- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **El BLOCKER sigue ACTIVO**: nada esta expuesto a internet, y el segundo factor no es el que este ADR previo
 - **Fecha:** 2026-08-21, aceptado el 2026-08-25
 - **Decide:** Arquitectura, con aprobación obligatoria de gobierno del proyecto y presupuesto
 - **Relacionado:** [ADR-007](ADR-007-aws-cost-optimized-platform.md)
@@ -58,7 +58,7 @@ Se decidió **no añadir comprobaciones de rol sin identidad verificable**. Un `
 ## Camino de resolución
 
 ```text
-1. Aprobar un proveedor de identidad        -> HECHO: Cognito Essentials
+1. Aprobar un proveedor de identidad        -> HECHO: Cognito Essentials, aprovisionado
 2. Adaptador del alta de sujetos             -> PENDIENTE: opera FakeIdentityProvider
 3. Validar el testimonio                     -> HECHO: JWKS del pool, aws-jwt-verify
 4. Cada servicio valida el testimonio        -> HECHO: los cinco servicios NestJS
@@ -85,7 +85,9 @@ En los tres casos con propiedad, un recurso ajeno responde **404 y no 403**: dis
 
 Con la autenticación desactivada no se deja pasar sin más: se atribuye el sujeto literal `anonymous`. Sin proveedor **no se sabe** quién realiza la petición, y el dato que se guarde debe decirlo. Un hilo firmado por `anonymous` es honesto; uno firmado por un identificador sin verificar, no.
 
-**El sistema sigue sin poder exponerse a internet hasta que exista el pool real**, porque nada de lo anterior sirve sin un emisor de testimonios.
+El pool real **ya existe**: `us-east-1_HrEiSzzKW`, con sus tres grupos —`PLAYER`, `MODERATOR`, `ADMINISTRATOR`— y el cliente de Web con codigo de autorizacion y PKCE. El emisor de testimonios que faltaba esta en pie.
+
+**Aun asi el sistema no esta expuesto**, y es deliberado: `public_ingress_cidrs` sigue vacio y los grupos de seguridad no tienen ninguna regla de entrada desde internet. Exponerlo es una decision aparte de tener identidad, y se toma cuando haya algo desplegado que valga la pena exponer.
 
 Notas de implementación que condicionan los pasos 2 a 4:
 
@@ -105,6 +107,42 @@ Opciones evaluadas, con precios reales de la Price List API en `us-east-1` al 20
 | Cognito user pool, plan Plus | 0,020 USD/MAU | Descartada: su valor añadido es protección frente a amenazas, que no es el problema a resolver |
 | IdP autoalojado en la misma EC2 | Solo cómputo ya presupuestado | Descartada: añade custodia de credenciales, justo lo que este ADR evita |
 | Managed Microsoft AD | Varias veces el techo mensual completo | Descartada por coste |
+
+### El MFA por correo exige SES, y este ADR no lo contemplo
+
+Al aprovisionar el pool, Cognito rechazo la configuracion que este ADR daba por
+hecha:
+
+```
+InvalidParameterException: Cannot set EmailMfaConfiguration when user pool
+EmailConfiguration contains an EmailSendingAccount of COGNITO_DEFAULT.
+```
+
+El emisor de correo por defecto de Cognito **no sirve** para el segundo factor.
+Para usarlo hace falta SES con una identidad verificada, y salir de su entorno
+de pruebas para poder escribir a cualquiera.
+
+Hubo un segundo rechazo, y su motivo merece anotarse porque es correcto:
+
+```
+Cannot set EmailMfaConfiguration when user pool AccountRecoverySetting
+is not set or contains only verified_email in RecoveryMechanisms.
+```
+
+Si el correo es a la vez el segundo factor y el unico modo de recuperar la
+cuenta, el circulo se cierra sobre si mismo: quien tenga el correo se salta el
+MFA pidiendo una recuperacion, y el segundo factor deja de serlo. La
+recuperacion quedo en `admin_only`, que no se puede combinar con otros
+mecanismos — y esa es justo la propiedad util: **no hay autoservicio de
+recuperacion**, y queda dicho en lugar de aparentar que lo hay.
+
+**Estado actual: el segundo factor es una aplicacion autenticadora (TOTP)**, no
+correo. No cuesta nada, no necesita SES, y es mas fuerte: un codigo por correo
+lo intercepta quien tenga acceso al correo.
+
+Volver al correo es aprovisionar SES y cambiar una variable
+(`mfa_method = "email"`). Es una decision pendiente, no un olvido, y hasta que se
+tome **este ADR no describe lo que hay desplegado en ese punto**.
 
 ### Por qué Essentials y no Lite
 
