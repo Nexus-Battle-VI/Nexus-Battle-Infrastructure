@@ -198,3 +198,19 @@ jobs:
             exit 1
           fi
           echo "Sin secretos detectados."
+
+      # La composicion de referencia se valida de verdad, no solo como YAML.
+      #
+      # `config` resuelve el fichero entero: comprueba que cada `depends_on`
+      # apunta a un servicio que existe, que las condiciones son validas y que
+      # no hay ciclos. Un fichero sintacticamente correcto puede describir un
+      # grafo que no arranca, y eso no se ve leyendolo.
+      #
+      # No comprueba que las imagenes existan ni que los servicios funcionen:
+      # para eso haria falta levantar el stack, que no es trabajo de este job.
+      - name: Validar la composicion de referencia
+        run: |
+          cp compose/compose.example.yml compose/compose.yml
+          docker compose -f compose/compose.yml config > /dev/null
+          rm compose/compose.yml
+          echo "Composicion valida."
