@@ -79,12 +79,34 @@ No es un impedimento —se resuelve fijando `7.10.0` en ambos paquetes, que es l
 
 | Herramienta | Versión | Nota |
 | --- | --- | --- |
-| **Driver oficial `mongodb`** | `7.6.0` | Documentos planos, sin capa intermedia |
+| **Driver oficial `mongodb`** | `6.21.0` | Documentos planos, sin capa intermedia |
 | **Mongoose** | `9.9.4` | ODM con esquemas y validación propias |
 
 **Mongoose duplicaría la validación.** `Quantity` ya impide un saldo negativo o fraccionario, `Money` ya impide importes fraccionarios y la capacidad del inventario ya se aplica en el agregado. Un esquema de Mongoose repitiendo esas reglas crea **dos sitios donde la verdad puede divergir**, y el día que diverjan ganará el que no debería.
 
 El driver oficial entrega documentos planos, que es justo la forma de la instantánea que el repositorio ya maneja.
+
+### La versión anotada era `7.6.0`, y no conecta
+
+Este ADR anotó `7.6.0` porque era la publicada como `latest`. Al implementar el adaptador de Catalog contra un MongoDB 8.0 real, el servidor rechaza el saludo:
+
+```
+MongoServerSelectionError: Missing required sub-document 'driver'
+in the client metadata document
+    at ... node_modules/mongodb/src/sdam/monitor.ts:388:7
+```
+
+No es el código del servicio: la traza apunta al **monitor** del driver. Y el driver siempre incluye `driver` en el saludo inicial —se lee en su propio `client_metadata.js`, que lanza si no cabe en los 512 bytes—, así que lo que falla es la ruta del monitor, donde el saludo continuo omite los metadatos por especificación.
+
+Se comprobó cambiando **una sola variable**, la versión del driver, con la misma imagen del servidor: con `6.21.0` conecta y la suite completa pasa.
+
+**La decisión no cambia** —driver oficial, no ODM—; lo que cambia es la versión, y queda dicho por qué. La línea `7.x` se podrá adoptar cuando esto se corrija aguas arriba, y entonces será un cambio de una línea en `package.json` respaldado por la suite contra motor real.
+
+### Un detalle que la implementación obliga a fijar
+
+Por defecto el driver **promociona** un entero de 64 bits a número de JavaScript cuando cabe en 53 bits, y lo deja como `Long` cuando no. Es decir, el tipo que recibe la traducción **depende del valor**, de modo que la comprobación de exactitud solo se ejercita con importes grandes: un camino que nadie prueba.
+
+Los adaptadores de MongoDB fijan `promoteLongs: false`. Siempre llega un `Long`, y la comprobación se aplica siempre.
 
 ## Decisión
 
