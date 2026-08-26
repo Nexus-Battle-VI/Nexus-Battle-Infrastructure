@@ -35,11 +35,11 @@ Las otras cuatro dependen de un proveedor que **no existe todavía**.
 
 ## BLOCKER — Identity provider approval
 
-**Estado del blocker al 2026-08-25: la aprobación existe, la implementación no.**
+**Estado del blocker al 2026-08-25: el código está listo, el proveedor no existe todavía.**
 
-Ya hay proveedor autorizado y presupuesto ([ADR-007](ADR-007-aws-cost-optimized-platform.md) está `Accepted`). Eso resuelve el paso 1 del camino de resolución y **solo el paso 1**.
+Los cinco servicios validan el testimonio y aplican control de acceso. Lo que falta no es código de producto: es **el user pool de Cognito**, que Terraform describe pero que no se ha aplicado.
 
-**Elegir el proveedor no protege ni un solo endpoint.** Mientras el adaptador OIDC no sustituya a `FakeIdentityProvider` y los servicios no validen el testimonio, todo lo que sigue continúa siendo cierto sin ningún matiz.
+La tabla siguiente describe lo que ocurre **si el sistema se despliega sin ese pool**, es decir con `AUTH_MODE=disabled`. Sigue siendo exacta, con un matiz que antes no existía: ahora el sujeto que se registra es literalmente `anonymous`, de modo que los datos dicen que nadie fue verificado en lugar de aparentar personas concretas.
 
 Consecuencia directa y declarada en todos los servicios afectados:
 
@@ -58,16 +58,34 @@ Se decidió **no añadir comprobaciones de rol sin identidad verificable**. Un `
 ## Camino de resolución
 
 ```text
-1. Aprobar un proveedor de identidad        -> HECHO el 2026-08-25: Cognito Essentials
-2. Implementar el adaptador OIDC             -> sustituye a FakeIdentityProvider
-3. Account emite o valida el testimonio      -> JWT verificable contra el JWKS del pool
-4. Cada servicio valida el testimonio        -> guard comun en el borde HTTP
-5. Activar RBAC en las operaciones sensibles -> las reglas ya existen en Account
+1. Aprobar un proveedor de identidad        -> HECHO: Cognito Essentials
+2. Adaptador del alta de sujetos             -> PENDIENTE: opera FakeIdentityProvider
+3. Validar el testimonio                     -> HECHO: JWKS del pool, aws-jwt-verify
+4. Cada servicio valida el testimonio        -> HECHO: los cinco servicios NestJS
+5. Activar RBAC en operaciones sensibles     -> HECHO
 ```
 
-El paso 1 está resuelto. Del 2 al 5 son trabajo conocido y ya no bloqueado: es implementación pendiente, no incertidumbre.
+**Cuatro de los cinco pasos están implementados.** Falta el 2, y su alcance se ha reducido: `POST /accounts` toma el sujeto del testimonio, de modo que el alta en el proveedor ya no la hace el producto. `IdentityProviderPort.register` solo se usa cuando la autenticación está desactivada.
 
-**Hasta completar el paso 5, el sistema sigue sin poder exponerse a internet.**
+### Qué protege ya cada servicio
+
+| Servicio | Antes | Ahora |
+| --- | --- | --- |
+| Account | Cualquier testimonio leía cualquier cuenta | El agregado guarda su `subject`. `/me` resuelve la propia; `/:id` exige `ADMINISTRATOR` |
+| Catalog | Crear, publicar, archivar y cambiar precio no exigían nada | Rol `ADMINISTRATOR` |
+| Community | `authorId` y `moderatorId` los declaraba el cliente | Salen del `sub`. Moderar exige `MODERATOR` o `ADMINISTRATOR` |
+| Commerce | `customerId` lo declaraba el cliente | Sale del `sub`. Un pedido ajeno responde 404 |
+| Player-Inventory | El `ownerId` de la URL no se comprobaba | Debe coincidir con el `sub` |
+
+En los tres casos con propiedad, un recurso ajeno responde **404 y no 403**: distinguirlos confirmaría que existe, y con eso se pueden enumerar recursos ajenos probando identificadores.
+
+### La regla que hace inaplazable el paso 2
+
+**Un binario de producción sin verificación de identidad no arranca.** Con `NODE_ENV=production` y `AUTH_MODE=disabled`, la carga de configuración falla y el servicio no llega a escuchar. Un aviso en el registro se pasa por alto; un arranque que falla, no.
+
+Con la autenticación desactivada no se deja pasar sin más: se atribuye el sujeto literal `anonymous`. Sin proveedor **no se sabe** quién realiza la petición, y el dato que se guarde debe decirlo. Un hilo firmado por `anonymous` es honesto; uno firmado por un identificador sin verificar, no.
+
+**El sistema sigue sin poder exponerse a internet hasta que exista el pool real**, porque nada de lo anterior sirve sin un emisor de testimonios.
 
 Notas de implementación que condicionan los pasos 2 a 4:
 

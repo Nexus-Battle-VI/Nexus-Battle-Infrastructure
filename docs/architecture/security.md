@@ -11,12 +11,16 @@ No es un descuido. Es un **BLOCKER declarado**, y al 2026-08-25 su estado es est
 | Paso | Estado |
 | --- | --- |
 | Elegir proveedor y presupuesto | **Hecho**: Cognito, plan Essentials |
-| Implementar el adaptador OIDC | Pendiente |
-| Emitir y validar el JWT | Pendiente |
-| Validar el testimonio en cada servicio | Pendiente |
-| Activar RBAC en operaciones sensibles | Pendiente |
+| Adaptador del alta de sujetos | Pendiente |
+| Validar el JWT contra el JWKS | **Hecho** |
+| Validar el testimonio en cada servicio | **Hecho**: los cinco servicios NestJS |
+| Activar RBAC en operaciones sensibles | **Hecho** |
 
-**Elegir el proveedor no protege ni un solo endpoint.** Todo lo que sigue en esta sección continúa siendo cierto hasta completar los cuatro pasos pendientes.
+**Lo que falta ya no es código de producto: es el user pool.** Terraform lo describe y no se ha aplicado.
+
+La tabla de arriba describe lo que ocurre si el sistema se despliega **sin** ese pool, con `AUTH_MODE=disabled`. En ese caso el sujeto registrado es literalmente `anonymous`: los datos dicen que nadie fue verificado, en lugar de aparentar personas concretas.
+
+Y con `NODE_ENV=production`, esa configuración **impide arrancar el servicio**.
 
 | Servicio | Qué queda sin proteger |
 | --- | --- |
