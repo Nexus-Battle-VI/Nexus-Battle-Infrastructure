@@ -312,11 +312,14 @@ services:
     pids_limit: 256
     environment:
       POSTGRES_USER: nexus
-      POSTGRES_PASSWORD: cambiar
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cambiar}
       POSTGRES_DB: nexus
+      # La usan los scripts de `docker-entrypoint-initdb.d` para crear los
+      # usuarios de cada servicio. Sin ella la inicializacion se aborta.
+      DB_PASSWORD: ${DB_PASSWORD:-cambiar}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./init-postgres.sh:/docker-entrypoint-initdb.d/init.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U nexus']
       interval: 10s
@@ -333,7 +336,8 @@ services:
     # puede leer la base de otro, aunque cada uno use la suya.
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: cambiar
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-cambiar}
+      DB_PASSWORD: ${DB_PASSWORD:-cambiar}
     volumes:
       - mongo-data:/data/db
       - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro

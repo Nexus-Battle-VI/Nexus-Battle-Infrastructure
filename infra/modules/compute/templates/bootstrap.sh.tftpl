@@ -54,6 +54,12 @@ ${contenido}
 NEXUS_FICHERO_EOF
 %{ endfor ~}
 
+# `cat` no conserva el bit de ejecucion. Importa: el entrypoint de la imagen de
+# PostgreSQL EJECUTA los `.sh` de `docker-entrypoint-initdb.d` si son
+# ejecutables y los SOURCEA si no, y sourcear uno con `set -euo pipefail`
+# dejaria esas opciones activas en la shell del propio entrypoint.
+chmod +x /opt/nexus/*.sh 2>/dev/null || true
+
 # El `.env` que acompana a la composicion. Se escribe con permisos 0600: lleva
 # la contrasena de las bases, y `user_data` ya es legible desde la instancia por
 # quien pueda consultar los metadatos, asi que no hace falta ampliarlo mas.
