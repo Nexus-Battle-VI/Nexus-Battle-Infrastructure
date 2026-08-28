@@ -28,11 +28,56 @@ resource "aws_iam_role" "node" {
   tags               = var.tags
 }
 
-# Unica politica adjunta. No se concede nada mas: un nodo de esta topologia no
-# necesita leer ni escribir ningun servicio de AWS.
+# SSM para administracion. Cognito Admin* (mas abajo) es la SEGUNDA y ultima
+# concesion a este rol: un nodo de esta topologia no necesita leer ni escribir
+# ningun otro servicio de AWS.
 resource "aws_iam_role_policy_attachment" "ssm" {
   role       = aws_iam_role.node.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+/**
+ * Autorizacion IAM para el login server-side de Account (HU-02).
+ *
+ * `AdminInitiateAuth`/`AdminRespondToAuthChallenge` son las operaciones que
+ * Cognito exige de verdad para `AuthFlow = ADMIN_USER_PASSWORD_AUTH`: a
+ * diferencia de `InitiateAuth` publico, estas dos van firmadas con
+ * credenciales de AWS, y por eso son las que dejan la autorizacion en IAM y no
+ * en el `client_id`. Acotadas por `Resource` a un unico pool: ni "*" ni
+ * `cognito-idp:*`, que concederia tambien crear o borrar pools, usuarios o
+ * clientes de aplicacion.
+ *
+ * BLOCKER DE TOPOLOGIA — declarado y no disimulado: este rol es el UNICO que
+ * existe para el nodo `app` (ver `aws_iam_instance_profile.node` mas abajo), y
+ * ADR-011 pone los seis contenedores del nodo `app` -proxy, web, account,
+ * inventory, catalog, community, commerce- en la MISMA instancia EC2. Docker
+ * no aisla por contenedor el acceso al servicio de metadatos (169.254.169.254,
+ * IMDSv2): cualquier contenedor de ese nodo puede, en la practica, obtener las
+ * mismas credenciales que Account y llamar estas dos acciones, no solo
+ * Account. No existe hoy un mecanismo para restringir esto por contenedor sin
+ * cambiar de topologia (roles de tarea de ECS/Fargate, ServiceAccounts de
+ * Kubernetes, o una instancia por servicio) -precisamente lo que ADR-011
+ * descarto por coste-, y no se inventa aqui uno nuevo. Aislar esto de verdad
+ * es una decision arquitectonica futura, no un ajuste de esta rama.
+ */
+data "aws_iam_policy_document" "cognito_admin_auth" {
+  statement {
+    sid    = "AccountAdminAuth"
+    effect = "Allow"
+
+    actions = [
+      "cognito-idp:AdminInitiateAuth",
+      "cognito-idp:AdminRespondToAuthChallenge",
+    ]
+
+    resources = [var.cognito_user_pool_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "cognito_admin_auth" {
+  name   = "${var.name}-cognito-admin-auth"
+  role   = aws_iam_role.node.name
+  policy = data.aws_iam_policy_document.cognito_admin_auth.json
 }
 
 resource "aws_iam_instance_profile" "node" {

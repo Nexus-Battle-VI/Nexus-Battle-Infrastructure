@@ -99,6 +99,7 @@ module "compute" {
   arrancar_stack        = var.arrancar_stack
   compose_plugin_url    = var.compose_plugin_url
   compose_plugin_sha256 = var.compose_plugin_sha256
+  cognito_user_pool_arn = module.identity.user_pool_arn
 
   # El presupuesto y las alertas existen antes que cualquier recurso de computo.
   # Esta dependencia lo convierte en una garantia del grafo, no en una costumbre.

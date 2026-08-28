@@ -95,3 +95,12 @@ variable "compose_plugin_sha256" {
   DESC
   type        = string
 }
+
+variable "cognito_user_pool_arn" {
+  description = <<-DESC
+    ARN del user pool contra el que Account invoca AdminInitiateAuth /
+    AdminRespondToAuthChallenge (HU-02). Acota la policy de IAM a este pool
+    exacto, nunca a "*".
+  DESC
+  type        = string
+}
