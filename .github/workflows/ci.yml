@@ -193,14 +193,36 @@ jobs:
           # Se excluye .github porque este mismo workflow contiene los patrones
           # de busqueda y coincidiria consigo mismo.
           #
+          # Mencionar el nombre AWS_SECRET_ACCESS_KEY en documentacion NO es un
+          # secreto. Para esa variable se exige una asignacion (= o :) seguida
+          # de un valor con forma de credencial. Asi una explicacion tecnica no
+          # produce falsos positivos, pero una clave escrita realmente en
+          # .env/HCL/YAML/JSON sigue haciendo fallar el CI.
+          #
           # Las credenciales de la composicion de referencia no se detectan
           # porque son literalmente la palabra "cambiar": estan declaradas como
           # ejemplo y acompanadas de la instruccion de sustituirlas.
-          if grep -rniE 'aws_secret_access_key|BEGIN [A-Z ]*PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}' \
+          secret_pattern="aws_secret_access_key[\\\"']?[[:space:]]*[:=][[:space:]]*[\\\"']?[A-Za-z0-9/+=]{20,}|BEGIN [A-Z ]*PRIVATE KEY|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}"
+
+          # Autoprueba del propio detector:
+          # 1. Una referencia documental al nombre debe pasar.
+          # 2. Una asignacion ficticia con forma de clave debe detectarse.
+          if printf '%s\\n' 'AWS_SECRET_ACCESS_KEY' | grep -qiE "$secret_pattern"; then
+            echo "El detector confunde el nombre de una variable con un secreto."
+            exit 1
+          fi
+
+          if ! printf '%s\\n' 'AWS_SECRET_ACCESS_KEY=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' | grep -qiE "$secret_pattern"; then
+            echo "El detector no reconoce una Secret Access Key asignada."
+            exit 1
+          fi
+
+          if grep -rniE "$secret_pattern" \
                --exclude-dir=.git --exclude-dir=.github . ; then
             echo "Se detecto un posible secreto."
             exit 1
           fi
+
           echo "Sin secretos detectados."
 
       # La composicion de referencia se valida de verdad, no solo como YAML.

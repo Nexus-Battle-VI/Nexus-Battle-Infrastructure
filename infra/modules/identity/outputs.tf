@@ -2,6 +2,11 @@ output "user_pool_id" {
   value = aws_cognito_user_pool.this.id
 }
 
+output "user_pool_arn" {
+  description = "Para acotar permisos de IAM (p. ej. cognito-idp:AdminInitiateAuth) a este pool y ninguno mas."
+  value       = aws_cognito_user_pool.this.arn
+}
+
 output "client_id" {
   description = "Identificador del cliente publico. No es un secreto: viaja en la URL de inicio de sesion."
   value       = aws_cognito_user_pool_client.web.id

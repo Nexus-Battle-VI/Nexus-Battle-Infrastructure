@@ -22,6 +22,7 @@ navegador -> Caddy :8080
                |
                +-- /                -> Web
                +-- /api/accounts    -> Account      :3000
+               +-- /api/sessions    -> Account      :3000
                +-- /api/inventories -> Inventory    :3002
                +-- /api/products    -> Catalog      :3003
                +-- /api/threads     -> Community    :3004

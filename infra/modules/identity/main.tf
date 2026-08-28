@@ -16,8 +16,18 @@ resource "aws_cognito_user_pool" "this" {
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
 
+  /**
+   * `minimum_length = 9`, no 12.
+   *
+   * HU-01 (CA-03) exige contrasena de "mas de ocho caracteres": nueve es la
+   * primera longitud que lo cumple. Doce no tiene ninguna aclaracion formal del
+   * cliente ni del profesor que lo autorice (auditado contra el backlog de
+   * Management al preparar esta rama) — era una politica mas estricta que la
+   * HU sin decision que la respalde, y este ADR no debe inventarla. No es
+   * `ForceNew`: se aplica sobre el pool existente sin reemplazarlo.
+   */
   password_policy {
-    minimum_length                   = 12
+    minimum_length                   = 9
     require_lowercase                = true
     require_uppercase                = true
     require_numbers                  = true
@@ -112,9 +122,13 @@ resource "aws_cognito_user_pool" "this" {
 # ---------------------------------------------------------------------------
 resource "aws_cognito_user_group" "roles" {
   for_each = {
-    ADMINISTRATOR = { precedence = 1, description = "Gestiona catalogo y roles" }
-    MODERATOR     = { precedence = 2, description = "Modera hilos y mensajes" }
-    PLAYER        = { precedence = 3, description = "Rol base, no puede retirarse" }
+    # Unico Super Administrador raiz del sistema (HU-02). Este bloque SOLO crea
+    # el grupo de Cognito: no crea la cuenta, no le asigna contrasena, no
+    # aprovisiona ningun usuario y no asigna el rol a nadie. Eso es HU-39.
+    SUPER_ADMINISTRATOR = { precedence = 0, description = "Rol raiz unico, gestion total del sistema" }
+    ADMINISTRATOR       = { precedence = 1, description = "Gestiona catalogo y roles" }
+    MODERATOR           = { precedence = 2, description = "Modera hilos y mensajes" }
+    PLAYER              = { precedence = 3, description = "Rol base, no puede retirarse" }
   }
 
   name         = each.key
@@ -124,11 +138,30 @@ resource "aws_cognito_user_group" "roles" {
 }
 
 # ---------------------------------------------------------------------------
-# Cliente de aplicacion para Web.
+# Cliente de aplicacion — Web y, con IAM de por medio, Account.
 #
 # PUBLICO: sin secreto de cliente. Un secreto embebido en el navegador no es un
 # secreto, y Cognito exigiria un SECRET_HASH que el navegador no puede proteger.
-# El flujo es codigo de autorizacion con PKCE.
+# El flujo de Web es codigo de autorizacion con PKCE.
+#
+# Sigue siendo UN SOLO cliente y no dos, a proposito: los cuatro servicios de
+# dominio (Catalog, Commerce, Community, Player-Inventory) verifican el
+# `client_id` del token contra un UNICO valor de `COGNITO_CLIENT_ID` compartido
+# (PR #13) — ninguno acepta una lista. Provisionar un segundo cliente para
+# Account emitiria tokens que esos cuatro servicios rechazarian con 401 sin
+# tocar su codigo, que esta fuera del alcance de este repositorio. Aislar el
+# flujo de Account de verdad exige que los cinco servicios acepten varios
+# `client_id` validos — trabajo futuro de varios repositorios, no de este PR.
+#
+# Lo que SI separa el flujo de Account del de Web no es un cliente distinto,
+# es IAM: `ALLOW_ADMIN_USER_PASSWORD_AUTH` (mas abajo) solo lo puede invocar
+# quien tenga el permiso `cognito-idp:AdminInitiateAuth`/
+# `AdminRespondToAuthChallenge` firmado con credenciales de AWS validas — ver
+# el rol de instancia en el modulo `compute`. El `client_id` de este cliente es
+# publico (viaja en el bundle de Web), pero de nada le sirve a quien no tenga
+# esas credenciales: no puede invocar el flujo de administrador solo con el
+# `client_id`, a diferencia de `ALLOW_USER_PASSWORD_AUTH`, que este modulo
+# deliberadamente NO habilita aqui por esa misma razon.
 # ---------------------------------------------------------------------------
 resource "aws_cognito_user_pool_client" "web" {
   name         = "${var.name}-web"
@@ -173,8 +206,19 @@ resource "aws_cognito_user_pool_client" "web" {
   }
 
   /**
-   * Solo los flujos que Web necesita. Los de contrasena directa quedan fuera:
-   * obligarian al frontend a manejar credenciales en lugar de delegarlas.
+   * `ALLOW_USER_SRP_AUTH`: Web, desde el navegador.
+   *
+   * `ALLOW_ADMIN_USER_PASSWORD_AUTH`: Account, server-side, para
+   * `AdminInitiateAuth`/`AdminRespondToAuthChallenge` (HU-02). Deliberadamente
+   * NO es `ALLOW_USER_PASSWORD_AUTH`: esa variante no exige IAM, solo el
+   * `client_id`, que es publico porque viaja en el bundle de Web — habilitarla
+   * abriria un camino directo a Cognito que se salta por completo el guard
+   * aplicativo de Account (CA-06: Administrator/SuperAdministrator no pueden
+   * autenticar sin el segundo factor). La variante Admin exige ademas una
+   * peticion firmada con credenciales de AWS con el permiso
+   * `cognito-idp:AdminInitiateAuth` sobre este pool -ver el rol de instancia en
+   * el modulo `compute`-, que nadie fuera de la infraestructura del proyecto
+   * tiene. El `client_id` publico deja de ser suficiente por si solo.
    *
    * `ALLOW_REFRESH_TOKEN_AUTH` NO aparece, y no es un olvido: Cognito rechaza
    * la creacion del cliente si se declara junto con la rotacion del token de
@@ -188,7 +232,7 @@ resource "aws_cognito_user_pool_client" "web" {
    * la propia rotacion: cada canje invalida el anterior. Declararlo como flujo
    * explicito describiria un comportamiento que ya no existe.
    */
-  explicit_auth_flows = ["ALLOW_USER_SRP_AUTH"]
+  explicit_auth_flows = ["ALLOW_USER_SRP_AUTH", "ALLOW_ADMIN_USER_PASSWORD_AUTH"]
 
   prevent_user_existence_errors = "ENABLED"
 }
