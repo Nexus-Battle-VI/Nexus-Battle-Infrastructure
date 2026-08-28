@@ -77,8 +77,8 @@ locals {
     data = {
       compose = file("${local.compose_dir}/nodes/data.yml")
       ficheros = {
-        "init-postgres.sql" = file("${local.compose_dir}/init-postgres.sql")
-        "init-mongo.js"     = file("${local.compose_dir}/init-mongo.js")
+        "init-postgres.sh" = file("${local.compose_dir}/init-postgres.sh")
+        "init-mongo.js"    = file("${local.compose_dir}/init-mongo.js")
       }
       entorno = {
         DB_PASSWORD = var.db_password

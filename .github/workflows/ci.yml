@@ -102,7 +102,7 @@ jobs:
           compose/.env.example
           compose/nodes/app.yml
           compose/nodes/data.yml
-          compose/init-postgres.sql
+          compose/init-postgres.sh
           compose/init-mongo.js
           "
           for file in $required; do
