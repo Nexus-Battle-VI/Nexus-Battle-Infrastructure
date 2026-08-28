@@ -145,10 +145,18 @@ resource "aws_instance" "node" {
 
   # IMDSv2 obligatorio. Con IMDSv1 basta una vulnerabilidad de peticion del lado
   # del servidor para leer las credenciales del rol de la instancia.
+  #
+  # `http_put_response_hop_limit = 2`, no 1: la peticion a IMDS sale de un
+  # contenedor Docker, que es un salto de red adicional sobre el host. Con
+  # limite 1 la respuesta no vuelve a atravesarlo y el contenedor no recibe el
+  # token de IMDSv2 -es la recomendacion de AWS para hosts con contenedores-,
+  # que es exactamente como corre Account (y el resto de servicios) en este
+  # nodo. Coherente con lo ya documentado aqui mismo: las credenciales del rol
+  # de instancia se comparten a nivel de nodo, no de contenedor.
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
-    http_put_response_hop_limit = 1
+    http_put_response_hop_limit = 2
   }
 
   root_block_device {
