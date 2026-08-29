@@ -10,17 +10,19 @@ terraform {
     }
   }
 
-  # Estado local por ahora. El backend S3 con bloqueo esta descrito en
-  # infra/README.md y se activa cuando exista el bucket: crearlo requiere una
-  # primera aplicacion con estado local, y ese orden hay que respetarlo.
+  # El bucket ya existe (`modules/tfstate`, aplicado). El orden que exigia
+  # crearlo con estado local antes de declarar el backend esta cumplido.
   #
-  # backend "s3" {
-  #   bucket       = "nexus-battles-vi-tfstate"
-  #   key          = "envs/prod/terraform.tfstate"
-  #   region       = "us-east-1"
-  #   encrypt      = true
-  #   use_lockfile = true
-  # }
+  # `use_lockfile` usa escrituras condicionales de S3 para el bloqueo: no
+  # necesita DynamoDB, que ademas esta prohibida en este proyecto. Exige
+  # Terraform 1.10, de ahi `required_version` arriba.
+  backend "s3" {
+    bucket       = "nexus-battles-vi-tfstate"
+    key          = "envs/prod/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
