@@ -103,6 +103,7 @@ locals {
       "${path.module}/templates/bootstrap.sh.tftpl",
       {
         rol            = nodo.role
+        data_host      = var.nodes["data"].private_ip
         compose        = var.bootstrap[nodo.role].compose
         ficheros       = var.bootstrap[nodo.role].ficheros
         entorno        = var.bootstrap[nodo.role].entorno
