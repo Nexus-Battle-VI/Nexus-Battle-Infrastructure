@@ -56,9 +56,14 @@ note bottom of ec2
 end note
 
 note top of internet
-  **NO DESPLEGAR sin resolver ADR-004**
-  Ningun servicio verifica quien
-  realiza la peticion.
+  **NO EXPUESTO A INTERNET**, y no por falta
+  de identidad: los cinco servicios verifican
+  el testimonio (AUTH_MODE=jwt).
+
+  `public_ingress_cidrs` esta vacio. Y la unica
+  URL de retorno registrada en Cognito es la de
+  desarrollo local, asi que exponerlo son dos
+  cambios acoplados, no uno.
 end note
 
 @enduml

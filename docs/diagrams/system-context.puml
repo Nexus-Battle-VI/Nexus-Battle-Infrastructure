@@ -1,12 +1,14 @@
 @startuml system-context
 !theme plain
-title Nexus Battles VI — Contexto del sistema (Sprint 1)
+title Nexus Battles VI — Contexto del sistema (2026-08-29)
 
 skinparam defaultFontName sans-serif
 skinparam rectangle {
   BackgroundColor<<sistema>> #E8F0FE
   BackgroundColor<<pendiente>> #FFF4E5
   BorderColor<<pendiente>> #E0A800
+  BackgroundColor<<externo>> #E6F4EA
+  BorderColor<<externo>> #34A853
 }
 skinparam note {
   BackgroundColor #FFF9E6
@@ -27,7 +29,7 @@ rectangle "Nexus Battles VI" <<sistema>> as sistema {
   rectangle "Notifications" as notifications
 }
 
-rectangle "Proveedor de identidad" <<pendiente>> as idp
+rectangle "Amazon Cognito\nus-east-1_HrEiSzzKW" <<externo>> as idp
 rectangle "Proveedor de correo" <<pendiente>> as mail
 rectangle "Directorio corporativo" <<pendiente>> as ad
 
@@ -35,26 +37,47 @@ jugador --> web : HTTPS
 moderador --> web : HTTPS
 admin --> web : HTTPS
 
-web --> account
-web --> inventory
-web --> catalog
-web --> community
-web --> commerce
+web --> idp : alta e inicio de sesion\n(codigo de autorizacion + PKCE)
+web --> account : con testimonio
+web --> inventory : con testimonio
+web --> catalog : con testimonio
+web --> community : con testimonio
+web --> commerce : con testimonio
 
-account ..> idp : IdentityProviderPort\n**NO EXISTE**
+account ..> idp : AuthenticationProviderPort\n(login server-side)
+account ..> idp : RoleDirectoryPort\n(refleja el rol)
+inventory ..> idp : verifica el testimonio\ncontra el JWKS
+catalog ..> idp
+community ..> idp
+commerce ..> idp
+
 notifications ..> mail : EmailSenderPort\n**NO INTEGRADO**
 idp ..> ad : **NO PROVISIONADO**\n(coste)
 
 note bottom of idp
-  BLOCKER — ADR-004
-  Sin proveedor de identidad autorizado.
-  Ningun servicio verifica quien realiza
-  la peticion.
+  Aprovisionado y **en uso**. Los cinco servicios
+  verifican el testimonio (AUTH_MODE=jwt).
+
+  Account **no crea identidades**: el alta ocurre
+  en la pantalla del proveedor. Lo que Account si
+  hace es reflejar el rol, para que viaje dentro
+  del testimonio que leen los otros cuatro.
+
+  ABIERTO: el segundo factor de los roles
+  administrativos exige SES, no aprobado.
 end note
 
 note bottom of mail
   Opera FakeEmailSender.
   En local, Mailpit por SMTP.
+end note
+
+note right of web
+  **No expuesto a internet.**
+  `public_ingress_cidrs` vacio, y la unica URL
+  de retorno registrada es la de desarrollo
+  local. Exponerlo obliga a cambiar las dos
+  cosas a la vez.
 end note
 
 @enduml

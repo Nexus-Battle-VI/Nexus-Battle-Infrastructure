@@ -1,6 +1,6 @@
 # ADR-004 — Identidad, directorio y control de acceso
 
-- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **Queda ABIERTO** el segundo factor de los roles administrativos, que no es el que este ADR previó
+- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **El rol viaja en el testimonio** desde el 2026-08-29 (Account decide, el pool refleja). **Queda ABIERTO** el segundo factor de los roles administrativos, que no es el que este ADR previó
 - **Fecha:** 2026-08-21, aceptado el 2026-08-25
 - **Decide:** Arquitectura, con aprobación obligatoria de gobierno del proyecto y presupuesto
 - **Relacionado:** [ADR-007](ADR-007-aws-cost-optimized-platform.md)
@@ -29,8 +29,8 @@ Las otras cuatro dependen de un proveedor que **no existe todavía**.
 
 1. **No se provisiona Managed Microsoft AD** en el alcance de Sprint 1. Su coste fijo excede por sí solo el techo completo.
 2. **El producto no almacena contraseñas propias.** Ni hashes, ni sales, ni tokens de sesión, ni secretos de segundo factor. El agregado `Account` modela cuenta y roles, no credenciales.
-3. Se define **`IdentityProviderPort`** como frontera: alta, consulta y baja del sujeto de identidad. Es lo único que el dominio conoce del proveedor.
-4. En Foundation opera **`FakeIdentityProvider`**, implementación completa del puerto sobre almacenamiento en memoria y sin credenciales. No es una simulación del comportamiento: es una implementación real de un contrato deliberadamente estrecho.
+3. ~~Se define **`IdentityProviderPort`** como frontera: alta, consulta y baja del sujeto de identidad.~~ **Superado el 2026-08-29**: el producto dejó de dar de alta identidades, el puerto se quedó sin consumidores y se eliminó. La frontera hoy son tres contratos estrechos —`TokenVerifierPort`, `AuthenticationProviderPort` y `RoleDirectoryPort`— en lugar de uno ancho. Ver «Camino de resolución».
+4. ~~En Foundation opera **`FakeIdentityProvider`**.~~ Eliminado junto con el puerto. Los dobles que quedan son `FakeAuthenticationProvider` e `InMemoryRoleDirectory`, cada uno de un contrato que sí existe.
 5. **RBAC se implementa ya**, en el dominio de Account, porque no depende del proveedor.
 
 ## BLOCKER — Identity provider approval
@@ -99,13 +99,33 @@ Se decidió **no añadir comprobaciones de rol sin identidad verificable**. Un `
 
 ```text
 1. Aprobar un proveedor de identidad        -> HECHO: Cognito Essentials, aprovisionado
-2. Adaptador del alta de sujetos             -> PENDIENTE: opera FakeIdentityProvider
+2. Adaptador del alta de sujetos             -> RETIRADO: el producto no da de alta identidades
 3. Validar el testimonio                     -> HECHO: JWKS del pool, aws-jwt-verify
 4. Cada servicio valida el testimonio        -> HECHO: los cinco servicios NestJS
 5. Activar RBAC en operaciones sensibles     -> HECHO
+6. Reflejar el rol en el proveedor           -> HECHO: Account decide, el pool recoge
 ```
 
-**Cuatro de los cinco pasos están implementados.** Falta el 2, y su alcance se ha reducido: `POST /accounts` toma el sujeto del testimonio, de modo que el alta en el proveedor ya no la hace el producto. `IdentityProviderPort.register` solo se usa cuando la autenticación está desactivada.
+**El paso 2 no se completó: desapareció**, y merece decirse así en lugar de
+marcarlo como hecho. El 2026-08-29 se eligió entre dos diseños coherentes y ganó
+el que saca a Account del negocio de crear identidades: **el alta ocurre en la
+pantalla del proveedor**, de modo que al llegar a `POST /accounts` la identidad
+ya existe y lo que falta es la cuenta del producto. Sin sujeto verificado el
+registro responde 401 en vez de inventar uno.
+
+Con eso `IdentityProviderPort` se quedó **sin un solo consumidor** y se eliminó,
+junto con `FakeIdentityProvider` y `CognitoIdentityProvider` —este último
+mergeado el día anterior—. Es preferible a dejar un adaptador que parece vivo y
+no lo está.
+
+**Este ADR describía ese puerto como la frontera del dominio con el proveedor
+(punto 3 de la Decisión). Ya no existe.** La frontera hoy son
+`TokenVerifierPort` (verificar el testimonio), `AuthenticationProviderPort`
+(comprobar la contraseña) y `RoleDirectoryPort` (reflejar el rol) — tres
+contratos estrechos en lugar de uno ancho.
+
+El paso 6 es nuevo y no estaba previsto aquí; ver «El rol viaja en el
+testimonio» más abajo.
 
 ### Qué protege ya cada servicio
 
@@ -134,7 +154,7 @@ Notas de implementación que condicionan los pasos 2 a 4:
 - El pool se provisiona con **Terraform** ([ADR-008](ADR-008-iac.md)), no a mano, para que no haya deriva entre el entorno y el código.
 - El cliente de aplicación de Web es **público: sin secreto de cliente**, con *authorization code grant* y **PKCE**. Un secreto en el navegador no es un secreto.
 - La validación del JWT se hace **contra el JWKS del pool**, comprobando `iss`, `aud`, `token_use` y `exp`, con biblioteca mantenida. No se implementa verificación de firma a mano.
-- El identificador estable del sujeto es el `sub` del pool, que es lo que `IdentityProviderPort` ya modela. El correo **no** sirve como identificador: puede cambiar y puede repetirse entre proveedores.
+- El identificador estable del sujeto es el `sub` del pool, que es lo que `TokenVerifierPort` entrega ya verificado. El correo **no** sirve como identificador: puede cambiar y puede repetirse entre proveedores.
 
 ## Login server-side de Account (HU-02)
 
@@ -146,7 +166,7 @@ Actualiza lo que este ADR describía como "el cliente de Web": ahora autoriza do
 
 No se creó un segundo App Client. Se evaluó y se descartó: los cuatro servicios de dominio (`Catalog`, `Commerce`, `Community`, `Player-Inventory`) verifican el `client_id` del token contra un único valor de configuración (`COGNITO_CLIENT_ID`, compartido desde el PR #13), código idéntico en los cuatro, sin soporte de lista ni de `null`. Un segundo cliente emitiría tokens con un `client_id` distinto que esos cuatro servicios rechazarían con 401, y modificarlos está fuera del alcance de `Nexus-Battle-Infrastructure`. Aislar de verdad el flujo de Account del de Web exige que los cinco servicios acepten varios `client_id` válidos — se deja registrado como trabajo futuro, no como algo resuelto aquí.
 
-**Quién tiene el permiso IAM, y su límite honesto.** El rol de instancia del nodo `app` (`infra/modules/compute`) es el único principal al que se le concedió `cognito-idp:AdminInitiateAuth`/`AdminRespondToAuthChallenge`, acotado por `Resource` a este pool exacto — nunca `cognito-idp:*`. No se generó ninguna clave de acceso de AWS (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`): el SDK de Account obtiene credenciales de la cadena por defecto, que en este nodo resuelve al perfil de instancia vía IMDSv2. IAM es aquí un **control técnico**, no una regla funcional: no decide qué puede hacer un rol de producto, solo qué principal de AWS puede firmar esta llamada concreta.
+**Quién tiene el permiso IAM, y su límite honesto.** El rol de instancia del nodo `app` (`infra/modules/compute`) es el único principal al que se le concedió `cognito-idp:AdminInitiateAuth`/`AdminRespondToAuthChallenge`, acotado por `Resource` a este pool exacto — nunca `cognito-idp:*`. Desde el 2026-08-29 tiene además tres acciones para reflejar el rol (`AdminListGroupsForUser`, `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`), con el mismo acotamiento; ver «El rol viaja en el testimonio». No se generó ninguna clave de acceso de AWS (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`): el SDK de Account obtiene credenciales de la cadena por defecto, que en este nodo resuelve al perfil de instancia vía IMDSv2. IAM es aquí un **control técnico**, no una regla funcional: no decide qué puede hacer un rol de producto, solo qué principal de AWS puede firmar esta llamada concreta.
 
 Ese control tiene un límite que este ADR no puede disimular: **es el único rol que existe para el nodo `app`**, y ADR-011 pone los seis contenedores de ese nodo —proxy, web, account, inventory, catalog, community, commerce— en la misma instancia EC2. Docker no aísla por contenedor el acceso al servicio de metadatos; en la práctica, cualquier contenedor del nodo `app` puede obtener las mismas credenciales que Account y llamar estas dos acciones, no solo Account. Aislarlo de verdad —una identidad de AWS por servicio— es la clase de cambio de topología (ECS/Fargate con roles de tarea, instancia por servicio) que ADR-011 ya descartó por coste. Es una limitación aceptada de esta topología, no un descuido de esta rama, y queda dicha en lugar de aparentar un aislamiento que no existe.
 
@@ -155,6 +175,112 @@ Ese control tiene un límite que este ADR no puede disimular: **es el único rol
 **Corrección de política de contraseña.** `minimum_length` baja de 12 a 9. HU-01 (CA-03) exige "más de ocho caracteres"; nueve es el mínimo que lo cumple, y no existe ninguna aclaración formal del cliente ni del profesor —auditada contra el backlog de Management— que autorice doce. Era una política más estricta que la historia de usuario sin decisión que la respalde.
 
 **Lo que sigue pendiente, sin resolver aquí.** El segundo factor administrativo del producto está confirmado por el cliente como **correo electrónico** (aclaración PO-12, 2026-08-19, backlog de Management). Lo que Cognito tiene aprovisionado sigue siendo **TOTP** (ver más abajo, «El MFA por correo exige SES»): `Nexus-Battle-Notifications` no tiene todavía un adaptador SES real (solo `Fake`/`SMTP`), así que activar `mfa_method = "email"` en Terraform seguiría fallando el `apply`. Esta rama no lo resuelve: sería inventar una decisión de tres repositorios (Infrastructure, Notifications, y el aprovisionamiento de SES) que nadie ha tomado todavía.
+
+## El rol viaja en el testimonio
+
+**Estado:** decidido y aplicado el 2026-08-29. Comprobado de extremo a extremo
+contra el pool real.
+
+### El problema: dos fuentes de verdad que nadie sincronizaba
+
+Account escribía el rol en `account_roles` (PostgreSQL) y el testimonio viajaba
+**sin `cognito:groups`**. Los otros cuatro servicios leen el rol del testimonio,
+así que veían a quien se registrase por la pantalla del proveedor **sin ningún
+rol**.
+
+**No daba síntoma, y eso es lo que lo hacía peligroso.** Las ocho puertas
+`@Roles(...)` del sistema piden `ADMINISTRATOR` o `MODERATOR`; ninguna pide
+`PLAYER`. Un jugador auto-registrado podía navegar el catálogo, comprar, escribir
+en la comunidad y ver su inventario con normalidad. La divergencia era
+**invisible, no inexistente**: habría dado la cara el día que alguien escribiera
+`@Roles(Role.Player)`, con el síntoma «los usuarios nuevos no pueden hacer nada»
+y ninguna pista que apuntara aquí.
+
+### La decisión, y las dos que se descartaron
+
+Gana **Account decide, el pool refleja**. Es lo que el módulo `identity` ya
+declaraba de sus grupos —«la fuente de verdad de los roles sigue siendo Account:
+aquí solo se refleja la pertenencia para que viaje en el testimonio»—; lo que
+faltaba era el código que refleja, y el permiso que lo permite.
+
+Se descartó que **los cuatro servicios preguntaran a Account** el rol en cada
+petición: elimina la duplicidad de raíz, pero acopla los cuatro a Account en el
+camino caliente y convierte una caída de Account en una caída de la autorización
+de todo el sistema.
+
+Un **disparador de Cognito** (*pre token generation*) ni siquiera entró en la
+comparación: sería Lambda, que el alcance actual prohíbe sin un ADR que lo
+autorice.
+
+### La dirección es de un solo sentido, y el orden importa
+
+`RoleDirectoryPort` refleja hacia el proveedor y nunca lee de él como autoridad.
+El reflejo ocurre **antes** de persistir la cuenta: al revés, un fallo dejaría
+una cuenta guardada cuyo rol no viaja, e irreparable por reintento porque el
+segundo intento chocaría con el correo ya registrado. En este orden lo peor que
+puede pasar es un sujeto en el grupo sin cuenta, que no concede nada —toda ruta
+protegida resuelve la cuenta desde el sujeto y no la encontraría— y que el
+reintento absorbe, porque el reflejo es idempotente.
+
+El adaptador **calcula la diferencia** en lugar de solo añadir: un reflejo que
+solo suma no es un reflejo, y revocar un rol nunca llegaría al testimonio. Y solo
+toca grupos del vocabulario de roles: reflejar no es apropiarse del pool.
+
+Si el proveedor no responde, el registro **falla cerrado** y devuelve 503 — no
+500: el servicio funciona, la dependencia no, y reintentar más tarde tiene
+sentido.
+
+### El permiso, y lo que deliberadamente no se concedió
+
+| Acción | Por qué |
+|---|---|
+| `AdminListGroupsForUser` | Lectura, para calcular la diferencia |
+| `AdminAddUserToGroup` | Conceder |
+| `AdminRemoveUserFromGroup` | Revocar |
+
+Verificado con `iam simulate-principal-policy`, **con controles negativos**:
+`AdminCreateUser`, `AdminDeleteUser` y `CreateGroup` responden `implicitDeny`.
+Account dejó de crear identidades y no debe recuperar esa capacidad por la puerta
+de atrás; los grupos los declara este repositorio, y que el servicio pudiera
+crearlos dejaría a la infraestructura describiendo algo distinto de lo que existe.
+
+**Esto corrige a la baja** lo que se afirmó al retirar la creación de
+identidades: que el rol de instancia no necesitaba escritura sobre el pool. No
+necesita crear identidades —sigue siendo cierto—, pero gestionar pertenencia a
+grupos **es** una escritura, y llamarla de otro modo sería maquillarla.
+
+El límite de topología descrito más arriba aplica igual a estas tres acciones:
+cualquier contenedor del nodo `app` puede invocarlas, no solo Account.
+
+### La comprobación
+
+```text
+1. grupos ANTES del registro -> (ninguno)
+2. registro por la API       -> HTTP 201, roles ["PLAYER"]
+3. grupos DESPUES            -> PLAYER
+
+cognito:groups en un testimonio NUEVO -> ["PLAYER"]
+```
+
+La última línea es la que cierra el asunto: el testimonio usado para registrar se
+emitió *antes* del reflejo, así que solo uno nuevo demuestra que el rol viaja de
+verdad.
+
+## La URL de retorno ata la exposición a la identidad
+
+**Registrado el 2026-08-29.** La única URL de retorno registrada en el cliente de
+Web es `http://localhost:5173/auth/callback`.
+
+Es correcto hoy y conviene que se sepa por qué: **el circuito de identidad
+funciona de extremo a extremo solo desde desarrollo local**. El Web desplegado no
+podría completar el flujo aunque se expusiera — Cognito respondería
+`redirect_mismatch`.
+
+No da síntoma porque nada está expuesto a internet, y por eso las dos cosas
+parecían decisiones independientes. **No lo son.** El día que
+`public_ingress_cidrs` deje de estar vacío, hay que añadir el origen desplegado a
+`callback_urls` **en el mismo cambio**, o el inicio de sesión se rompe la primera
+vez que alguien lo use.
 
 ## Decisión de proveedor: Amazon Cognito, plan Essentials
 
@@ -232,12 +358,14 @@ A la escala prevista de la demo el coste es marginal frente al cómputo. **El co
 
 **Lo que cuesta**
 
-- El sistema **no es desplegable públicamente** hasta completar los pasos 2 a 5. Es la limitación más relevante del Sprint 1 y así se reporta.
+- ~~El sistema **no es desplegable públicamente** hasta completar los pasos 2 a 5.~~ **Superado**: los pasos 3, 4, 5 y 6 están hechos y el 2 se retiró. Lo que queda para exponerlo no es identidad: es la decisión de `public_ingress_cidrs` y, atada a ella, la URL de retorno (ver más arriba).
 - Cognito **no es un Directorio Activo**. Es un IdP con OIDC. El requisito literal de directorio corporativo sigue sin cumplirse, y esta decisión no lo disimula.
 - El requisito de Directorio Activo queda sin cumplir, con su justificación de coste registrada.
 
 ## Evidencia
 
 - `Nexus-Battle-Account` no contiene ningún campo de contraseña, hash ni secreto en su agregado.
-- `FakeIdentityProvider` implementa el contrato completo de `IdentityProviderPort` y está cubierto por pruebas.
-- `RegisterAccount` compensa el alta de identidad si falla la persistencia, para no dejar sujetos huérfanos.
+- ~~`FakeIdentityProvider` implementa el contrato completo de `IdentityProviderPort`.~~ **Ambos eliminados el 2026-08-29.** Los dobles vigentes son `FakeAuthenticationProvider` e `InMemoryRoleDirectory`.
+- ~~`RegisterAccount` compensa el alta de identidad si falla la persistencia.~~ **Ya no hay alta que compensar**: el caso de uso no crea identidades. Lo único que compensa es el avatar.
+- `RegisterAccount` refleja el rol en el proveedor **antes** de persistir, y falla cerrado (503) si no puede. Comprobado con un control: invirtiendo ese orden, la prueba que lo fija falla.
+- El registro exige un sujeto ya verificado; sin él responde 401, no 500.

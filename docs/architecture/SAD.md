@@ -157,16 +157,23 @@ Umbral exigido: 80 %. Todos lo superan.
 
 Se enumeran juntas porque quien lea este documento necesita conocerlas antes de tomar cualquier decisión sobre el sistema:
 
-1. **Sin control de acceso.** Ningún servicio verifica quién realiza la petición.
-2. **Sin persistencia real.** El estado se pierde al reiniciar.
-3. **Sin comunicación entre servicios.** Los puertos existen; el transporte no.
-4. **Sin saga de checkout.** Confirmar un pedido no reserva inventario.
-5. **Cinco de las seis pantallas de Web** son marcadores declarados.
-6. **La arquitectura de demo no cumple los RNF** y tiene un punto único de fallo.
-7. **No hay infraestructura AWS provisionada.**
-8. **Sin licencia asignada** (`Licensing pending project governance`).
+1. **Sin comunicación entre servicios.** Los puertos existen; el transporte no.
+2. **Sin saga de checkout.** Confirmar un pedido no reserva inventario.
+3. **Cinco de las seis pantallas de Web** son marcadores declarados.
+4. **La arquitectura de demo no cumple los RNF** y tiene un punto único de fallo.
+5. **Sin licencia asignada** (`Licensing pending project governance`).
+6. **Segundo factor de los roles administrativos, abierto.** Exige SES, no aprobado.
+7. **No expuesto a internet.** `public_ingress_cidrs` vacío; y la única URL de retorno registrada en Cognito es la de desarrollo local, así que exponerlo son dos cambios acoplados, no uno.
 
 Ninguna es un descuido. Cada una tiene su motivo registrado y su condición de desbloqueo.
+
+### Superadas el 2026-08-29, y por qué se dejan escritas
+
+- ~~**Sin control de acceso.**~~ Los cinco servicios verifican el testimonio contra el JWKS del pool (`AUTH_MODE=jwt`). Comprobado de extremo a extremo. El rol viaja dentro del testimonio desde que Account lo refleja en el proveedor.
+- ~~**Sin persistencia real.**~~ Los cinco declaran PostgreSQL o MongoDB, con migraciones propias. Comprobado con el caso que lo demuestra: una cuenta creada días antes sigue ahí tras reemplazar por completo el nodo de aplicación.
+- ~~**No hay infraestructura AWS provisionada.**~~ 43 recursos con Terraform y estado remoto en S3.
+
+Se dejan tachadas en lugar de borrarlas: quien haya leído una versión anterior necesita saber qué cambió, y una limitación que desaparece sin rastro parece que nunca existió.
 
 ## 15. Índice de decisiones
 

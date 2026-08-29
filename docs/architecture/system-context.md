@@ -16,7 +16,7 @@ Los tres roles existen en el dominio de Account (`PLAYER`, `MODERATOR`, `ADMINIS
 
 | Sistema | Relación | Estado |
 | --- | --- | --- |
-| Proveedor de identidad | Autenticaría a las personas usuarias | **No existe.** Opera `FakeIdentityProvider` |
+| Proveedor de identidad | Autentica a las personas usuarias, y da de alta las cuentas en su propia pantalla | **Amazon Cognito**, `us-east-1_HrEiSzzKW`, aprovisionado y en uso por los cinco servicios |
 | Proveedor de correo | Entregaría las notificaciones | **No integrado.** Opera `FakeEmailSender`; en local, Mailpit por SMTP |
 | Directorio corporativo | Censo de personas de la organización | **No provisionado** por coste |
 
