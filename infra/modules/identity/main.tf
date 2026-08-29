@@ -78,26 +78,39 @@ resource "aws_cognito_user_pool" "this" {
   }
 
   /**
-   * Recuperacion por administrador, y NO por correo verificado.
+   * Recuperacion por correo verificado, y la razon de que ANTES no lo fuera.
    *
-   * Cognito rechaza la combinacion "MFA por correo + recuperacion solo por
-   * correo verificado", y el rechazo es legitimo: si el correo es a la vez el
-   * segundo factor y el unico modo de recuperar la cuenta, el circulo se cierra
-   * sobre si mismo. Quien tenga acceso al correo puede saltarse el MFA pidiendo
-   * una recuperacion, de modo que el segundo factor deja de ser un segundo
-   * factor.
+   * Este bloque decia `admin_only`, con este argumento: si el correo es a la vez
+   * el segundo factor y el unico modo de recuperar la cuenta, el circulo se
+   * cierra sobre si mismo, porque quien tenga el correo puede saltarse el MFA
+   * pidiendo una recuperacion.
    *
-   * La alternativa que AWS admite es un mecanismo por telefono, y eso exige SMS:
-   * un rol para SNS, salida del entorno de pruebas y coste por mensaje. Con el
-   * techo de este proyecto no compensa para una demo.
+   * El argumento era correcto **mientras el segundo factor fuera el correo**. La
+   * decision de producto del 2026-08-29 es TOTP, y con TOTP el circulo no se
+   * cierra: recuperar la contrasena por correo no entrega el autenticador, y
+   * Cognito sigue exigiendo `SOFTWARE_TOKEN_MFA` en el inicio de sesion
+   * siguiente. La premisa caduco con la decision.
    *
-   * `admin_only` no se puede combinar con otros mecanismos, y esa es
-   * precisamente la propiedad util aqui: no hay autoservicio de recuperacion, y
-   * eso queda dicho en lugar de aparentar que lo hay.
+   * Lo que `admin_only` producia en la practica, comprobado sobre el sistema
+   * desplegado: la pantalla alojada **no muestra** el enlace de recuperacion, y
+   * la ruta `/forgotPassword` escrita a mano responde "Could not reset password
+   * for the account". Es decir, cualquier jugador que olvide su contrasena queda
+   * fuera sin ninguna via de vuelta. Se descubrio del unico modo en que estas
+   * cosas se descubren: olvidando una contrasena de verdad.
+   *
+   * El pretexto de que "queda dicho en lugar de aparentar que lo hay" no se
+   * sostenia: no habia nada que lo dijera. Solo un boton ausente y un error
+   * generico.
+   *
+   * Contrapartida que se acepta a proposito: para una cuenta SIN segundo factor
+   * -hoy, todas- quien controle el correo puede tomarla. Es la misma exposicion
+   * que asume cualquier producto con recuperacion por correo, y es preferible a
+   * que nadie pueda recuperar nada. Para las cuentas administrativas la
+   * exposicion NO existe: se les exige TOTP inscrito antes de elevarlas.
    */
   account_recovery_setting {
     recovery_mechanism {
-      name     = "admin_only"
+      name     = "verified_email"
       priority = 1
     }
   }
@@ -137,6 +150,22 @@ resource "aws_cognito_user_pool" "this" {
     precondition {
       condition     = var.mfa_method != "email" || var.ses_identity_arn != ""
       error_message = "mfa_method = \"email\" exige ses_identity_arn: el emisor por defecto de Cognito no admite MFA por correo."
+    }
+
+    /**
+     * La recuperacion pasa a `verified_email` porque el segundo factor es TOTP.
+     * Volver a `mfa_method = "email"` cerraria el circulo que ese cambio da por
+     * abierto: quien tenga el correo recuperaria la cuenta Y recibiria el
+     * codigo, de modo que el segundo factor dejaria de serlo.
+     *
+     * Cognito rechaza esa combinacion, pero lo hace DURANTE el apply y con un
+     * mensaje que describe el sintoma. Aqui se dice la causa antes de tocar
+     * nada, que es lo que este proyecto ya aprendio por las malas con el
+     * apostrofo de una regla de seguridad.
+     */
+    precondition {
+      condition     = var.mfa_method != "email"
+      error_message = "mfa_method = \"email\" es incompatible con la recuperacion por correo verificado: el correo seria a la vez el segundo factor y la via de recuperacion. Si se quiere el correo como factor, hay que decidir antes otro mecanismo de recuperacion."
     }
   }
 
