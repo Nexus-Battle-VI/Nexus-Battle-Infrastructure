@@ -36,3 +36,12 @@ output "limites_aplicados_por_iam" {
   description = "Lo que la politica impide de verdad, no lo que un documento pide que no se haga."
   value       = module.iam.servicios_denegados
 }
+
+output "registro_dns_necesario" {
+  description = "Que registro DNS hay que crear para que el sitio publico funcione. Vacio si no hay sitio publico configurado."
+  value = var.public_site_address == "" ? "Sin sitio publico: no hace falta ningun registro DNS." : format(
+    "Crear un registro A: %s -> %s",
+    var.public_site_address,
+    module.compute.app_public_ip,
+  )
+}

@@ -52,6 +52,9 @@ module "iam" {
 module "network" {
   source = "../../modules/network"
 
+  # El puerto 80 solo se abre cuando hay un dominio del que pedir certificado.
+  acme_enabled = var.public_site_address != "" && var.tls_contact_email != ""
+
   name                 = local.name
   tags                 = local.tags
   availability_zone    = var.availability_zone
@@ -70,6 +73,28 @@ module "identity" {
   ses_identity_arn   = var.ses_identity_arn
   from_email_address = var.from_email_address
   mfa_method         = var.mfa_method
+
+  /**
+   * Las URL de retorno incluyen el sitio publico AUTOMATICAMENTE.
+   *
+   * Es el acoplamiento que mas facil se olvida: exponer el sistema sin anadir su
+   * origen aqui deja un despliegue alcanzable donde el inicio de sesion falla
+   * con `redirect_mismatch`, y el error no menciona esta variable por ningun
+   * lado. Derivarlo de `public_site_address` hace imposible desincronizarlos.
+   *
+   * `localhost` se conserva siempre: es el unico origen que Cognito admite por
+   * HTTP y sin el se rompe el desarrollo local. Que Cognito lo permita como
+   * excepcion explicita es lo que hace seguro dejarlo puesto.
+   */
+  callback_urls = compact([
+    "http://localhost:5173/auth/callback",
+    var.public_site_address == "" ? "" : "https://${var.public_site_address}/auth/callback",
+  ])
+
+  logout_urls = compact([
+    "http://localhost:5173/",
+    var.public_site_address == "" ? "" : "https://${var.public_site_address}/",
+  ])
 }
 
 # Lo que cada rol de nodo escribe en disco al arrancar.
@@ -118,6 +143,10 @@ locals {
 
 module "compute" {
   source = "../../modules/compute"
+
+  # Un nombre DNS apuntando aqui exige una direccion que no cambie al reemplazar
+  # el nodo. Se activa sola en cuanto hay sitio publico configurado.
+  stable_public_ip = var.public_site_address != ""
 
   name                  = local.name
   tags                  = local.tags

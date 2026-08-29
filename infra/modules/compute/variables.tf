@@ -104,3 +104,20 @@ variable "cognito_user_pool_arn" {
   DESC
   type        = string
 }
+
+variable "stable_public_ip" {
+  description = <<-DESC
+    Asocia una IP elastica al nodo `app`, para que su direccion sobreviva a los
+    reemplazos.
+
+    Hace falta en cuanto un nombre DNS apunte aqui: sin ella, cada reemplazo del
+    nodo cambia la direccion y rompe a la vez el registro DNS, el certificado y
+    las URL de retorno de Cognito.
+
+    ATENCION al retirar el stack: una IP elastica se factura tambien con la
+    instancia apagada y sin asociar. Poner `nodes = {}` sin poner esto a falso
+    deja una direccion cobrando sola.
+  DESC
+  type        = bool
+  default     = false
+}

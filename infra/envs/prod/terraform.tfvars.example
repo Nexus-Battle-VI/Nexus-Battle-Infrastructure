@@ -100,3 +100,27 @@ activate_cost_allocation_tags = false
 # public_ingress_cidrs = ["203.0.113.4/32"]
 # public_site_address  = "nexus.ejemplo.com"
 # tls_contact_email    = "operaciones@ejemplo.com"
+#
+# CON UN DOMINIO PROPIO, que es lo que se quiere para ensenarlo:
+#
+#   public_site_address  = "nexus.midominio.app"
+#   tls_contact_email    = "operaciones@midominio.app"
+#   public_ingress_cidrs = ["0.0.0.0/0"]
+#
+# Poner las dos primeras hace tres cosas solo, sin que haya que acordarse:
+#
+#   1. Reserva una IP ELASTICA para el nodo `app`, para que su direccion
+#      sobreviva a los reemplazos. Sin ella, cada despliegue rompe a la vez el
+#      registro DNS, el certificado y las URL de retorno.
+#   2. Abre el puerto 80 a TODO INTERNET. No es una eleccion: Let's Encrypt
+#      valida desde direcciones que no publica y desaconseja filtrarlas. En ese
+#      puerto el proxy solo sirve el reto de ACME y una redireccion.
+#   3. Anade el origen a `callback_urls` y `logout_urls` del cliente de Cognito.
+#      Olvidarlo dejaria el sistema alcanzable con el inicio de sesion roto por
+#      `redirect_mismatch`, y ese error no menciona esta variable.
+#
+# `public_ingress_cidrs` sigue gobernando el 443, que es por donde pasa todo lo
+# demas. Ahi si cabe restringir.
+#
+# EL ORDEN IMPORTA: aplicar primero, leer la salida `registro_dns_necesario`,
+# crear el registro A, y esperar. Caddy reintenta solo hasta que el DNS resuelve.

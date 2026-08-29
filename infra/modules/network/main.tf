@@ -56,9 +56,8 @@ resource "aws_security_group" "app" {
   tags = merge(var.tags, { Name = "${var.name}-app" })
 }
 
-# No se declara ninguna regla de entrada cuando la lista esta vacia. Sin reglas,
-# el grupo deniega todo el trafico entrante: es el comportamiento correcto
-# mientras el BLOCKER de identidad siga abierto.
+# Sin reglas de entrada, el grupo deniega todo. Es el estado por defecto: el
+# sistema no esta expuesto.
 resource "aws_vpc_security_group_ingress_rule" "app_https" {
   for_each = toset(var.public_ingress_cidrs)
 
@@ -70,12 +69,35 @@ resource "aws_vpc_security_group_ingress_rule" "app_https" {
   ip_protocol       = "tcp"
 }
 
-resource "aws_vpc_security_group_ingress_rule" "app_http" {
-  for_each = toset(var.public_ingress_cidrs)
+/**
+ * El puerto 80 se abre a TODO INTERNET, y es deliberado.
+ *
+ * Let's Encrypt valida el reto HTTP-01 desde muchos puntos del mundo y **no
+ * publica sus direcciones**; su documentacion desaconseja expresamente filtrar
+ * por origen, porque cambian sin aviso. Una lista de CIDR en este puerto no
+ * dejaria emitir el certificado: no es que fuera mas estricta, es que no
+ * funcionaria.
+ *
+ * Lo que queda expuesto ahi es minimo: el proxy solo sirve en 80 el reto de ACME
+ * y una redireccion a HTTPS. Todo lo demas vive en 443, donde SI se aplica
+ * `public_ingress_cidrs`.
+ *
+ * Se abre unicamente cuando hay un sitio publico configurado. Sin dominio no hay
+ * certificado que pedir, y entonces este puerto no tiene ningun motivo para
+ * estar abierto.
+ *
+ * La alternativa que evitaria abrirlo es el reto DNS-01, que demuestra el
+ * control del dominio con un registro TXT y no necesita conexion entrante. Exige
+ * un Caddy con el modulo DNS del registrador compilado dentro -la imagen oficial
+ * no lo trae- y credenciales de la API del registrador guardadas en el nodo. Es
+ * mas superficie de secreto para quitar un puerto que solo sirve redirecciones.
+ */
+resource "aws_vpc_security_group_ingress_rule" "app_acme" {
+  count = var.acme_enabled ? 1 : 0
 
   security_group_id = aws_security_group.app.id
-  description       = "HTTP desde origen autorizado, solo para el reto ACME de Let's Encrypt"
-  cidr_ipv4         = each.value
+  description       = "HTTP abierto para el reto ACME de Let's Encrypt, que valida desde origenes no publicados"
+  cidr_ipv4         = "0.0.0.0/0"
   from_port         = 80
   to_port           = 80
   ip_protocol       = "tcp"
