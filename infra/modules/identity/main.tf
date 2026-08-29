@@ -102,11 +102,42 @@ resource "aws_cognito_user_pool" "this" {
     }
   }
 
-  # Correo por defecto de Cognito: sin coste y sin dominio verificado. Tiene un
-  # limite diario bajo, suficiente para la demo. SES exige verificacion de
-  # dominio y salida del sandbox, y no esta aprobado.
+  /**
+   * Emisor de correo: el de Cognito, o SES si se aporta una identidad.
+   *
+   * El emisor por defecto no cuesta nada y basta para verificar cuentas, pero
+   * **no admite MFA por correo**: Cognito rechaza `email_mfa_configuration`
+   * mientras `EmailSendingAccount` sea `COGNITO_DEFAULT`. Por eso las dos cosas
+   * van juntas y no por separado.
+   *
+   * Con `DEVELOPER`, Cognito crea por su cuenta un rol vinculado al servicio
+   * para llamar a SES; no hace falta una politica de autorizacion de envio en
+   * la identidad, porque esta en la misma cuenta y en la misma region. Lo que
+   * si necesita quien aplica es `iam:CreateServiceLinkedRole`.
+   *
+   * Como la identidad verificada es una direccion y no un dominio, Cognito la
+   * usa tambien como REPLY-TO. Se declara `from_email_address` de forma
+   * explicita igualmente: que el remitente sea legible en el correo no deberia
+   * depender de un valor por defecto.
+   */
   email_configuration {
-    email_sending_account = "COGNITO_DEFAULT"
+    email_sending_account = var.ses_identity_arn == "" ? "COGNITO_DEFAULT" : "DEVELOPER"
+    source_arn            = var.ses_identity_arn == "" ? null : var.ses_identity_arn
+    from_email_address    = var.ses_identity_arn == "" ? null : var.from_email_address
+  }
+
+  /**
+   * Falla en el PLAN y no en el apply.
+   *
+   * Sin esto, `mfa_method = "email"` con el emisor por defecto llega hasta AWS
+   * y vuelve como `InvalidParameterException`, con un mensaje que describe el
+   * sintoma y no la causa. Aqui se dice la causa antes de tocar nada.
+   */
+  lifecycle {
+    precondition {
+      condition     = var.mfa_method != "email" || var.ses_identity_arn != ""
+      error_message = "mfa_method = \"email\" exige ses_identity_arn: el emisor por defecto de Cognito no admite MFA por correo."
+    }
   }
 
   deletion_protection = "ACTIVE"

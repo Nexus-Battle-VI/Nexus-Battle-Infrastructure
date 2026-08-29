@@ -129,3 +129,46 @@ variable "allowed_instance_types" {
   type        = list(string)
   default     = ["t4g.nano", "t4g.micro", "t4g.small", "t4g.medium"]
 }
+
+# ---------------------------------------------------------------------------
+# Segundo factor por correo (ADR-004)
+# ---------------------------------------------------------------------------
+
+variable "ses_identity_arn" {
+  description = <<-DESC
+    ARN de una identidad de SES ya verificada, que el pool usara como remitente.
+
+    Vacio deja el emisor por defecto de Cognito, que NO admite MFA por correo.
+
+    La identidad debe verificarse ANTES del apply, y esto no lo hace Terraform a
+    proposito: verificar una direccion exige que una persona abra un correo y
+    pulse un enlace.
+
+    ATENCION - LIMITE REAL DE ESTA CUENTA: SES esta en el entorno de pruebas y la
+    solicitud para salir de el fue DENEGADA (caso 178781013000904). En ese
+    entorno **solo se puede escribir a direcciones ya verificadas**. El segundo
+    factor por correo funcionara para las cuentas administrativas cuyo correo
+    este verificado en SES, y no para nadie mas. Es suficiente para la demo
+    porque los roles administrativos son contados, y conviene saberlo antes de
+    prometer el flujo a cualquier usuario.
+  DESC
+  type        = string
+  default     = ""
+}
+
+variable "from_email_address" {
+  description = "Remitente visible. Debe corresponder a la identidad verificada."
+  type        = string
+  default     = ""
+}
+
+variable "mfa_method" {
+  description = <<-DESC
+    Segundo factor del pool: "software_token" o "email".
+
+    ADR-004 previo el correo. Se mantuvo "software_token" mientras SES no estaba
+    resuelto, y se registro como correccion del ADR en lugar de disimularla.
+  DESC
+  type        = string
+  default     = "software_token"
+}
