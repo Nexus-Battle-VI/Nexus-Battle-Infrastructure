@@ -87,16 +87,33 @@ end note
 == Lo que sigue ABIERTO ==
 
 note over Jugador, otros
-  **Segundo factor de los roles administrativos.**
-  ADR-004 lo previo por correo; el correo exige SES,
-  que no esta aprobado. `LoginAccount` **falla cerrado**
-  mientras tanto: un rol administrativo con testimonio
-  pero sin reto devuelve `providerUnavailable`.
+  **Segundo factor: falta INSCRIBIRLO, no configurarlo.**
+  ADR-004 lo previo por correo, pero el correo exige SES y
+  el acceso a produccion fue DENEGADO: solo escribiria a
+  direcciones ya verificadas. La decision del 2026-08-29 es
+  TOTP, que el pool ya tiene activo.
 
-  **Exposicion a internet.** `public_ingress_cidrs` sigue
-  vacio. Y la unica URL de retorno registrada es la de
-  desarrollo local: exponer el sistema obliga a anadir el
-  origen desplegado a `callback_urls` en el mismo cambio.
+  `mfa_configuration = OPTIONAL`, y AWS documenta que con
+  OPTIONAL **solo se reta a quien tenga factor inscrito**.
+  Eso es justo lo que se quiere -segundo factor para los
+  administradores, sin friccion para los jugadores- pero se
+  consigue por inscripcion, y nada delata su ausencia.
+
+  `LoginAccount` **falla cerrado**: un rol administrativo con
+  testimonio pero sin reto devuelve `providerUnavailable`.
+  Cubre `POST /api/sessions`, **no** la pantalla alojada.
+
+  Hoy el riesgo es LATENTE: no hay ninguna cuenta en
+  ADMINISTRATOR ni en SUPER_ADMINISTRATOR. Aparece con la
+  primera que se cree.
+end note
+
+note over Jugador, otros
+  **Elevar el rol no tiene endpoint.** `grantRole` no lo
+  invoca ningun caso de uso; HU-39 es quien debe exponerlo.
+  No basta con anadir el grupo en Cognito: la fuente de
+  verdad es `account_roles` en PostgreSQL, y el pool solo
+  la refleja.
 end note
 
 @enduml
