@@ -215,4 +215,27 @@ variable "tls_contact_email" {
   DESC
   type        = string
   default     = ""
+
+  /**
+   * Un valor de relleno TUMBA EL PROXY, y con el todo el nodo.
+   *
+   * Caddy solo acepta `internal`, `force_automate` o un correo. Cualquier otra
+   * cosa hace que el fichero de configuracion no se pueda adaptar y el
+   * contenedor entra en bucle de reinicio: deja de servir tambien el sitio
+   * interno, del que dependen las sondas de salud.
+   *
+   * Paso de verdad. Un `apply` con `tls_contact_email=TU-CORREO` -el marcador de
+   * un ejemplo, copiado literal- dejo el nodo recien creado sin proxy:
+   *
+   *   Error: parsing caddyfile tokens for 'tls': single argument must either be
+   *   'internal', 'force_automate', or an email address
+   *
+   * Se comprueba aqui porque es donde todavia no ha costado nada. Corregirlo
+   * despues obliga a reemplazar el nodo otra vez, ya que el valor viaja en
+   * `user_data`.
+   */
+  validation {
+    condition     = var.tls_contact_email == "" || can(regex("^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$", var.tls_contact_email))
+    error_message = "tls_contact_email debe ser un correo valido, o cadena vacia para usar la CA local. Un valor de relleno deja el proxy en bucle de reinicio."
+  }
 }
