@@ -124,3 +124,21 @@ activate_cost_allocation_tags = false
 #
 # EL ORDEN IMPORTA: aplicar primero, leer la salida `registro_dns_necesario`,
 # crear el registro A, y esperar. Caddy reintenta solo hasta que el DNS resuelve.
+
+# ---------------------------------------------------------------------------
+# UNA ADVERTENCIA SOBRE `-var` EN LA LINEA DE ORDENES
+# ---------------------------------------------------------------------------
+#
+# Estos valores van AQUI, en `terraform.tfvars`, no en banderas `-var`.
+#
+# Terraform no recuerda las banderas de un apply anterior. Aplicar una vez con
+#
+#   terraform apply -var 'public_ingress_cidrs=["0.0.0.0/0"]'
+#
+# y la siguiente sin ella no deja las cosas como estaban: BORRA la regla, porque
+# el valor vuelve a su defecto. Y lo hace sin avisar de nada raro, porque para
+# Terraform es exactamente lo que se le pidio.
+#
+# El fichero es el unico sitio donde la configuracion sobrevive entre applys.
+# Esta ignorado por git a proposito -contiene la contrasena de las bases- y por
+# eso existe este ejemplo.
