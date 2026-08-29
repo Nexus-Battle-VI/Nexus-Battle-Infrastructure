@@ -1,6 +1,6 @@
 # ADR-004 — Identidad, directorio y control de acceso
 
-- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **El rol viaja en el testimonio** desde el 2026-08-29 (Account decide, el pool refleja). **Queda ABIERTO** el segundo factor de los roles administrativos, que no es el que este ADR previó
+- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **El rol viaja en el testimonio** desde el 2026-08-29 (Account decide, el pool refleja). **Segundo factor por correo disponible** desde el 2026-08-29, limitado a direcciones verificadas en SES porque la cuenta sigue en el entorno de pruebas
 - **Fecha:** 2026-08-21, aceptado el 2026-08-25
 - **Decide:** Arquitectura, con aprobación obligatoria de gobierno del proyecto y presupuesto
 - **Relacionado:** [ADR-007](ADR-007-aws-cost-optimized-platform.md)
@@ -293,6 +293,31 @@ Opciones evaluadas, con precios reales de la Price List API en `us-east-1` al 20
 | Cognito user pool, plan Plus | 0,020 USD/MAU | Descartada: su valor añadido es protección frente a amenazas, que no es el problema a resolver |
 | IdP autoalojado en la misma EC2 | Solo cómputo ya presupuestado | Descartada: añade custodia de credenciales, justo lo que este ADR evita |
 | Managed Microsoft AD | Varias veces el techo mensual completo | Descartada por coste |
+
+### Resuelto el 2026-08-29, con un limite que hay que decir entero
+
+El pool ya puede usar el correo como segundo factor: emisor `DEVELOPER` sobre la
+identidad verificada `nexusbattle67@gmail.com`, en la misma region. Cognito crea
+por su cuenta el rol vinculado al servicio; no hace falta politica de
+autorizacion de envio en la identidad porque esta en la misma cuenta.
+
+Y hay una precondicion que hace fallar el **plan**, no el apply, si alguien pone
+`mfa_method = "email"` sin identidad: sin ella el error llegaba desde AWS
+describiendo el sintoma en lugar de la causa.
+
+**El limite: SES esta en el entorno de pruebas, y la solicitud para salir de el
+fue DENEGADA** (caso 178781013000904). En ese entorno solo se puede escribir a
+direcciones ya verificadas.
+
+Consecuencia practica, dicha sin adornos: **el segundo factor por correo funciona
+para las cuentas administrativas cuyo correo este verificado en SES, y para nadie
+mas.** Es suficiente para lo que el requisito pide -el segundo factor es de
+`ADMINISTRATOR` y `SUPER_ADMINISTRATOR`, que son cuentas contadas- pero no es un
+flujo que pueda ofrecerse a cualquier usuario. Prometerlo sin esta frase seria
+prometer algo que no ocurre.
+
+Ampliarlo exige que AWS conceda el acceso de produccion, que ya nego una vez. Eso
+es una gestion, no un cambio de codigo.
 
 ### El MFA por correo exige SES, y este ADR no lo contemplo
 

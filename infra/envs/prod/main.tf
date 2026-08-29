@@ -63,6 +63,13 @@ module "identity" {
 
   name = local.name
   tags = local.tags
+
+  # El segundo factor por correo y la identidad de SES van juntos: sin identidad
+  # verificada, Cognito no admite MFA por correo. Vacio deja el pool con el
+  # emisor por defecto y el segundo factor en aplicacion autenticadora.
+  ses_identity_arn   = var.ses_identity_arn
+  from_email_address = var.from_email_address
+  mfa_method         = var.mfa_method
 }
 
 # Lo que cada rol de nodo escribe en disco al arrancar.

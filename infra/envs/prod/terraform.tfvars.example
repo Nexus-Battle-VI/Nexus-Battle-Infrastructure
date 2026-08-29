@@ -45,3 +45,23 @@ public_ingress_cidrs = []
 # Segunda aplicacion, un dia despues: AWS necesita ver la etiqueta en un recurso
 # real antes de permitir activarla.
 activate_cost_allocation_tags = false
+
+# ---------------------------------------------------------------------------
+# Segundo factor por correo (ADR-004)
+# ---------------------------------------------------------------------------
+#
+# Las tres van juntas: `mfa_method = "email"` sin identidad de SES falla en el
+# PLAN, con un mensaje que dice la causa. Dejarlas vacias mantiene el emisor por
+# defecto de Cognito y el segundo factor en aplicacion autenticadora.
+#
+# La identidad tiene que estar verificada ANTES. Terraform no la crea: verificar
+# una direccion exige que una persona abra un correo y pulse un enlace.
+#
+# LIMITE REAL DE ESTA CUENTA: SES esta en el entorno de pruebas y la solicitud
+# para salir de el fue DENEGADA. Solo se puede escribir a direcciones ya
+# verificadas, asi que el segundo factor por correo llega a las cuentas
+# administrativas cuyo correo lo este, y a nadie mas.
+#
+# ses_identity_arn   = "arn:aws:ses:us-east-1:658430303197:identity/nexusbattle67@gmail.com"
+# from_email_address = "nexusbattle67@gmail.com"
+# mfa_method         = "email"
