@@ -81,11 +81,12 @@ locals {
         "Caddyfile" = file("${local.compose_dir}/Caddyfile")
       }
       entorno = {
-        DATA_HOST            = var.nodes["data"].private_ip
-        DB_PASSWORD          = var.db_password
-        AUTH_MODE            = var.auth_mode
-        COGNITO_USER_POOL_ID = module.identity.user_pool_id
-        COGNITO_CLIENT_ID    = module.identity.client_id
+        DATA_HOST             = var.nodes["data"].private_ip
+        DB_PASSWORD           = var.db_password
+        AUTH_MODE             = var.auth_mode
+        AUTHENTICATION_DRIVER = var.authentication_driver
+        COGNITO_USER_POOL_ID  = module.identity.user_pool_id
+        COGNITO_CLIENT_ID     = module.identity.client_id
       }
     }
 

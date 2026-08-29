@@ -71,6 +71,23 @@ variable "auth_mode" {
   }
 }
 
+variable "authentication_driver" {
+  description = <<-DESC
+    Como verifica Account las contrasenas.
+
+    `fake` compara contra cuentas sembradas en memoria y sirve para levantar el
+    stack sin depender de AWS. `cognito` invoca `AdminInitiateAuth` de verdad,
+    que es lo que HU-02 necesita; el rol de instancia ya tiene ese permiso.
+  DESC
+  type        = string
+  default     = "fake"
+
+  validation {
+    condition     = contains(["fake", "cognito"], var.authentication_driver)
+    error_message = "authentication_driver solo admite 'fake' o 'cognito'."
+  }
+}
+
 variable "compose_plugin_url" {
   description = "Complemento `compose`, con la version fijada. No esta en los repositorios de AL2023."
   type        = string
