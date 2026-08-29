@@ -179,11 +179,22 @@ jobs:
 
       - name: Verificar que la infraestructura no abre ingreso publico
         run: |
-          # El BLOCKER de ADR-004 impide exponer el sistema a internet. Esta
-          # comprobacion existe para que abrirlo requiera un cambio consciente
-          # que falla en CI, y no un descuido que nadie ve en la revision.
-          if grep -rn '0\.0\.0\.0/0' infra/ --include='*.tfvars.example' ; then
+          # Abrir el sistema a internet debe ser un cambio consciente que falla
+          # en CI, no un descuido que nadie ve en la revision.
+          #
+          # SE IGNORAN LAS LINEAS COMENTADAS, y no es una relajacion. La version
+          # anterior buscaba la cadena en cualquier posicion y saltaba con un
+          # comentario que ADVERTIA contra abrir a 0.0.0.0/0. Una comprobacion
+          # que castiga documentar el riesgo ensena a rodearla con eufemismos, y
+          # entonces deja de proteger de lo que decia proteger.
+          #
+          # Una asignacion real -comentada o no- sigue cayendo: lo que se filtra
+          # son las lineas que empiezan por `#`, no las que contienen la cadena.
+          hallazgos=$(grep -rn '0\.0\.0\.0/0' infra/ --include='*.tfvars.example'             | grep -vE ':[0-9]+:[[:space:]]*#' || true)
+
+          if [ -n "$hallazgos" ]; then
             echo "El ejemplo de variables abre ingreso publico. Ver ADR-004."
+            echo "$hallazgos"
             exit 1
           fi
           echo "El ejemplo de variables no abre ingreso publico."
