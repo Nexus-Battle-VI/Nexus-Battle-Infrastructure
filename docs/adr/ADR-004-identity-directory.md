@@ -1,6 +1,6 @@
 # ADR-004 — Identidad, directorio y control de acceso
 
-- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **El BLOCKER sigue ACTIVO**: nada esta expuesto a internet, y el segundo factor no es el que este ADR previo
+- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **Queda ABIERTO** el segundo factor de los roles administrativos, que no es el que este ADR previó
 - **Fecha:** 2026-08-21, aceptado el 2026-08-25
 - **Decide:** Arquitectura, con aprobación obligatoria de gobierno del proyecto y presupuesto
 - **Relacionado:** [ADR-007](ADR-007-aws-cost-optimized-platform.md)
@@ -35,7 +35,47 @@ Las otras cuatro dependen de un proveedor que **no existe todavía**.
 
 ## BLOCKER — Identity provider approval
 
-**Estado del blocker al 2026-08-25: el código está listo, el proveedor no existe todavía.**
+**Estado del blocker al 2026-08-29: resuelto en su parte técnica. Queda abierto el segundo factor administrativo.**
+
+El pool existe, está aplicado, y los cinco servicios corren con `AUTH_MODE=jwt`
+sobre los nodos de la demo. La tabla de más abajo describe lo que ocurría con
+`AUTH_MODE=disabled` y **ya no describe el estado actual**: se conserva porque
+sigue siendo exacta para cualquier entorno que arranque sin el pool.
+
+### Lo que se comprobó, y cómo
+
+No se da por bueno que «el código lo hace». Se ejecutó contra el sistema
+desplegado, a través del proxy:
+
+| Ruta | Sin testimonio | Con testimonio |
+| --- | --- | --- |
+| `/`, `/api/products`, `/api/threads` (declaradas `@Public()`) | 200 | — |
+| `GET /api/inventories/:id` | **401** | 404 |
+| `GET /api/orders` | **401** | **200** |
+| `POST /api/threads` | **401** | — |
+| `GET /api/accounts/me` | — | **200**, resuelto desde el `sub` del testimonio |
+
+El testimonio se obtuvo del propio sistema: `POST /api/sessions` con un usuario
+`PLAYER` real, que Account verifica contra PostgreSQL y luego contra Cognito por
+`AdminInitiateAuth`. Su firma se validó **contra el JWKS del pool** —RS256, `kid`
+presente— y transporta `cognito:groups: ["PLAYER"]`.
+
+`readRoles` acepta únicamente grupos que sean roles conocidos: un grupo inventado
+en el pool no puede fabricar un permiso.
+
+### Lo que sigue abierto
+
+- **Segundo factor por correo para `ADMINISTRATOR` y `SUPER_ADMINISTRATOR`.**
+  El pool tiene TOTP porque el MFA por correo exige SES, decisión pendiente.
+  `LoginAccount` **falla cerrado** mientras tanto: si Cognito entrega un token
+  para un rol administrativo sin haber retado el segundo factor, devuelve
+  `providerUnavailable` en lugar de autenticar.
+- **HU-01 no crea todavía la identidad en Cognito.** La cuenta de prueba se
+  alineó a mano entre el pool y PostgreSQL.
+- **`public_ingress_cidrs` sigue vacío.** Abrirlo es una decisión aparte, que
+  ahora es discutible y antes no lo era.
+
+**Estado anterior, conservado como referencia:**
 
 Los cinco servicios validan el testimonio y aplican control de acceso. Lo que falta no es código de producto: es **el user pool de Cognito**, que Terraform describe pero que no se ha aplicado.
 
