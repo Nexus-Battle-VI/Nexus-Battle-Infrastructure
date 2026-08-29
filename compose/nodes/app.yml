@@ -57,6 +57,13 @@ services:
       PERSISTENCE_DRIVER: postgres
       DATABASE_URL: postgres://account:${DB_PASSWORD}@${DATA_HOST}:5432/account
       AUTH_MODE: ${AUTH_MODE:-disabled}
+      # `fake` verifica contra cuentas sembradas en memoria; `cognito` invoca
+      # AdminInitiateAuth de verdad. Con `NODE_ENV=production`, `fake` IMPIDE
+      # ARRANCAR: un binario de produccion no puede dar por buena una
+      # contrasena que nadie comprobo.
+      #
+      # Solo lo lee `account`: es el unico servicio que verifica contrasenas.
+      AUTHENTICATION_DRIVER: ${AUTHENTICATION_DRIVER:-fake}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
     depends_on:
