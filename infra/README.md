@@ -80,11 +80,40 @@ Se resuelve desde el parámetro público de SSM. Un identificador escrito a mano
 
 `ignore_changes = [ami]` evita que una AMI nueva recree la instancia en silencio y se lleve por delante el volumen del nodo de datos.
 
-### El estado todavía es local
+### El estado pasa a S3
 
-El backend S3 está escrito y **comentado** en `versions.tf`. Activarlo exige que el bucket exista, y crearlo requiere una primera aplicación con estado local. Ese orden hay que respetarlo, no saltárselo.
+La condición que este mismo documento fijaba —«es aceptable porque todavía no hay nada aplicado; deja de serlo en cuanto lo haya»— ya se cumplió: hay recursos aplicados.
 
-Mientras el estado sea local: **no está compartido y no está respaldado**. Es aceptable porque todavía no hay nada aplicado; deja de serlo en cuanto lo haya.
+Y apareció el motivo concreto. Cuando otra persona del equipo clonó el repositorio y ejecutó `terraform plan`, obtuvo `2 to import, 29 to add`: sin el estado, Terraform propone crear lo que ya existe. La salida aparentemente obvia es pasarse el fichero, y **no se debe hacer**: el estado guarda `user_data` **entero y sin hashear**, y el arranque lleva dentro `DB_PASSWORD`. Mandar el `terraform.tfstate` por chat o correo es mandar la contraseña de las bases.
+
+El estado compartido no es comodidad. Es la forma de no tener que mandar ese fichero.
+
+`modules/tfstate` crea el bucket con versionado, cifrado SSE-S3, los cuatro bloqueos de acceso público, caducidad de versiones antiguas y una política que rechaza cualquier petición sin TLS. Es la **única** excepción a la prohibición de S3, prevista por ADR-007 y habilitada por ADR-008; la política de denegación de `modules/iam` ya lo permitía por nombre.
+
+#### El orden de activación, que no se puede saltar
+
+```bash
+# 1. Crear el bucket, todavía con estado local.
+terraform apply
+
+# 2. Descomentar el bloque `backend "s3"` de `versions.tf`.
+
+# 3. Migrar el estado local al bucket. Terraform pide confirmación.
+terraform init -migrate-state
+
+# 4. Comprobar que el estado remoto es el bueno ANTES de borrar nada.
+terraform state list
+terraform plan          # debe salir sin cambios pendientes
+
+# 5. Solo entonces, retirar los ficheros locales.
+rm terraform.tfstate terraform.tfstate.backup
+```
+
+El paso 4 no es opcional: es lo único que distingue «el estado se migró» de «el estado se perdió y Terraform empezó uno vacío».
+
+A partir de ahí el bloqueo lo da `use_lockfile`, que usa escrituras condicionales de S3 y **no necesita DynamoDB** —que además está prohibida—. Exige Terraform 1.10 o superior, y por eso `required_version` subió de `>= 1.9` a `>= 1.10`: con 1.9 el backend se activa sin bloqueo y sin avisar.
+
+El bucket se declara en la misma configuración cuyo estado aloja, así que acaba registrado dentro de sí mismo. Es el patrón habitual y funciona; lo que no se puede es destruirlo con `terraform destroy` sin sacarlo antes del estado, y por eso lleva `prevent_destroy`.
 
 ### Las etiquetas de coste se activan en una segunda aplicación
 

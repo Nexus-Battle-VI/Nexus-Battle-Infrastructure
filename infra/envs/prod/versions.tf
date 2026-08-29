@@ -1,5 +1,7 @@
 terraform {
-  required_version = ">= 1.9"
+  # 1.10 y no 1.9: el bloqueo nativo del backend S3 (`use_lockfile`) aparece
+  # en 1.10. Con 1.9 el backend se activa sin bloqueo y sin decirlo.
+  required_version = ">= 1.10"
 
   required_providers {
     aws = {
