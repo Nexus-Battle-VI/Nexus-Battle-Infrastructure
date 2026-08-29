@@ -72,6 +72,46 @@ data "aws_iam_policy_document" "cognito_admin_auth" {
 
     resources = [var.cognito_user_pool_arn]
   }
+
+  /**
+   * Reflejo del rol en el pool.
+   *
+   * Account es la fuente de verdad de los roles -viven en `account_roles`, en
+   * PostgreSQL- y el pool solo los refleja para que viajen dentro del
+   * testimonio. Es lo que el modulo `identity` ya dice de los grupos; lo que
+   * faltaba era el permiso que lo hace posible.
+   *
+   * Sin esto, quien se registrara por la pantalla del proveedor quedaba fuera
+   * del grupo `PLAYER`: Account escribia el rol en PostgreSQL y el testimonio
+   * viajaba sin `cognito:groups`, de modo que los demas servicios veian a esa
+   * persona sin ningun rol. No daba sintoma porque ninguna puerta pide
+   * `PLAYER` -todas piden `ADMINISTRATOR` o `MODERATOR`- y por eso la
+   * divergencia era invisible en lugar de inexistente.
+   *
+   * SON TRES ACCIONES Y NO MAS, deliberadamente. `AdminListGroupsForUser` es de
+   * lectura y hace falta para calcular la diferencia: sin ella el reflejo solo
+   * podria sumar, y retirar un rol en Account nunca llegaria al testimonio.
+   * NO se conceden `AdminCreateUser` ni `AdminDeleteUser`: Account dejo de
+   * crear identidades y no debe recuperar esa capacidad por la puerta de atras.
+   * Tampoco `CreateGroup` ni `DeleteGroup`: los grupos los declara el modulo
+   * `identity`, y que el servicio pudiera crearlos dejaria a la
+   * infraestructura describiendo algo distinto de lo que existe.
+   *
+   * El blocker de topologia descrito arriba aplica igual a estas tres: cualquier
+   * contenedor del nodo `app` puede invocarlas, no solo Account.
+   */
+  statement {
+    sid    = "AccountRoleReflection"
+    effect = "Allow"
+
+    actions = [
+      "cognito-idp:AdminListGroupsForUser",
+      "cognito-idp:AdminAddUserToGroup",
+      "cognito-idp:AdminRemoveUserFromGroup",
+    ]
+
+    resources = [var.cognito_user_pool_arn]
+  }
 }
 
 resource "aws_iam_role_policy" "cognito_admin_auth" {
