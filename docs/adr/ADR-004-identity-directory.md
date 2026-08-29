@@ -1,6 +1,6 @@
 # ADR-004 — Identidad, directorio y control de acceso
 
-- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **El rol viaja en el testimonio** desde el 2026-08-29 (Account decide, el pool refleja). **Segundo factor por correo disponible** desde el 2026-08-29, limitado a direcciones verificadas en SES porque la cuenta sigue en el entorno de pruebas
+- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **El rol viaja en el testimonio** desde el 2026-08-29 (Account decide, el pool refleja). **Segundo factor por correo disponible** desde el 2026-08-29, limitado a direcciones verificadas en SES porque la cuenta sigue en el entorno de pruebas. **El pool tiene TOTP activo y `mfa_configuration = OPTIONAL`**, que según AWS solo reta a quien tenga factor inscrito: falta la inscripción, no la configuración. **Ninguna cuenta administrativa existe todavía**, así que el riesgo es latente
 - **Fecha:** 2026-08-21, aceptado el 2026-08-25
 - **Decide:** Arquitectura, con aprobación obligatoria de gobierno del proyecto y presupuesto
 - **Relacionado:** [ADR-007](ADR-007-aws-cost-optimized-platform.md)
@@ -309,30 +309,101 @@ mientras SES siga en el entorno de pruebas: los códigos solo llegan a direccion
 verificadas, de modo que dejaría fuera a todos los jugadores. Es exactamente el
 «dejaría a todo el mundo fuera» que este ADR ya preveía.
 
-Conclusión, sin adornos: **las cuentas administrativas siguen protegidas solo por
+Conclusión, sin adornos: **una cuenta administrativa estaría protegida solo por
 contraseña, y el sistema ya está abierto a todo internet.** Se abrió por decisión
 del equipo, con este riesgo sobre la mesa y no descubierto después.
 
-Cerrarlo tiene un camino concreto y corto: poner las tres variables de SES en
-`terraform.tfvars` —el código ya está— y crear las cuentas administrativas con
-una de las direcciones **reales y verificadas** de la cuenta. Mientras eso no se
-haga, no conviene crear ninguna cuenta con rol administrativo.
+### Corrección del 2026-08-29: SES no es el camino corto, y la exposición es latente
+
+Esta sección decía antes que cerrarlo era «poner las tres variables de SES». Al
+comprobarlo contra el pool, esa recomendación resultó equivocada en dos puntos.
+
+**Primero, el pool ya tiene un segundo factor aprovisionado y activo:**
+
+```
+GetUserPoolMfaConfig(us-east-1_HrEiSzzKW)
+  -> {"SoftwareTokenMfaConfiguration": {"Enabled": true},
+      "MfaConfiguration": "OPTIONAL"}
+```
+
+Y la documentación de AWS es explícita sobre lo que `OPTIONAL` significa:
+
+> If MFA is optional, then MFA is added at the user level. Only users who have
+> MFA configured are prompted with an MFA challenge during sign in.
+
+Es decir: **`OPTIONAL` ya produce el comportamiento que ADR-004 quiere.** Reta a
+quien tiene factor inscrito y no molesta a los jugadores. Lo que falta no es
+configuración del pool ni SES: es que **alguien inscriba el factor** en las
+cuentas administrativas. La protección se consigue por inscripción, no por
+imposición, y por eso no hay ningún error que delate su ausencia.
+
+**Segundo, hoy no hay nada expuesto.** El pool no tiene ninguna cuenta en
+`ADMINISTRATOR` ni en `SUPER_ADMINISTRATOR`. El riesgo es **latente**: aparece en
+el momento en que se cree la primera, no antes.
+
+**El control.** `scripts/verificar-segundo-factor-administrativo.py` lista los
+miembros de ambos grupos y exige que cada uno tenga un factor **confirmado**
+(`UserMFASettingList`, no `MFAOptions`, que está obsoleto y solo refleja SMS).
+Como mientras no haya cuentas administrativas la comprobación pasa por ausencia
+—y una comprobación que solo sabe pasar no comprueba nada— el guion admite
+`GRUPOS_ADMINISTRATIVOS` por entorno para ejercitar el camino de fallo sin tocar
+ningún permiso:
+
+```
+$ python scripts/verificar-segundo-factor-administrativo.py
+  No hay ninguna cuenta administrativa en el pool.        -> salida 0
+
+$ GRUPOS_ADMINISTRATIVOS=PLAYER python scripts/...py
+  SIN 2FA  94f884e8-...  [PLAYER]                         -> salida 1
+```
+
+**Lo que queda por decidir, y es de producto, no técnico.** La aclaración PO-12
+fijó el segundo factor **por correo**. Lo aprovisionado es TOTP. Las dos opciones
+son viables y ninguna es gratis:
+
+| | TOTP (lo que hay) | Correo (lo que pidió el cliente) |
+| --- | --- | --- |
+| Requiere `apply` | No, ya está activo | Sí, tres variables de SES |
+| A quién protege | A cualquier cuenta | Solo a las 7 direcciones verificadas en SES |
+| Fuerza | Mayor: canal distinto del correo | Menor: el correo es también el canal de recuperación |
+| Cumple PO-12 | No | Sí |
+
+**Recomendación:** inscribir TOTP ahora, porque cierra el riesgo hoy y sin
+depender de un permiso de AWS que ya nos denegaron, y llevar PO-12 a revisión con
+la limitación de SES sobre la mesa. Si el cliente mantiene el correo, se añade
+después: son compatibles, y Cognito puede ofrecer ambos con `SELECT_MFA_TYPE`
+—lo que exigiría cambiar el módulo, que hoy los trata como excluyentes mediante
+un único `mfa_method`.
+
+Mientras no se inscriba ningún factor: **no crear cuentas con rol
+administrativo.**
 
 ## La URL de retorno ata la exposición a la identidad
 
-**Registrado el 2026-08-29.** La única URL de retorno registrada en el cliente de
-Web es `http://localhost:5173/auth/callback`.
+**Registrado el 2026-08-29.** Hasta ese día la única URL de retorno registrada en
+el cliente de Web era `http://localhost:5173/auth/callback`, de modo que **el
+circuito de identidad funcionaba de extremo a extremo solo desde desarrollo
+local**. El Web desplegado no habría podido completar el flujo aunque se
+expusiera: Cognito habría respondido `redirect_mismatch`.
 
-Es correcto hoy y conviene que se sepa por qué: **el circuito de identidad
-funciona de extremo a extremo solo desde desarrollo local**. El Web desplegado no
-podría completar el flujo aunque se expusiera — Cognito respondería
-`redirect_mismatch`.
-
-No da síntoma porque nada está expuesto a internet, y por eso las dos cosas
+No daba síntoma porque nada estaba expuesto a internet, y por eso las dos cosas
 parecían decisiones independientes. **No lo son.** El día que
-`public_ingress_cidrs` deje de estar vacío, hay que añadir el origen desplegado a
-`callback_urls` **en el mismo cambio**, o el inicio de sesión se rompe la primera
-vez que alguien lo use.
+`public_ingress_cidrs` dejase de estar vacío, había que añadir el origen
+desplegado a `callback_urls` **en el mismo cambio**, o el inicio de sesión se
+rompería la primera vez que alguien lo usara.
+
+**Resuelto el mismo día**, y comprobado contra el cliente desplegado:
+
+```
+callbacks: ["http://localhost:5173/auth/callback",
+            "https://nexus.simuladorupbbga.app/auth/callback"]
+logout:    ["http://localhost:5173/",
+            "https://nexus.simuladorupbbga.app/"]
+```
+
+La URL pública se **deriva** de `public_site_address` en `envs/prod/main.tf`, no
+se escribe a mano. Es lo que impide que vuelvan a separarse: no se puede fijar un
+dominio sin registrar su retorno.
 
 ## Decisión de proveedor: Amazon Cognito, plan Essentials
 
