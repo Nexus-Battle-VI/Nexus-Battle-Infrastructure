@@ -1,13 +1,13 @@
-# Proxy inverso de la composicion de referencia.
+# Proxy inverso de la composicion.
 #
-# Reproduce el papel que Caddy cumple en la arquitectura de demo: un unico
-# origen para el navegador, con /api enrutado hacia cada servicio.
-#
-# La aplicacion web nunca conoce la topologia: habla siempre con el mismo
-# origen. Esa indireccion es lo que permite que la demo corra en una maquina y
-# la arquitectura objetivo detras de un balanceador sin cambiar el frontend.
+# Un unico origen para el navegador, con /api enrutado hacia cada servicio. La
+# aplicacion web nunca conoce la topologia: habla siempre con el mismo origen.
+# Esa indireccion es lo que permite que la demo corra en una maquina y la
+# arquitectura objetivo detras de un balanceador sin cambiar el frontend.
 
-:8080 {
+# Las rutas se definen UNA vez y se importan en los dos sitios. Duplicarlas
+# garantizaria que algun dia una de las dos copias se quede atras.
+(rutas) {
 	handle /api/accounts* {
 		reverse_proxy account:3000
 	}
@@ -40,4 +40,42 @@
 
 	encode gzip zstd
 	log
+}
+
+# ---------------------------------------------------------------------------
+# Sitio interno: HTTP plano en 8080.
+#
+# No lleva TLS a proposito. Es el que usan las sondas de salud del contenedor y
+# las comprobaciones por SSM contra 127.0.0.1, y tambien el extremo de un tunel
+# de Session Manager. Nada de eso sale de la maquina, asi que cifrarlo no
+# protegeria de nada y complicaria las sondas.
+#
+# Este puerto NO debe abrirse en el grupo de seguridad.
+# ---------------------------------------------------------------------------
+:8080 {
+	import rutas
+}
+
+# ---------------------------------------------------------------------------
+# Sitio publico.
+#
+# `SITIO_PUBLICO` decide la direccion, y con ella el certificado:
+#
+#   sin definir      -> `localhost:8443`, que nadie alcanza porque el puerto no
+#                       se publica. Es el estado por defecto: el sistema no esta
+#                       expuesto.
+#   una IP           -> certificado de la CA local de Caddy. El navegador avisa.
+#   un dominio       -> con `TLS_CONTACTO` puesto a un correo, Caddy obtiene un
+#                       certificado real de Let's Encrypt y el aviso desaparece.
+#
+# HTTPS y no HTTP, y no por gusto: **Cognito rechaza URL de retorno que no sean
+# HTTPS**, salvo `localhost`. Exponer esto por HTTP plano daria un sistema
+# alcanzable en el que nadie podria iniciar sesion.
+# ---------------------------------------------------------------------------
+{$SITIO_PUBLICO:localhost:8443} {
+	# `internal` usa la CA local. Un correo activa ACME contra Let's Encrypt,
+	# que necesita un dominio publico resoluble y el puerto 80 alcanzable.
+	tls {$TLS_CONTACTO:internal}
+
+	import rutas
 }

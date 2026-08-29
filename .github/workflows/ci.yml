@@ -234,6 +234,25 @@ jobs:
       #
       # No comprueba que las imagenes existan ni que los servicios funcionen:
       # para eso haria falta levantar el stack, que no es trabajo de este job.
+      # El Caddyfile es el unico punto por el que pasa TODO el trafico del nodo
+      # `app`. Un error de sintaxis ahi no rompe una ruta: deja el proxy sin
+      # arrancar y el sistema entero inalcanzable, y no se descubriria hasta
+      # despues del despliegue.
+      #
+      # Se valida con la misma imagen que corre en el nodo. Las variables se dan
+      # para que la sustitucion tenga algo que poner; lo que se comprueba es la
+      # sintaxis, no los valores.
+      - name: Validar el Caddyfile
+        run: |
+          docker run --rm -v "$PWD/compose:/etc/caddy:ro"             -e SITIO_PUBLICO=ejemplo.test -e TLS_CONTACTO=internal             caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          echo "Caddyfile valido con sitio publico definido."
+
+          # Y tambien sin definirlo, que es el estado por defecto: el sistema no
+          # expuesto. Si solo se validara la variante configurada, el fichero
+          # podria estar roto justo en el camino que se usa a diario.
+          docker run --rm -v "$PWD/compose:/etc/caddy:ro"             caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          echo "Caddyfile valido con los valores por defecto."
+
       - name: Validar la composicion de referencia
         run: |
           cp compose/compose.example.yml compose/compose.yml

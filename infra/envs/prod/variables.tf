@@ -172,3 +172,47 @@ variable "mfa_method" {
   type        = string
   default     = "software_token"
 }
+
+# ---------------------------------------------------------------------------
+# Exposicion del sitio publico
+# ---------------------------------------------------------------------------
+
+variable "public_site_address" {
+  description = <<-DESC
+    Direccion con la que el proxy sirve el sitio publico, y con ella el
+    certificado que usa.
+
+    Vacio  -> `localhost:8443`, que nadie alcanza. El sistema NO esta expuesto.
+    Una IP -> certificado de la CA local de Caddy. El navegador avisa.
+    Dominio -> con `tls_contact_email`, certificado real de Let's Encrypt.
+
+    HTTPS y no HTTP, y no por gusto: Cognito RECHAZA URL de retorno que no sean
+    HTTPS, salvo `localhost`. Exponer esto por HTTP plano daria un sistema
+    alcanzable en el que nadie podria iniciar sesion.
+
+    VA DE LA MANO DE DOS COSAS MAS, y omitir cualquiera deja el sistema roto de
+    una forma distinta:
+
+      1. `public_ingress_cidrs`, o nadie llega.
+      2. `callback_urls` del cliente de Cognito, o el retorno del inicio de
+         sesion falla con `redirect_mismatch`.
+
+    Y si la direccion es una IP: la publica del nodo CAMBIA cada vez que se
+    reemplaza. Para que no se rompa en cada despliegue hace falta una IP
+    elastica, o un dominio.
+  DESC
+  type        = string
+  default     = ""
+}
+
+variable "tls_contact_email" {
+  description = <<-DESC
+    Correo de contacto para Let's Encrypt. Vacio significa `internal`: Caddy usa
+    su CA local y el navegador avisa de certificado no confiable.
+
+    Solo tiene efecto con un dominio publico resoluble en `public_site_address`:
+    Let's Encrypt no emite certificados para una IP desnuda.
+  DESC
+  type        = string
+  default     = ""
+}
