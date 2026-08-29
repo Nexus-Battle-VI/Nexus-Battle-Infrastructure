@@ -199,6 +199,17 @@ jobs:
           fi
           echo "El ejemplo de variables no abre ingreso publico."
 
+      # AWS solo admite un juego concreto de caracteres en la descripcion de una
+      # regla de grupo de seguridad, y el apostrofo NO esta dentro.
+      #
+      # Esto existe porque costo un apply a medias: la descripcion decia
+      # "Let's Encrypt", el plan paso limpio -Terraform no valida ese campo- y
+      # el error llego de AWS DESPUES de haber reemplazado ya el nodo. Un fallo
+      # a mitad de apply es el peor momento posible, y es justo el que una
+      # comprobacion barata en CI evita.
+      - name: Verificar las descripciones de las reglas de seguridad
+        run: python3 scripts/verificar-descripciones-de-seguridad.py
+
       - name: Verificar ausencia de secretos
         run: |
           # Se excluye .github porque este mismo workflow contiene los patrones

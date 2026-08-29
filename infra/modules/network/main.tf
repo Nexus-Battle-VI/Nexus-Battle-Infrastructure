@@ -96,7 +96,7 @@ resource "aws_vpc_security_group_ingress_rule" "app_acme" {
   count = var.acme_enabled ? 1 : 0
 
   security_group_id = aws_security_group.app.id
-  description       = "HTTP abierto para el reto ACME de Let's Encrypt, que valida desde origenes no publicados"
+  description       = "HTTP abierto para el reto ACME, que se valida desde origenes no publicados"
   cidr_ipv4         = "0.0.0.0/0"
   from_port         = 80
   to_port           = 80
