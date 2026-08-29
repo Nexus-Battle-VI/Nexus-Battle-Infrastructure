@@ -133,6 +133,22 @@ resource "aws_instance" "node" {
 
   user_data = local.arranque[each.key]
 
+  # Sin esto, cambiar el arranque NO cambia nada en la maquina.
+  #
+  # Por defecto `user_data_replace_on_change` es `false`: Terraform actualiza el
+  # atributo en el estado, informa de "updated in-place" y la instancia sigue
+  # corriendo el script con el que nacio. El `apply` sale en verde y el nodo se
+  # queda como estaba.
+  #
+  # Se detecto con el arreglo de las credenciales de servicio: el plan proponia
+  # "2 to change" sobre las dos instancias y ninguna habria ejecutado el
+  # `init-postgres.sh` nuevo.
+  #
+  # Que reemplazar la instancia sea caro es precisamente el punto: el arranque
+  # solo se ejecuta al nacer, asi que un cambio en el arranque ES un cambio de
+  # instancia. Decirlo en el plan vale mas que ahorrarselo.
+  user_data_replace_on_change = true
+
   # Necesaria para descargar imagenes: no hay NAT Gateway.
   #
   # Es AUTOASIGNADA y no elastica, y la diferencia importa para el coste: AWS
