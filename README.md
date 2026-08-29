@@ -85,14 +85,30 @@ Siete diagramas PlantUML en [docs/diagrams](docs/diagrams). Los de despliegue **
 
 Se enumeran juntas porque quien lea esta documentación necesita conocerlas antes de tomar cualquier decisión sobre el sistema:
 
-1. **Sin control de acceso.** Ningún servicio verifica quién realiza la petición. **No debe desplegarse en un entorno accesible desde internet.**
-2. **Sin persistencia real.** El estado se pierde al reiniciar.
-3. **Sin comunicación entre servicios.** Los puertos existen; el transporte no.
-4. **Sin saga de checkout.** Confirmar un pedido no reserva inventario.
-5. **Cinco de las seis pantallas de Web** son marcadores declarados.
-6. **La arquitectura de demo no cumple los RNF** y tiene un punto único de fallo.
-7. **No hay infraestructura AWS provisionada.**
-8. **Sin licencia asignada.**
+1. **Sin comunicación entre servicios.** Los puertos existen; el transporte no. Account solo tiene `LoggingNotificationRequester`, que escribe en el registro.
+2. **Sin saga de checkout.** Confirmar un pedido no reserva inventario.
+3. **Cinco de las seis pantallas de Web** son marcadores declarados. Catalog es la única real.
+4. **La arquitectura de demo no cumple los RNF** y tiene un punto único de fallo.
+5. **Sin licencia asignada.**
+6. **Segundo factor de los roles administrativos, abierto.** ADR-004 lo previó por correo; el correo exige SES, no aprobado. `LoginAccount` falla cerrado mientras tanto.
+7. **No expuesto a internet, y exponerlo son dos cambios, no uno.** `public_ingress_cidrs` está vacío, y la única URL de retorno registrada en Cognito es la de desarrollo local. Abrir lo primero sin añadir el origen desplegado a `callback_urls` rompe el inicio de sesión la primera vez que alguien lo use.
+
+### Tres limitaciones que esta lista declaraba y ya no son ciertas
+
+Se dejan escritas en lugar de borrarlas, porque quien haya leído una versión
+anterior de este README necesita saber qué cambió:
+
+- ~~**Sin control de acceso.** Ningún servicio verifica quién realiza la petición.~~
+  **Superado el 2026-08-29.** Los cinco servicios verifican el testimonio contra el
+  JWKS del pool (`AUTH_MODE=jwt`), comprobado de extremo a extremo: las rutas
+  protegidas responden 401 sin testimonio y 200 con él. El rol viaja dentro del
+  testimonio. Ver [ADR-004](docs/adr/ADR-004-identity-directory.md).
+- ~~**Sin persistencia real.** El estado se pierde al reiniciar.~~ **Superado.** Los
+  cinco servicios declaran PostgreSQL o MongoDB, con migraciones propias.
+  Comprobado con el caso que de verdad lo demuestra: una cuenta creada días antes
+  sigue ahí **después de reemplazar por completo el nodo de aplicación**.
+- ~~**No hay infraestructura AWS provisionada.**~~ **Superado.** 43 recursos con
+  Terraform y estado remoto en S3. Ver [ADR-011](docs/adr/ADR-011-deployment-topology.md).
 
 Ninguna es un descuido. Cada una tiene su motivo registrado y su condición de desbloqueo.
 

@@ -4,21 +4,56 @@ Ver [ADR-004](../adr/ADR-004-identity-directory.md).
 
 ## El estado que hay que conocer primero
 
-**Ningún servicio verifica quién realiza la petición.**
+**Los cinco servicios verifican quién realiza la petición.** Al 2026-08-29, con
+`AUTH_MODE=jwt` y comprobado de extremo a extremo contra el pool real.
 
-No es un descuido. Es un **BLOCKER declarado**, y al 2026-08-25 su estado es este:
+Este documento decía lo contrario hasta esa fecha, y el **BLOCKER de ADR-004**
+que describía está resuelto en lo técnico:
 
 | Paso | Estado |
 | --- | --- |
 | Elegir proveedor y presupuesto | **Hecho**: Cognito, plan Essentials |
-| Adaptador del alta de sujetos | Pendiente |
+| ~~Adaptador del alta de sujetos~~ | **Retirado**: el producto no da de alta identidades; el alta ocurre en la pantalla del proveedor |
 | Validar el JWT contra el JWKS | **Hecho** |
 | Validar el testimonio en cada servicio | **Hecho**: los cinco servicios NestJS |
 | Activar RBAC en operaciones sensibles | **Hecho** |
+| Reflejar el rol en el proveedor | **Hecho**: Account decide, el pool recoge |
 
-**Lo que falta ya no es código de producto: es el user pool.** Terraform lo describe y no se ha aplicado.
+La comprobación, contra el sistema desplegado:
 
-La tabla de arriba describe lo que ocurre si el sistema se despliega **sin** ese pool, con `AUTH_MODE=disabled`. En ese caso el sujeto registrado es literalmente `anonymous`: los datos dicen que nadie fue verificado, en lugar de aparentar personas concretas.
+| Ruta | Sin testimonio | Con testimonio |
+| --- | --- | --- |
+| `/`, `/api/products`, `/api/threads` | 200 | — |
+| `GET /api/inventories/:id` | **401** | 404 |
+| `GET /api/orders` | **401** | **200** |
+| `POST /api/threads` | **401** | — |
+
+Que `/api/orders` pase de 401 a 200 con el mismo testimonio prueba que la
+verificación **no vive solo en Account**: la hace cada servicio.
+
+## Lo que sigue abierto
+
+- **Segundo factor de los roles administrativos.** ADR-004 lo previó por correo;
+  el correo exige SES, que no está aprobado. `LoginAccount` **falla cerrado**
+  mientras tanto: un rol administrativo con testimonio pero sin reto devuelve
+  `providerUnavailable`. No se rebajó la regla para que el flujo pasara.
+- **Exposición a internet, que son dos cambios acoplados.**
+  `public_ingress_cidrs` está vacío, y la única URL de retorno registrada en
+  Cognito es la de desarrollo local. Abrir lo primero sin añadir el origen
+  desplegado a `callback_urls` rompe el inicio de sesión en cuanto alguien lo
+  use.
+- **Una sola identidad de AWS para todo el nodo `app`.** Cualquier contenedor de
+  ese nodo puede obtener las mismas credenciales que Account. Es una limitación
+  aceptada de la topología de ADR-011, no un descuido, y aislarla exige cambiar
+  de topología.
+
+## Lo que este documento describía y ya no ocurre
+
+Se deja escrito en lugar de borrarlo: quien haya leído una versión anterior
+necesita saber qué cambió, y un blocker que desaparece sin rastro parece que
+nunca existió.
+
+La tabla que sigue describe lo que ocurriría si el sistema se desplegara **sin** ese pool, con `AUTH_MODE=disabled`. **No es el estado actual**: el despliegue corre con `AUTH_MODE=jwt`. Se conserva porque `disabled` sigue siendo una configuración posible en desarrollo local, y conviene saber qué implica. En ese caso el sujeto registrado es literalmente `anonymous`: los datos dicen que nadie fue verificado, en lugar de aparentar personas concretas.
 
 Y con `NODE_ENV=production`, esa configuración **impide arrancar el servicio**.
 
@@ -30,7 +65,7 @@ Y con `NODE_ENV=production`, esa configuración **impide arrancar el servicio**.
 | Commerce | El `customerId` llega sin verificar |
 | Web | `useSession` guarda una identidad no verificada |
 
-**Ningún servicio debe desplegarse en un entorno accesible desde internet sin resolver este blocker.**
+**Con `AUTH_MODE=disabled`, ningún servicio debe desplegarse en un entorno accesible desde internet.** Con `NODE_ENV=production` esa configuración además impide arrancar, de modo que la regla no depende de que alguien la recuerde.
 
 ## La decisión de no añadir seguridad aparente
 

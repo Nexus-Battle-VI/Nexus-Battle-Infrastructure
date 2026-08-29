@@ -1,6 +1,6 @@
 @startuml sequence-login-2fa
 !theme plain
-title Registro, verificacion y RBAC — estado actual frente a objetivo
+title Alta, registro y RBAC — estado real al 2026-08-29
 
 skinparam defaultFontName sans-serif
 skinparam sequence {
@@ -9,76 +9,94 @@ skinparam sequence {
 
 actor Jugador
 participant "Web" as web
+participant "Cognito\n(hosted UI + pool)" as idp
 participant "Account" as account
-participant "IdentityProviderPort" as idp
-participant "NotificationRequestPort" as notify
-participant "Notifications" as notifications
+participant "RoleDirectoryPort" as roles
+participant "Otros cuatro servicios" as otros
 
-== Implementado hoy ==
+== La identidad existe ANTES que la cuenta ==
 
-Jugador -> web : registrarse
-web -> account : POST /api/accounts
+note over Jugador, idp
+  Account **no crea identidades**. El alta ocurre en la
+  pantalla del proveedor; aqui solo se crea la cuenta del
+  producto para un sujeto que ya esta verificado.
+end note
+
+Jugador -> web : "Crear cuenta"
+web -> idp : GET /signup\n(codigo de autorizacion + PKCE)
+activate idp
+Jugador -> idp : correo y contrasena
+idp --> web : redirect con `code`
+deactivate idp
+
+web -> idp : POST /oauth2/token\n(presenta el verificador de PKCE)
+idp --> web : testimonio firmado (sub, email)
+
+== Registro de la cuenta ==
+
+Jugador -> web : completa el perfil
+web -> account : POST /api/accounts\nAuthorization: Bearer ...
 activate account
 
-account -> account : EmailAddress.create()\nDisplayName.create()
+account -> account : verifica el testimonio\ncontra el JWKS del pool
+note right: sin testimonio -> 401.\nEl sujeto sale del token,\nNO del cuerpo de la peticion.
+
+account -> account : EmailAddress.create()\nDisplayName.create()\nexistsByEmail()
 note right: falla temprano, sin efectos
 
-account -> account : existsByEmail()
-alt correo duplicado
-  account --> web : 409 Conflict
-end
+account -> account : guarda el avatar
+note right: /var/lib/nexus/avatars\nen un volumen del nodo
 
-account -> idp : register(email)
-activate idp
-idp --> account : IdentitySubject
-deactivate idp
-note right of idp
-  FakeIdentityProvider
-  Sin credenciales.
-  ADR-004 pendiente.
+account -> roles : reflect(sub, [PLAYER])
+activate roles
+roles -> idp : AdminAddUserToGroup / RemoveFromGroup\n(diferencia, no solo altas)
+idp --> roles : ok
+roles --> account
+deactivate roles
+
+note right of roles
+  **Antes de persistir, a proposito.**
+  Al reves, un fallo dejaria una cuenta
+  cuyo rol no viaja en el testimonio,
+  irreparable por reintento.
+  Si el proveedor no responde: 503,
+  y la cuenta NO se crea.
 end note
 
-account -> account : Account.register()\nestado PENDING_VERIFICATION\nrol PLAYER
-
-group compensacion explicita
-  account -> account : save()
-  alt falla la persistencia
-    account -> idp : revoke(subject)
-    note right: evita identidades huerfanas
-    account --> web : error
-  end
-end
-
-account -> notify : request(account-welcome)
-note right of notify
-  NO participa de la compensacion:
-  la cuenta ya es valida.
-end note
-notify -> notifications : (registro estructurado)\nADR-006 pendiente
+account -> account : Account.register()\nPENDING_VERIFICATION, rol PLAYER
+account -> account : saveRegistration()
+note right: si falla, se compensa el avatar
 
 account --> web : 201 PENDING_VERIFICATION
 deactivate account
 
-Jugador -> web : verificar cuenta
-web -> account : POST /api/accounts/:id/verification
-account -> account : verify() -> ACTIVE
-account --> web : 200 ACTIVE
+== El rol ya viaja, y los demas lo leen ==
 
-== NO implementado — depende de ADR-004 ==
+Jugador -> idp : iniciar sesion
+idp --> Jugador : testimonio con\ncognito:groups: ["PLAYER"]
 
-note over Jugador, notifications
-  **Falta todo esto:**
-  1. Autenticacion real contra el IdP
-  2. Segundo factor por correo
-  3. Emision y validacion de JWT
-  4. Guard de RBAC en el borde de cada servicio
+Jugador -> otros : peticion con testimonio
+otros -> otros : verifica firma contra el JWKS\ny lee el rol de cognito:groups
+note right of otros
+  Los cuatro leen el rol del testimonio.
+  Por eso hacia falta reflejarlo: Account
+  decide el rol, pero quien lo aplica es
+  otro servicio que solo ve el token.
+end note
 
-  Las reglas de roles YA existen en el dominio
-  de Account. Lo que falta es la identidad
-  verificable que las active.
+== Lo que sigue ABIERTO ==
 
-  No se anadio un guard sobre un identificador
-  no verificado: eso seria seguridad aparente.
+note over Jugador, otros
+  **Segundo factor de los roles administrativos.**
+  ADR-004 lo previo por correo; el correo exige SES,
+  que no esta aprobado. `LoginAccount` **falla cerrado**
+  mientras tanto: un rol administrativo con testimonio
+  pero sin reto devuelve `providerUnavailable`.
+
+  **Exposicion a internet.** `public_ingress_cidrs` sigue
+  vacio. Y la unica URL de retorno registrada es la de
+  desarrollo local: exponer el sistema obliga a anadir el
+  origen desplegado a `callback_urls` en el mismo cambio.
 end note
 
 @enduml
