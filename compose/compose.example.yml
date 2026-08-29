@@ -82,6 +82,12 @@ services:
       AUTHENTICATION_DRIVER: ${AUTHENTICATION_DRIVER:-fake}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+    # El avatar es obligatorio en el registro (HU-01) y se guarda antes que nada:
+    # sin un lugar donde escribirlo, ninguna cuenta puede crearse. La imagen ya
+    # trae el directorio y apunta ahi; el volumen es lo que hace que los avatares
+    # sobrevivan al siguiente `docker compose up`.
+    volumes:
+      - avatares:/var/lib/nexus/avatars
     depends_on:
       # El esquema tiene que existir ANTES de que el servicio acepte peticiones.
       # Migrar desde el arranque del propio servicio haría que varias réplicas
@@ -382,3 +388,4 @@ services:
 volumes:
   postgres-data:
   mongo-data:
+  avatares:
