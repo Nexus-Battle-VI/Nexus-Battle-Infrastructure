@@ -266,7 +266,21 @@ La última línea es la que cierra el asunto: el testimonio usado para registrar
 emitió *antes* del reflejo, así que solo uno nuevo demuestra que el rol viaja de
 verdad.
 
-## Exponer el sistema: lo que hace falta, y lo que lo desaconseja hoy
+## El sistema esta expuesto desde el 2026-08-29
+
+`https://nexus.simuladorupbbga.app` sirve desde internet con certificado de
+Let's Encrypt (`CN=YE1`, vigente hasta el 27 de noviembre de 2026). El puerto 443
+esta abierto a `0.0.0.0/0` y el 80 responde **308** hacia HTTPS: solo redirige.
+
+Comprobado desde fuera: HTTPS valida sin `-k`, `/api/products` responde 200 y
+`/api/orders` responde **401**. La autorizacion funciona contra el origen
+publico, no solo contra `127.0.0.1`.
+
+**Lo que sigue abierto es el segundo factor**, y con el sistema ya expuesto pasa
+a ser lo mas urgente. Ver la seccion siguiente: el codigo esta, las variables no
+estan puestas.
+
+## Exponer el sistema: lo que hizo falta, y lo que sigue desaconsejando abrirlo del todo
 
 **Registrado el 2026-08-29.** Abrir `public_ingress_cidrs` era, hasta ahora, una
 variable que no habría servido de nada: el grupo de seguridad abre 443 y 80, y el
@@ -295,8 +309,14 @@ mientras SES siga en el entorno de pruebas: los códigos solo llegan a direccion
 verificadas, de modo que dejaría fuera a todos los jugadores. Es exactamente el
 «dejaría a todo el mundo fuera» que este ADR ya preveía.
 
-Conclusión, sin adornos: **con las cuentas administrativas protegidas solo por
-contraseña, abrir a todo internet no es prudente.** Un alcance restringido sí.
+Conclusión, sin adornos: **las cuentas administrativas siguen protegidas solo por
+contraseña, y el sistema ya está abierto a todo internet.** Se abrió por decisión
+del equipo, con este riesgo sobre la mesa y no descubierto después.
+
+Cerrarlo tiene un camino concreto y corto: poner las tres variables de SES en
+`terraform.tfvars` —el código ya está— y crear las cuentas administrativas con
+una de las direcciones **reales y verificadas** de la cuenta. Mientras eso no se
+haga, no conviene crear ninguna cuenta con rol administrativo.
 
 ## La URL de retorno ata la exposición a la identidad
 

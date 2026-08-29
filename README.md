@@ -91,7 +91,7 @@ Se enumeran juntas porque quien lea esta documentación necesita conocerlas ante
 4. **La arquitectura de demo no cumple los RNF** y tiene un punto único de fallo.
 5. **Sin licencia asignada.**
 6. **Segundo factor de los roles administrativos, abierto.** ADR-004 lo previó por correo; el correo exige SES, no aprobado. `LoginAccount` falla cerrado mientras tanto.
-7. **No expuesto a internet, y exponerlo son dos cambios, no uno.** `public_ingress_cidrs` está vacío, y la única URL de retorno registrada en Cognito es la de desarrollo local. Abrir lo primero sin añadir el origen desplegado a `callback_urls` rompe el inicio de sesión la primera vez que alguien lo use.
+7. **El sistema está expuesto y el segundo factor no está activo.** Desde el 2026-08-29 `https://nexus.simuladorupbbga.app` sirve desde internet con certificado real. El código del segundo factor por correo está, pero sus variables no están puestas, así que las cuentas administrativas están protegidas solo por contraseña. **No conviene crear cuentas con rol administrativo hasta resolverlo.**
 
 ### Tres limitaciones que esta lista declaraba y ya no son ciertas
 
