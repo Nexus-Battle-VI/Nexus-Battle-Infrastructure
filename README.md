@@ -90,8 +90,26 @@ Se enumeran juntas porque quien lea esta documentación necesita conocerlas ante
 3. **Cinco de las seis pantallas de Web** son marcadores declarados. Catalog es la única real.
 4. **La arquitectura de demo no cumple los RNF** y tiene un punto único de fallo.
 5. **Sin licencia asignada.**
-6. **Segundo factor de los roles administrativos, abierto.** ADR-004 lo previó por correo; el correo exige SES, no aprobado. `LoginAccount` falla cerrado mientras tanto.
-7. **El sistema está expuesto y el segundo factor no está activo.** Desde el 2026-08-29 `https://nexus.simuladorupbbga.app` sirve desde internet con certificado real. El código del segundo factor por correo está, pero sus variables no están puestas, así que las cuentas administrativas están protegidas solo por contraseña. **No conviene crear cuentas con rol administrativo hasta resolverlo.**
+6. **Segundo factor administrativo elegido, pero sin cuenta inscrita.** El 2026-08-29 se confirmó TOTP. El pool ya lo tiene activo; falta inscribir el autenticador de la primera cuenta y solo después concederle el rol.
+7. **El sistema está expuesto.** Desde el 2026-08-29 `https://nexus.simuladorupbbga.app` sirve desde internet con certificado real. No existe todavía ninguna cuenta en `ADMINISTRATOR` ni `SUPER_ADMINISTRATOR`, así que el control pasa por ausencia. **No se concede uno de esos roles antes de verificar TOTP.**
+
+### Inscripción segura del primer factor administrativo
+
+La identidad debe existir, estar confirmada y seguir siendo `PLAYER` mientras se
+inscribe el factor. La contraseña y el código se introducen directamente en una
+terminal local; nunca se pasan como argumentos ni se copian a un chat:
+
+```powershell
+python scripts/inscribir_totp_administrativo.py --username usuario@dominio.example
+python scripts/verificar-segundo-factor-administrativo.py
+```
+
+El primer guion autentica al propio usuario, muestra una sola vez la clave que
+debe introducir en su aplicación autenticadora, verifica el código y marca TOTP
+como preferido. No crea usuarios ni asigna roles. El segundo comprueba el pool;
+la elevación a `ADMINISTRATOR` ocurre únicamente después de que TOTP aparezca
+confirmado. Así no existe una ventana en la que una cuenta administrativa pueda
+entrar con sola contraseña.
 
 ### Tres limitaciones que esta lista declaraba y ya no son ciertas
 
