@@ -28,6 +28,21 @@ module "governance" {
  * presupuesto: crear veintidos recursos a nombre de root deja un rastro de
  * auditoria que despues no se puede reescribir.
  */
+/*
+ * El bucket del estado. Se declara aqui, en la misma configuracion cuyo estado
+ * aloja: acaba registrado dentro de si mismo, que es el patron habitual.
+ *
+ * El orden de activacion NO se puede saltar: primero se aplica esto con estado
+ * local, y solo despues se descomenta el `backend "s3"` de `versions.tf` y se
+ * ejecuta `terraform init -migrate-state`. El procedimiento esta en
+ * `infra/README.md`.
+ */
+module "tfstate" {
+  source = "../../modules/tfstate"
+
+  tags = local.tags
+}
+
 module "iam" {
   source = "../../modules/iam"
 
