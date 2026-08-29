@@ -1,6 +1,6 @@
 # ADR-004 — Identidad, directorio y control de acceso
 
-- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **El rol viaja en el testimonio** desde el 2026-08-29 (Account decide, el pool refleja). **Segundo factor por correo disponible** desde el 2026-08-29, limitado a direcciones verificadas en SES porque la cuenta sigue en el entorno de pruebas. **El pool tiene TOTP activo y `mfa_configuration = OPTIONAL`**, que según AWS solo reta a quien tenga factor inscrito: falta la inscripción, no la configuración. **Ninguna cuenta administrativa existe todavía**, así que el riesgo es latente
+- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **El rol viaja en el testimonio** desde el 2026-08-29 (Account decide, el pool refleja). **TOTP confirmado como segundo factor administrativo** el 2026-08-29. El pool lo tiene activo con `mfa_configuration = OPTIONAL`, que según AWS solo reta a quien tenga factor inscrito: falta crear la identidad e inscribir su autenticador, no configurar el pool. **Ninguna cuenta administrativa existe todavía**, así que el control pasa por ausencia.
 - **Fecha:** 2026-08-21, aceptado el 2026-08-25
 - **Decide:** Arquitectura, con aprobación obligatoria de gobierno del proyecto y presupuesto
 - **Relacionado:** [ADR-007](ADR-007-aws-cost-optimized-platform.md)
@@ -357,9 +357,10 @@ $ GRUPOS_ADMINISTRATIVOS=PLAYER python scripts/...py
   SIN 2FA  94f884e8-...  [PLAYER]                         -> salida 1
 ```
 
-**Lo que queda por decidir, y es de producto, no técnico.** La aclaración PO-12
-fijó el segundo factor **por correo**. Lo aprovisionado es TOTP. Las dos opciones
-son viables y ninguna es gratis:
+**Decisión de producto confirmada el 2026-08-29: TOTP.** La aclaración PO-12
+había fijado originalmente el segundo factor **por correo**. Tras contrastar la
+limitación de SES y la fuerza de ambos factores, se eligió TOTP. La comparación
+que sustentó la decisión queda registrada:
 
 | | TOTP (lo que hay) | Correo (lo que pidió el cliente) |
 | --- | --- | --- |
@@ -368,12 +369,12 @@ son viables y ninguna es gratis:
 | Fuerza | Mayor: canal distinto del correo | Menor: el correo es también el canal de recuperación |
 | Cumple PO-12 | No | Sí |
 
-**Recomendación:** inscribir TOTP ahora, porque cierra el riesgo hoy y sin
-depender de un permiso de AWS que ya nos denegaron, y llevar PO-12 a revisión con
-la limitación de SES sobre la mesa. Si el cliente mantiene el correo, se añade
-después: son compatibles, y Cognito puede ofrecer ambos con `SELECT_MFA_TYPE`
-—lo que exigiría cambiar el módulo, que hoy los trata como excluyentes mediante
-un único `mfa_method`.
+**Ejecución de la decisión:** inscribir TOTP antes de conceder el primer rol
+administrativo. `scripts/inscribir_totp_administrativo.py` mantiene la
+contraseña y el código fuera de argumentos y archivos, y el verificador existente
+confirma después el factor contra el pool. Añadir correo en el futuro seguiría
+siendo compatible, pero exigiría cambiar el módulo, que hoy trata los métodos
+como excluyentes mediante un único `mfa_method`.
 
 Mientras no se inscriba ningún factor: **no crear cuentas con rol
 administrativo.**
@@ -474,9 +475,8 @@ recuperacion**, y queda dicho en lugar de aparentar que lo hay.
 correo. No cuesta nada, no necesita SES, y es mas fuerte: un codigo por correo
 lo intercepta quien tenga acceso al correo.
 
-Volver al correo es aprovisionar SES y cambiar una variable
-(`mfa_method = "email"`). Es una decision pendiente, no un olvido, y hasta que se
-tome **este ADR no describe lo que hay desplegado en ese punto**.
+Volver al correo sería una nueva decisión: exige aprovisionar SES y cambiar
+`mfa_method = "email"`. No forma parte del cierre actual, que mantiene TOTP.
 
 ### Por qué Essentials y no Lite
 
