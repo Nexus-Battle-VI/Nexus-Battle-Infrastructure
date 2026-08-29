@@ -94,6 +94,12 @@ locals {
         AUTHENTICATION_DRIVER = var.authentication_driver
         COGNITO_USER_POOL_ID  = module.identity.user_pool_id
         COGNITO_CLIENT_ID     = module.identity.client_id
+
+        # Vacio deja el sitio publico en `localhost:8443`, que nadie alcanza.
+        # Abrir `public_ingress_cidrs` sin poner esto abriria dos puertos donde
+        # el proxy no sirve nada util.
+        SITIO_PUBLICO = var.public_site_address
+        TLS_CONTACTO  = var.tls_contact_email
       }
     }
 

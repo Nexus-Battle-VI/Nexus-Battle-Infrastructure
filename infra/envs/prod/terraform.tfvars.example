@@ -65,3 +65,38 @@ activate_cost_allocation_tags = false
 # ses_identity_arn   = "arn:aws:ses:us-east-1:658430303197:identity/nexusbattle67@gmail.com"
 # from_email_address = "nexusbattle67@gmail.com"
 # mfa_method         = "email"
+
+# ---------------------------------------------------------------------------
+# Exposicion (ADR-004)
+# ---------------------------------------------------------------------------
+#
+# LAS TRES VAN JUNTAS. Poner una sin las otras deja el sistema roto de una forma
+# distinta cada vez:
+#
+#   public_ingress_cidrs  sin  public_site_address  -> puertos abiertos donde el
+#                                                      proxy no sirve nada util
+#   public_site_address   sin  public_ingress_cidrs -> el proxy sirve HTTPS y
+#                                                      nadie llega
+#   cualquiera de las dos sin actualizar `callback_urls` del cliente de Cognito
+#                                                   -> el retorno del inicio de
+#                                                      sesion falla con
+#                                                      `redirect_mismatch`
+#
+# Cognito RECHAZA URL de retorno que no sean HTTPS, salvo `localhost`. Exponerlo
+# por HTTP plano da un sistema alcanzable donde nadie puede iniciar sesion.
+#
+# Con una IP, Caddy usa su CA local y el navegador avisa. Y la IP publica del
+# nodo CAMBIA al reemplazarlo, asi que la URL de retorno se rompe en cada
+# despliegue: para algo estable hace falta un dominio, o una IP elastica.
+#
+# ANTES DE ABRIR A 0.0.0.0/0, LEER ESTO: el pool tiene `mfa_configuration` en
+# OPTIONAL y ningun usuario tiene segundo factor configurado. Quien entre por el
+# hosted UI obtiene un testimonio SIN segundo factor, y si esa cuenta esta en
+# ADMINISTRATOR los otros cuatro servicios lo honran. El `LoginAccount` que falla
+# cerrado solo protege la ruta de Account, no ese camino. Forzar MFA para todos
+# no es viable mientras SES siga en el entorno de pruebas, porque solo llegaria
+# a direcciones verificadas y dejaria fuera a los jugadores.
+#
+# public_ingress_cidrs = ["203.0.113.4/32"]
+# public_site_address  = "nexus.ejemplo.com"
+# tls_contact_email    = "operaciones@ejemplo.com"

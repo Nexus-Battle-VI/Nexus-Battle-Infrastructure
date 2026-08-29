@@ -266,6 +266,38 @@ La última línea es la que cierra el asunto: el testimonio usado para registrar
 emitió *antes* del reflejo, así que solo uno nuevo demuestra que el rol viaja de
 verdad.
 
+## Exponer el sistema: lo que hace falta, y lo que lo desaconseja hoy
+
+**Registrado el 2026-08-29.** Abrir `public_ingress_cidrs` era, hasta ahora, una
+variable que no habría servido de nada: el grupo de seguridad abre 443 y 80, y el
+proxy escuchaba **solo en 8080**. Se habrían abierto dos puertos donde no había
+nadie escuchando.
+
+Corregido: el proxy sirve ahora un sitio público en 443, con certificado de la CA
+local de Caddy o de Let's Encrypt según se configure un dominio. HTTPS y no HTTP
+porque **Cognito rechaza URL de retorno que no sean HTTPS**, salvo `localhost`:
+expuesto por HTTP plano, el sistema sería alcanzable y nadie podría iniciar
+sesión.
+
+### Lo que desaconseja abrirlo a internet hoy
+
+El pool tiene `mfa_configuration = OPTIONAL` y **ningún usuario tiene segundo
+factor configurado**. Quien entra por el hosted UI obtiene un testimonio sin
+reto, y si esa cuenta está en `ADMINISTRATOR` los otros cuatro servicios lo
+honran: leen el rol de `cognito:groups` y no saben nada de segundos factores.
+
+**El `LoginAccount` que falla cerrado protege la ruta de Account, no ese
+camino.** Es una defensa aplicativa sobre un flujo concreto, no sobre el
+proveedor.
+
+Forzar el segundo factor para todos (`mfa_configuration = ON`) tampoco vale
+mientras SES siga en el entorno de pruebas: los códigos solo llegan a direcciones
+verificadas, de modo que dejaría fuera a todos los jugadores. Es exactamente el
+«dejaría a todo el mundo fuera» que este ADR ya preveía.
+
+Conclusión, sin adornos: **con las cuentas administrativas protegidas solo por
+contraseña, abrir a todo internet no es prudente.** Un alcance restringido sí.
+
 ## La URL de retorno ata la exposición a la identidad
 
 **Registrado el 2026-08-29.** La única URL de retorno registrada en el cliente de

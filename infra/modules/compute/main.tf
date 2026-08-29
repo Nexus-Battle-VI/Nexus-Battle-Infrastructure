@@ -172,7 +172,39 @@ resource "aws_instance" "node" {
   # ciclo y ademas deja la topologia legible en un solo sitio.
   private_ip = each.value.private_ip
 
-  user_data = local.arranque[each.key]
+  /**
+   * Comprimido, y no por elegancia: EC2 limita `user_data` a 16 KB.
+   *
+   * El arranque lleva dentro el compose del nodo y sus ficheros de apoyo -el
+   * Caddyfile, los guiones de inicializacion de las bases-, asi que crece cada
+   * vez que crece cualquiera de ellos. Al anadir el sitio publico al Caddyfile
+   * se paso del limite y el plan fallo con:
+   *
+   *   expected length of user_data to be in the range (0 - 16384)
+   *
+   * cloud-init descomprime el gzip por su cuenta -documentado, no supuesto- de
+   * modo que el guion llega igual a la maquina. Lo unico que cambia es cuanto
+   * ocupa en transito.
+   *
+   * El limite sigue existiendo sobre el resultado comprimido. Cuando vuelva a
+   * quedarse corto, la salida no es comprimir mas: es dejar de meter ficheros
+   * en el arranque y traerlos de otro sitio.
+   *
+   * SOLO SE COMPRIME DONDE HACE FALTA, y esto importa. Cambiar de `user_data` a
+   * `user_data_base64` cambia el atributo aunque el guion sea identico, y con
+   * `user_data_replace_on_change` eso REEMPLAZA la instancia. Comprimir tambien
+   * el nodo de datos lo habria destruido -con PostgreSQL y MongoDB dentro- sin
+   * que su arranque hubiera cambiado una sola linea.
+   *
+   * El plan lo dijo: `2 to add, 0 to change, 2 to destroy`. Merece la pena
+   * mirar el plan POR NODO antes de cada apply.
+   *
+   * El de datos se queda sin comprimir porque su arranque es pequeno y estable.
+   * Si algun dia crece hasta el limite, comprimirlo costara una recreacion, y
+   * entonces habra que respaldar antes en lugar de descubrirlo a mitad.
+   */
+  user_data        = each.value.role == "data" ? local.arranque[each.key] : null
+  user_data_base64 = each.value.role == "data" ? null : base64gzip(local.arranque[each.key])
 
   # Sin esto, cambiar el arranque NO cambia nada en la maquina.
   #

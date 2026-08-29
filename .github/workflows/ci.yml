@@ -179,11 +179,22 @@ jobs:
 
       - name: Verificar que la infraestructura no abre ingreso publico
         run: |
-          # El BLOCKER de ADR-004 impide exponer el sistema a internet. Esta
-          # comprobacion existe para que abrirlo requiera un cambio consciente
-          # que falla en CI, y no un descuido que nadie ve en la revision.
-          if grep -rn '0\.0\.0\.0/0' infra/ --include='*.tfvars.example' ; then
+          # Abrir el sistema a internet debe ser un cambio consciente que falla
+          # en CI, no un descuido que nadie ve en la revision.
+          #
+          # SE IGNORAN LAS LINEAS COMENTADAS, y no es una relajacion. La version
+          # anterior buscaba la cadena en cualquier posicion y saltaba con un
+          # comentario que ADVERTIA contra abrir a 0.0.0.0/0. Una comprobacion
+          # que castiga documentar el riesgo ensena a rodearla con eufemismos, y
+          # entonces deja de proteger de lo que decia proteger.
+          #
+          # Una asignacion real -comentada o no- sigue cayendo: lo que se filtra
+          # son las lineas que empiezan por `#`, no las que contienen la cadena.
+          hallazgos=$(grep -rn '0\.0\.0\.0/0' infra/ --include='*.tfvars.example'             | grep -vE ':[0-9]+:[[:space:]]*#' || true)
+
+          if [ -n "$hallazgos" ]; then
             echo "El ejemplo de variables abre ingreso publico. Ver ADR-004."
+            echo "$hallazgos"
             exit 1
           fi
           echo "El ejemplo de variables no abre ingreso publico."
@@ -234,6 +245,25 @@ jobs:
       #
       # No comprueba que las imagenes existan ni que los servicios funcionen:
       # para eso haria falta levantar el stack, que no es trabajo de este job.
+      # El Caddyfile es el unico punto por el que pasa TODO el trafico del nodo
+      # `app`. Un error de sintaxis ahi no rompe una ruta: deja el proxy sin
+      # arrancar y el sistema entero inalcanzable, y no se descubriria hasta
+      # despues del despliegue.
+      #
+      # Se valida con la misma imagen que corre en el nodo. Las variables se dan
+      # para que la sustitucion tenga algo que poner; lo que se comprueba es la
+      # sintaxis, no los valores.
+      - name: Validar el Caddyfile
+        run: |
+          docker run --rm -v "$PWD/compose:/etc/caddy:ro"             -e SITIO_PUBLICO=ejemplo.test -e TLS_CONTACTO=internal             caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          echo "Caddyfile valido con sitio publico definido."
+
+          # Y tambien sin definirlo, que es el estado por defecto: el sistema no
+          # expuesto. Si solo se validara la variante configurada, el fichero
+          # podria estar roto justo en el camino que se usa a diario.
+          docker run --rm -v "$PWD/compose:/etc/caddy:ro"             caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          echo "Caddyfile valido con los valores por defecto."
+
       - name: Validar la composicion de referencia
         run: |
           cp compose/compose.example.yml compose/compose.yml
