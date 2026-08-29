@@ -267,3 +267,51 @@ resource "aws_instance" "node" {
     ignore_changes = [ami]
   }
 }
+
+# ---------------------------------------------------------------------------
+# Direccion estable para el nodo que sirve el sitio publico.
+#
+# La IP asignada automaticamente CAMBIA cada vez que la instancia se reemplaza, y
+# el nodo `app` se reemplaza siempre que cambia su arranque. Ya paso dos veces el
+# 2026-08-29. Sin una direccion fija, cada reemplazo rompe el registro DNS y, con
+# el, el certificado y las URL de retorno de Cognito.
+#
+# COSTE: ninguno adicional mientras la instancia este encendida. AWS cobra la
+# misma tarifa por IPv4 publica sea automatica o elastica, y asociar una elastica
+# libera la automatica. Lo que si cambia es que una elastica se cobra tambien con
+# la instancia APAGADA, y sin asociar. Si se retiran los nodos, hay que retirarla
+# tambien o seguira facturando.
+#
+# Se declara aparte de la instancia a proposito: asi anadirla a un nodo que ya
+# existe no lo reemplaza.
+#
+# RIESGO CONOCIDO, y se deja dicho en lugar de taparlo: Terraform asocia la
+# direccion en cuanto la instancia pasa a `running`, y para entonces cloud-init
+# suele estar todavia instalando paquetes. Cambiar la IP publica corta las
+# conexiones salientes EN CURSO -las nuevas funcionan de inmediato-, asi que un
+# reemplazo del nodo puede dejar el arranque a medias.
+#
+# Se penso en envolver los pasos de red del arranque en reintentos, y se
+# descarto: ese guion lo comparten los DOS nodos, asi que tocarlo obliga a
+# reemplazar tambien el de datos -con PostgreSQL y MongoDB dentro- por un
+# beneficio que solo necesita el nodo `app`. El plan lo dijo: `2 to destroy`.
+# Cambiar destruccion segura de datos por un fallo transitorio posible es mal
+# negocio.
+#
+# Si un reemplazo deja el nodo a medias, se ve al comprobarlo -los contenedores
+# no estan- y se resuelve volviendo a aplicar. Cuando el arranque tenga que
+# cambiar por otro motivo, ese es el momento de anadir los reintentos.
+# ---------------------------------------------------------------------------
+resource "aws_eip" "app" {
+  count = var.stable_public_ip ? 1 : 0
+
+  domain = "vpc"
+  tags   = merge(var.tags, { Name = "${var.name}-app" })
+}
+
+resource "aws_eip_association" "app" {
+  count = var.stable_public_ip ? 1 : 0
+
+  instance_id   = aws_instance.node["app"].id
+  allocation_id = aws_eip.app[0].id
+}

@@ -37,3 +37,20 @@ variable "public_ingress_cidrs" {
   type        = list(string)
   default     = []
 }
+
+variable "acme_enabled" {
+  description = <<-DESC
+    Abre el puerto 80 a todo internet para que Let's Encrypt pueda validar el
+    reto HTTP-01.
+
+    Falso por defecto. Ponerlo a cierto SIN un dominio configurado en el proxy
+    abre un puerto que no sirve para nada: la redireccion a un sitio que nadie
+    pidio.
+
+    No admite una lista de origenes a proposito. Let's Encrypt valida desde
+    direcciones que no publica y que cambian sin aviso; filtrarlas no seria mas
+    estricto, seria no obtener certificado.
+  DESC
+  type        = bool
+  default     = false
+}
