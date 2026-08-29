@@ -83,6 +83,19 @@ def exigir_token_de_acceso(respuesta: dict[str, object]) -> str:
     return token
 
 
+def borrar_pantalla_del_terminal() -> None:
+    """Retira lo visible **y** el historial de desplazamiento.
+
+    Solo tiene efecto sobre un terminal de verdad: si la salida esta redirigida,
+    escribir secuencias de escape ensuciaria el fichero sin proteger nada.
+    """
+    if not sys.stdout.isatty():
+        return
+
+    sys.stdout.write("[3J[H[2J")
+    sys.stdout.flush()
+
+
 def inscribir_totp(
     cognito: ClienteCognito,
     *,
@@ -91,6 +104,7 @@ def inscribir_totp(
     username: str,
     leer_secreto: Callable[[str], str] = getpass.getpass,
     mostrar: Callable[[str], None] = print,
+    limpiar_pantalla: Callable[[], None] = borrar_pantalla_del_terminal,
 ) -> bool:
     """Inscribe y verifica TOTP. Devuelve ``False`` si ya estaba inscrito."""
     detalle_inicial = cognito.admin_get_user(UserPoolId=pool_id, Username=username)
@@ -115,10 +129,21 @@ def inscribir_totp(
     if not isinstance(clave, str) or not clave:
         raise ErrorInscripcion("Cognito no devolvio una clave TOTP para asociar.")
 
+    # El aviso va DESPUES de la clave, no antes.
+    #
+    # Estaba antes, y la primera persona que uso el guion pego el bloque entero
+    # -clave incluida- en un chat. No fue un descuido suyo: un aviso situado
+    # arriba queda fuera de la seleccion cuando alguien copia "lo que acaba de
+    # salir", y lo ultimo que se lee es lo que se recuerda.
     mostrar("")
     mostrar("Introduce AHORA esta clave en tu aplicacion autenticadora:")
-    mostrar(clave)
-    mostrar("No la copies a chats, incidencias ni documentos.")
+    mostrar("")
+    mostrar(f"    {clave}")
+    mostrar("")
+    mostrar("!! ESTA CLAVE ES UNA CREDENCIAL. Quien la tenga genera tus codigos.")
+    mostrar("!! NO la pegues en chats, incidencias, documentos ni capturas.")
+    mostrar("!! Si ya la has copiado a algun sitio, cancela con Ctrl+C: sin")
+    mostrar("!! verificar no queda activa, y la proxima ejecucion dara otra.")
     mostrar("")
 
     codigo = leer_secreto("Codigo de seis digitos del autenticador: ").strip()
@@ -144,7 +169,16 @@ def inscribir_totp(
             "La verificacion respondio correctamente, pero el factor no aparece confirmado."
         )
 
+    # Se borra la pantalla Y el historial de desplazamiento.
+    #
+    # La clave sigue en el bufer de la ventana aunque el guion haya terminado, y
+    # pedir "cierra el terminal" es pedir que alguien se acuerde. `3J` es lo que
+    # retira el historial; `2J` solo limpia lo visible y dejaria la clave a un
+    # scroll de distancia.
+    limpiar_pantalla()
+
     mostrar("TOTP confirmado. La identidad ya puede elevarse de rol de forma segura.")
+    mostrar("Se limpio la pantalla: la clave ya no esta en el historial de esta ventana.")
     return True
 
 
