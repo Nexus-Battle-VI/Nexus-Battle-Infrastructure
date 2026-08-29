@@ -66,6 +66,18 @@ services:
       AUTHENTICATION_DRIVER: ${AUTHENTICATION_DRIVER:-fake}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+    # El avatar es obligatorio en el registro (HU-01), asi que sin un lugar
+    # donde escribirlo NINGUNA cuenta puede crearse: el caso de uso guarda el
+    # avatar antes que nada y respondia 500. La imagen ya trae el directorio
+    # creado y su `AVATAR_STORAGE_PATH` apuntando ahi; el volumen es lo que hace
+    # que los avatares SOBREVIVAN al siguiente `docker compose up`, en lugar de
+    # vivir en la capa de escritura del contenedor y desaparecer con el.
+    #
+    # Es un volumen del nodo, no almacenamiento de objetos: si la instancia se
+    # reemplaza, se pierden. Igual que las bases de datos hoy. Sacarlos de la
+    # maquina exigiria S3, que el alcance actual no autoriza sin un ADR nuevo.
+    volumes:
+      - avatares:/var/lib/nexus/avatars
     depends_on:
       account-migrate:
         condition: service_completed_successfully
@@ -239,3 +251,9 @@ services:
     ports:
       - '8025:8025' # interfaz web para inspeccionar los correos
     restart: unless-stopped
+
+# ---------------------------------------------------------------------
+# Volumenes
+# ---------------------------------------------------------------------
+volumes:
+  avatares:
