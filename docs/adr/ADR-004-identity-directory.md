@@ -176,6 +176,79 @@ Ese control tiene un límite que este ADR no puede disimular: **es el único rol
 
 **Lo que sigue pendiente, sin resolver aquí.** El segundo factor administrativo del producto está confirmado por el cliente como **correo electrónico** (aclaración PO-12, 2026-08-19, backlog de Management). Lo que Cognito tiene aprovisionado sigue siendo **TOTP** (ver más abajo, «El MFA por correo exige SES»): `Nexus-Battle-Notifications` no tiene todavía un adaptador SES real (solo `Fake`/`SMTP`), así que activar `mfa_method = "email"` en Terraform seguiría fallando el `apply`. Esta rama no lo resuelve: sería inventar una decisión de tres repositorios (Infrastructure, Notifications, y el aprovisionamiento de SES) que nadie ha tomado todavía.
 
+## Alta server-side: la pantalla alojada desaparece (2026-08-30)
+
+**Decision de producto tomada el 2026-08-30.** El usuario nunca debe ver la
+pantalla alojada de Cognito -en ingles, aparte, con un alta en dos pasos-. Toda
+la interfaz es de Web, en espanol. Cognito se queda como **motor**: almacen de
+identidad, emisor de tokens y verificador del correo. Deja de ser una **cara**.
+
+Es la continuacion natural de «Login server-side de Account»: alli se llevo el
+INICIO DE SESION detras de nuestra UI; esto lleva el ALTA. Cuando termine, la
+pantalla alojada no se usa para nada.
+
+### Por que NO es reemplazar Cognito
+
+Se evaluo construir autenticacion propia y se descarto por lo que cuesta y por
+lo que rompe: custodiar contrasenas con hash, firmar y rotar tokens, implementar
+MFA, recuperacion y bloqueo por intentos, y asumir la responsabilidad de
+seguridad de todo eso. La decision 2 de este ADR lo prohibe explicitamente -el
+producto NO almacena contrasenas- y ninguno de los fallos que motivaron esta
+decision (registro que volvia al catalogo, cuenta pendiente que nadie activaba,
+un campo de contrasena que no iba a ningun sitio, un 500 por doble registro) lo
+habria evitado tener auth propia. Todos eran cableado nuestro.
+
+### El diseno, y por que la verificacion de correo sigue siendo real
+
+Se usa el flujo publico `SignUp` / `ConfirmSignUp` de Cognito, no `AdminCreateUser`:
+
+1. El formulario espanol -uno solo, con contrasena- envia a `POST /api/accounts`.
+   Account llama a `SignUp(email, password, atributos)`. Cognito crea la
+   identidad en estado `UNCONFIRMED`, devuelve el `sub`, y **envia un codigo de
+   verificacion al correo con su emisor por defecto** -el mismo que ya mando a
+   la primera persona su codigo; NO necesita SES-. Account crea la cuenta de
+   producto pendiente, atada a ese `sub`.
+2. Una pantalla nuestra -«escribe el codigo»- envia a un endpoint que llama a
+   `ConfirmSignUp(email, code)`. Confirmada la identidad, la cuenta pasa a
+   ACTIVE por el mismo criterio que ya existe: el proveedor comprobo el buzon.
+3. A partir de ahi, el login por credenciales que ya funciona.
+
+**La contrasena viaja a Cognito y no se guarda aqui.** La decision 2 queda
+intacta: Account transporta la contrasena a su unico custodio y no la persiste.
+
+### Lo que cambia respecto a «la identidad existe antes que la cuenta»
+
+Hasta ahora el alta ocurria en la pantalla de Cognito y Account tomaba el sujeto
+del testimonio. Ahora Account INICIA la creacion de la identidad. **No** la
+decide: Cognito sigue siendo la autoridad -asigna el `sub`, valida el correo,
+custodia la contrasena, aplica la politica-. Account es el mensajero que lleva
+los datos del formulario a Cognito, igual que ya es el mensajero que lleva la
+contraseña en el login. La regla que NO cambia: `account_roles` sigue siendo la
+fuente de verdad del rol, y el reflejo al pool sigue ocurriendo antes de
+persistir.
+
+### Permisos y limites
+
+`SignUp` y `ConfirmSignUp` son APIs PUBLICAS del pool: se invocan con el
+`client_id`, sin credenciales de AWS ni permiso IAM. No amplian la superficie de
+IAM del nodo. El `AllowAdminCreateUserOnly` del pool es `false`, de modo que el
+auto-registro ya esta permitido.
+
+El limite honesto: como `SignUp` solo necesita el `client_id` -que viaja en el
+bundle de Web-, cualquiera puede invocarlo directamente contra Cognito sin pasar
+por Account. Eso ya era cierto antes con la pantalla alojada, que usa el mismo
+client_id. No abre un camino nuevo: crea identidades en UNCONFIRMED que sin
+cuenta de producto no sirven para entrar, y el rate limiting del pool aplica.
+Cerrar eso del todo exige un cliente confidencial con secreto, que es trabajo
+futuro y no una regresion de esta decision.
+
+### Lo que se retira
+
+`RequireIdentity` y el redireccion a `/signup` de la pantalla alojada
+desaparecen de Web: ya no hay dos pasos que separar. El formulario vuelve a
+pedir contrasena, y esta vez si va a algun sitio -a Cognito, por nuestra API-.
+
+
 ## El rol viaja en el testimonio
 
 **Estado:** decidido y aplicado el 2026-08-29. Comprobado de extremo a extremo
