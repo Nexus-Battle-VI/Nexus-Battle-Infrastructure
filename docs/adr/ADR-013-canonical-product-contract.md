@@ -121,8 +121,37 @@ es «Prevención de daño entre aliados». Esa referencia no puede usarse como
 fuente de verdad. El Product Owner debe corregir la referencia o aprobar una
 matriz dentro de HU-33 antes de aceptar la validación de atributos.
 
+#### Decisión funcional requerida: PO-ATTR-01
+
+El Product Owner debe aprobar la fuente de verdad y la matriz funcional de
+atributos para `HEROE`, `HABILIDAD`, `ARMA`, `ARMADURA`, `ITEM` y `EPICA`. La
+decisión debe responder, como mínimo:
+
+1. qué documento o ítem de backlog reemplaza la referencia inválida a HU-012,
+   o si la matriz quedará definida directamente en HU-33;
+2. para cada tipo, qué atributos son obligatorios, cuáles son opcionales y si
+   se permite un conjunto vacío;
+3. para cada atributo, su significado funcional, tipo de dato, unidad, valores
+   permitidos, rango y cardinalidad cuando correspondan;
+4. para `HEROE`, `HABILIDAD` y `EPICA`, qué significan `habilidades` y
+   `efectos`, cuáles son obligatorios, su cantidad mínima y si referencian
+   conceptos existentes o se crean en línea;
+5. si un atributo desconocido debe rechazarse y cuál es el comportamiento
+   esperado cuando falta uno obligatorio;
+6. un ejemplo válido y uno inválido por cada tipo; y
+7. si una matriz aún no aprobada bloquea todos los tipos o solo el tipo
+   afectado durante una liberación incremental.
+
+El resultado aceptable es una matriz aprobada y enlazada desde HU-33, EN-027 y
+EN-027.1, junto con la corrección de la referencia funcional. El PO decide el
+significado y las reglas de negocio; el Tech Lead y el equipo deciden la forma
+JSON, el versionado del esquema, el almacenamiento y la implementación de las
+validaciones.
+
 Hasta entonces, OpenAPI marca `attributes.values` como extensión pendiente y
-la ruta no puede declararse funcionalmente completa.
+la ruta no puede declararse funcionalmente completa. El resto del contrato
+(identidad, estados, tiraje y precios) puede avanzar, pero EN-027.1 no puede
+cerrarse ni HU-33 declararse conforme mientras PO-ATTR-01 siga pendiente.
 
 ### 4. Precios
 

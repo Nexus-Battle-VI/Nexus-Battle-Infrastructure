@@ -343,7 +343,7 @@ components:
         Sobre versionado. La matriz exacta de values por ProductType requiere
         decisión funcional porque la referencia HU-012 de HU-33 no identifica
         un esquema de catálogo válido.
-      x-decision-pending: product-attribute-matrix
+      x-decision-pending: PO-ATTR-01
       properties:
         schemaVersion:
           type: string

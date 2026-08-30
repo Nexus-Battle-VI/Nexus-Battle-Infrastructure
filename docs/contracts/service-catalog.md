@@ -81,9 +81,11 @@ canónicos. El retiro requiere telemetría, ausencia confirmada de consumidores
 y aprobación del Product Owner.
 
 El contrato objetivo reserva `imageUrl`, pero el almacenamiento y ownership de
-la imagen dependen de EN-027.3. La matriz exacta de atributos por tipo también
-permanece pendiente: HU-33 referencia HU-012, mientras la HU-12 real no define
-categorías ni atributos de producto.
+la imagen dependen de EN-027.3. La matriz exacta de atributos por tipo depende
+de la decisión funcional `PO-ATTR-01`: HU-33 referencia HU-012, mientras la
+HU-12 real no define categorías ni atributos de producto. El PO debe corregir
+la fuente y aprobar obligatoriedad, tipo de dato, restricciones, cardinalidad y
+ejemplos válidos e inválidos para los seis tipos de producto.
 
 ### Community — `/api/threads`
 

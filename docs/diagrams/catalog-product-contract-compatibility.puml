@@ -32,7 +32,7 @@ package "Consumidores" {
   component "Player / Inventory\nitemId textual\nIMPLEMENTADO" <<implemented>> as inventory
 }
 
-component "Matriz de atributos\npor tipo\nDECISIÓN PO" <<blocked>> as attributeMatrix
+component "PO-ATTR-01\nMatriz de atributos por tipo\nDECISIÓN PO" <<blocked>> as attributeMatrix
 component "Storage de imagen\nEN-027.3\nBLOQUEADO" <<blocked>> as imageStorage
 
 web --> gateway : GET /api/products
