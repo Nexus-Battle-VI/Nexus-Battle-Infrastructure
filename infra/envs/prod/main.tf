@@ -75,7 +75,7 @@ module "identity" {
   mfa_methods        = var.mfa_methods
   account_recovery   = var.account_recovery
   sms_role_arn       = var.sms_role_arn
-  sms_external_id    = var.sms_external_id
+  enable_sms         = var.enable_sms
 
   /**
    * Las URL de retorno incluyen el sitio publico AUTOMATICAMENTE.

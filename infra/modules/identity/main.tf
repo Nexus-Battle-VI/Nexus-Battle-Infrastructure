@@ -123,11 +123,11 @@ resource "aws_cognito_user_pool" "this" {
    * autenticarse, y mezclarlos es justo lo que cierra el circulo.
    */
   dynamic "sms_configuration" {
-    for_each = var.sms_role_arn == "" ? [] : [1]
+    for_each = local.sms_role_arn == "" ? [] : [1]
 
     content {
-      external_id    = var.sms_external_id
-      sns_caller_arn = var.sms_role_arn
+      external_id    = local.sms_external_id
+      sns_caller_arn = local.sms_role_arn
     }
   }
 
@@ -188,8 +188,18 @@ resource "aws_cognito_user_pool" "this" {
      * lo explique. Este proyecto ya lo vivio con `admin_only`.
      */
     precondition {
-      condition     = var.account_recovery != "verified_phone_number" || var.sms_role_arn != ""
-      error_message = "account_recovery = \"verified_phone_number\" exige sms_role_arn: sin SMS configurado no hay recuperacion posible, y no lo dice ningun error."
+      condition     = var.account_recovery != "verified_phone_number" || local.sms_role_arn != ""
+      error_message = "account_recovery = \"verified_phone_number\" exige SMS: pon enable_sms = true o aporta sms_role_arn. Sin SMS no hay recuperacion posible, y no lo dice ningun error."
+    }
+
+    /**
+     * Aportar un rol Y pedir que se cree son dos intenciones distintas, y
+     * juntas dejan el rol creado sin usar: `local.sms_role_arn` se queda con el
+     * creado y el aportado queda huerfano sin que nada lo diga.
+     */
+    precondition {
+      condition     = !var.enable_sms || var.sms_role_arn == ""
+      error_message = "enable_sms crea el rol de SMS; sms_role_arn aporta uno existente. Usa uno u otro, no los dos."
     }
 
     /**
