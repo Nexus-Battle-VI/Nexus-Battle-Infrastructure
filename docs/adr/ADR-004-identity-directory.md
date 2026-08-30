@@ -450,21 +450,50 @@ falta el paso de datos que hace que la otra mitad no rompa nada.
 
 ### Que hace falta para activarlo, exactamente
 
-1. Aprovisionar el rol de SNS para SMS y decidir su coste contra el techo de
-   ADR-007. SNS tiene su **propio** entorno de pruebas para SMS: solo entrega a
-   numeros verificados, el mismo limite que SES y por el mismo motivo.
-2. Recoger telefono de las cuentas que vayan a existir, y verificarlo.
-3. Aplicar los cuatro valores a la vez, **nunca uno sin el otro**:
+1. **El rol de SNS ya no hay que crearlo a mano**: `enable_sms = true` lo
+   provisiona, con `sts:ExternalId` derivado del nombre del pool para que solo
+   ese pool pueda asumirlo. Sin esa condición, cualquier otro pool que conociera
+   el ARN podría mandar SMS a cargo de esta factura.
+
+   Lo que el rol **no** hace: sacar la cuenta del entorno de pruebas de SNS,
+   donde los SMS solo llegan a números verificados uno a uno. Mismo límite que
+   SES y por el mismo motivo. Y los SMS se cobran por mensaje, así que entran en
+   el techo de ADR-007.
+2. Recoger teléfono de las cuentas que vayan a existir, y verificarlo. **Este es
+   el paso que falta**, y es de datos, no de código.
+3. Aplicar los valores a la vez, **nunca uno sin el otro**:
 
 ```hcl
+enable_sms       = true
 mfa_methods      = ["software_token", "email"]
 ses_identity_arn = "arn:aws:ses:us-east-1:658430303197:identity/simuladorupbbga.app"
 account_recovery = "verified_phone_number"
-sms_role_arn     = "arn:aws:iam::658430303197:role/<el-rol-de-sms>"
 ```
 
-Comprobado que esa combinacion planifica limpia: `0 to add, 1 to change,
-0 to destroy`.
+Comprobado que esa combinación planifica limpia:
+
+```
+module.identity.aws_cognito_user_pool.this   will be updated in-place
+module.identity.aws_iam_role.sms[0]          will be created
+module.identity.aws_iam_role_policy.sms[0]   will be created
+Plan: 2 to add, 1 to change, 0 to destroy.
+```
+
+### Qué factor usa cada rol, y por qué no lo decide Cognito
+
+La decisión de producto es **autenticador para las cuentas administrativas,
+correo para los usuarios finales**. Cognito **no puede aplicarla**:
+`mfa_configuration` es del pool entero y ofrece los mismos factores a todo el
+mundo; lo único que varía es cuál inscribe cada persona.
+
+Confiar en eso sería confiar en una convención, no en un control: bastaría con
+que un administrador inscribiera el correo para que su segundo factor pasara a
+depender del mismo buzón que sirve para recuperar la cuenta.
+
+La regla vive en Account (`SecondFactorPolicy`), que conoce el rol desde
+`account_roles`, y se aplica **también en la ruta pública de elección**: filtrar
+solo en la pantalla dejaría que un administrador pidiera el correo llamando al
+endpoint a mano.
 
 ### Las guardas, y por que estan en el plan y no en el apply
 

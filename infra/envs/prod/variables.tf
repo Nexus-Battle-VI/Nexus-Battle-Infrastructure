@@ -196,10 +196,16 @@ variable "sms_role_arn" {
   default     = ""
 }
 
-variable "sms_external_id" {
-  description = "Identificador externo del rol de SMS."
-  type        = string
-  default     = ""
+variable "enable_sms" {
+  description = <<-DESC
+    Crea el rol de IAM para que Cognito publique SMS por SNS.
+
+    Tener la capacidad y usarla como via de recuperacion son dos decisiones
+    distintas: `account_recovery = "verified_phone_number"` deja fuera a quien
+    no tenga telefono registrado, y hoy no lo tiene nadie.
+  DESC
+  type        = bool
+  default     = false
 }
 
 variable "public_site_address" {
