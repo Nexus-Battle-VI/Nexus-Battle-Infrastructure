@@ -17,6 +17,25 @@ resource "aws_cognito_user_pool" "this" {
   auto_verified_attributes = ["email"]
 
   /**
+   * El correo que lleva el codigo de confirmacion del alta (HU-01).
+   *
+   * Sin este bloque, Cognito envia su plantilla por defecto -en ingles y
+   * generica-. El alta server-side usa el flujo de codigo (`SignUp` /
+   * `ConfirmSignUp`), asi que la opcion es `CONFIRM_WITH_CODE` y el mensaje DEBE
+   * contener el marcador `{####}`, que Cognito sustituye por el codigo.
+   *
+   * Funciona con el emisor por defecto (`COGNITO_DEFAULT`): personalizar el TEXTO
+   * no exige SES. Lo que SES habilitaria es HTML con marca y volumen; el emisor
+   * por defecto entrega texto y tiene un tope diario (~50 correos), suficiente
+   * para la demo. Es una actualizacion in-place del pool: no reemplaza nada.
+   */
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+    email_subject        = "Tu codigo de Nexus Battles VI"
+    email_message        = "Bienvenido a THE NEXUS BATTLES VI. Tu codigo de confirmacion es {####}. Escribelo en la pantalla de confirmacion para activar tu cuenta. Si no solicitaste este registro, ignora este mensaje."
+  }
+
+  /**
    * `minimum_length = 9`, no 12.
    *
    * HU-01 (CA-03) exige contrasena de "mas de ocho caracteres": nueve es la
