@@ -88,7 +88,7 @@ data "aws_iam_policy_document" "cognito_admin_auth" {
    * `PLAYER` -todas piden `ADMINISTRATOR` o `MODERATOR`- y por eso la
    * divergencia era invisible en lugar de inexistente.
    *
-   * SON CUATRO ACCIONES Y NO MAS, deliberadamente. `AdminListGroupsForUser` es
+   * SON CINCO ACCIONES Y NO MAS, deliberadamente. `AdminListGroupsForUser` es
    * de lectura y hace falta para calcular la diferencia: sin ella el reflejo
    * solo podria sumar, y retirar un rol en Account nunca llegaria al testimonio.
    *
@@ -98,6 +98,11 @@ data "aws_iam_policy_document" "cognito_admin_auth" {
    * tiene que preguntarselo al proveedor por el sujeto. Sin este permiso el
    * registro falla CERRADO con 503, que es el comportamiento correcto pero deja
    * el alta inutilizable.
+   *
+   * `AdminUserGlobalSignOut` se anadio para HU-39. Tras retirar un rol evita
+   * renovar la sesion anterior. Los access tokens ya emitidos se validan de
+   * forma local en los servicios y pueden conservarse hasta su expiracion; el
+   * cierre global no se documenta como revocacion instantanea de esos JWT.
    * NO se conceden `AdminCreateUser` ni `AdminDeleteUser`: Account dejo de
    * crear identidades y no debe recuperar esa capacidad por la puerta de atras.
    * Tampoco `CreateGroup` ni `DeleteGroup`: los grupos los declara el modulo
@@ -119,6 +124,7 @@ data "aws_iam_policy_document" "cognito_admin_auth" {
       # producto lee lo que el proveedor comprobo, nunca lo declara por su
       # cuenta. Poder escribirlo convertiria la prueba en una afirmacion propia.
       "cognito-idp:AdminGetUser",
+      "cognito-idp:AdminUserGlobalSignOut",
     ]
 
     resources = [var.cognito_user_pool_arn]
