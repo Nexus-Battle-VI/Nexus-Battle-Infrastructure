@@ -1,0 +1,73 @@
+@startuml hu-39-sequence-role-management
+!theme plain
+title HU-39 — Secuencia de gestión de roles
+
+skinparam defaultFontName sans-serif
+skinparam sequence {
+  LifeLineBorderColor #999999
+}
+
+actor "Super Administrador" as super
+participant "Web" as web
+participant "Guard JWT/RBAC" as guard
+participant "Caso de uso\nAccount" as usecase
+participant "Cuenta / RolePolicy" as domain
+database "PostgreSQL\naccount_roles" as db
+participant "Cognito\nMFA y grupos" as cognito
+participant "Servicio consumidor\nCatalog / Community" as consumer
+
+super -> web : buscar cuenta por correo
+web -> guard : GET /accounts/search + Bearer
+guard -> guard : verificar firma, exp y SUPER_ADMINISTRATOR
+guard -> usecase : buscar cuenta
+usecase -> cognito : AdminGetUser
+cognito --> usecase : UserMFASettingList
+usecase --> web : cuenta, roles, mfaEnrolled
+
+alt conceder ADMINISTRATOR o MODERATOR
+  super -> web : confirmar asignación
+  web -> guard : POST /accounts/:id/roles
+  guard -> usecase : actor, destino, rol
+
+  opt rol ADMINISTRATOR
+    usecase -> cognito : AdminGetUser
+    alt TOTP no confirmado
+      cognito --> usecase : sin SOFTWARE_TOKEN_MFA
+      usecase --> web : 409, sin escrituras
+    else TOTP confirmado
+      cognito --> usecase : SOFTWARE_TOKEN_MFA
+    end
+  end
+
+  usecase -> domain : grantRole(rol, rolesActor)
+  domain --> usecase : conjunto resultante
+  usecase -> db : guardar conjunto
+  db --> usecase : ok
+  usecase -> cognito : reflejar grupos
+  cognito --> usecase : ok
+  usecase --> web : 200 cuenta actualizada
+else retirar rol
+  super -> web : confirmar retirada
+  web -> guard : DELETE /accounts/:id/roles/:role
+  guard -> usecase : actor, destino, rol
+  usecase -> domain : validar retirada y calcular conjunto
+  domain --> usecase : conjunto resultante
+  usecase -> cognito : reflejar grupos primero
+  cognito --> usecase : ok
+  usecase -> db : guardar conjunto
+  db --> usecase : ok
+  usecase -> cognito : AdminUserGlobalSignOut
+  cognito --> usecase : ok
+  usecase --> web : 200 cuenta actualizada
+end
+
+note over cognito, consumer
+  Un testimonio nuevo transporta los grupos actualizados.
+  Un JWT anterior puede conservar sus claims hasta exp (<=15 min).
+end note
+
+super -> consumer : operación con testimonio nuevo
+consumer -> consumer : verificar JWT y rol requerido
+consumer --> super : 200 o 403 según matriz
+
+@enduml

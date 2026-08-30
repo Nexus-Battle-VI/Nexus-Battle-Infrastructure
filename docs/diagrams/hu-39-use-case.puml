@@ -1,0 +1,43 @@
+@startuml hu-39-use-case
+!theme plain
+title HU-39 — Caso de uso de gestión de roles
+
+skinparam defaultFontName sans-serif
+left to right direction
+
+actor "Super Administrador" as super
+actor "Actor no autorizado" as other
+actor "Cuenta destino" as target
+
+rectangle "Account / Identity" {
+  usecase "Buscar cuenta\npor correo" as search
+  usecase "Asignar MODERATOR\no ADMINISTRATOR" as assign
+  usecase "Retirar rol\noperativo" as revoke
+  usecase "Comprobar TOTP\npara ADMINISTRATOR" as mfa
+  usecase "Persistir y reflejar\nel rol" as reflect
+  usecase "Cerrar sesiones\nal retirar" as signout
+  usecase "Rechazar operación\nno autorizada" as deny
+}
+
+super --> search
+super --> assign
+super --> revoke
+other --> deny
+target -- search
+
+assign ..> mfa : <<include>>\nsi ADMINISTRATOR
+assign ..> reflect : <<include>>
+revoke ..> reflect : <<include>>
+revoke ..> signout : <<include>>
+
+note right of assign
+  SUPER_ADMINISTRATOR no es concedible por API.
+  PLAYER es base y no se retira.
+end note
+
+note bottom of deny
+  Sin testimonio: 401.
+  Autenticado sin rol raíz: 403.
+end note
+
+@enduml

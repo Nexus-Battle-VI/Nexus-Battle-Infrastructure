@@ -33,6 +33,9 @@ En los servicios NestJS, bajo el prefijo `/api`.
 | Método | Ruta | Códigos |
 | --- | --- | --- |
 | `POST` | `/api/accounts` | `201`, `400`, `409` |
+| `GET` | `/api/accounts/search?email=...` | `200`, `400`, `401`, `403`, `404`, `503` |
+| `POST` | `/api/accounts/:id/roles` | `200`, `400`, `401`, `403`, `404`, `409`, `503` |
+| `DELETE` | `/api/accounts/:id/roles/:role` | `200`, `400`, `401`, `403`, `404`, `503` |
 | `GET` | `/api/accounts/:id` | `200`, `404` |
 | `POST` | `/api/accounts/:id/verification` | `200`, `400`, `404` |
 

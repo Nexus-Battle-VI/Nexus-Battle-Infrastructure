@@ -1,0 +1,69 @@
+@startuml hu-39-activity-role-management
+!theme plain
+title HU-39 — Actividad de asignación y retirada
+
+skinparam defaultFontName sans-serif
+
+start
+:Recibir actor, destino, rol y operación;
+
+if (¿Testimonio válido?) then (no)
+  :Responder 401;
+  stop
+endif
+
+if (¿Actor SUPER_ADMINISTRATOR?) then (no)
+  :Responder 403;
+  stop
+endif
+
+if (¿Cuenta destino existe?) then (no)
+  :Responder 404;
+  stop
+endif
+
+if (¿Rol operativo válido?) then (no)
+  :Responder 400;
+  stop
+endif
+
+if (¿Conceder?) then (sí)
+  if (¿ADMINISTRATOR?) then (sí)
+    if (¿TOTP confirmado?) then (no)
+      :Responder 409 sin escribir;
+      stop
+    endif
+  endif
+
+  :Aplicar grantRole en el dominio;
+  :Guardar account_roles;
+  :Reflejar conjunto en Cognito;
+  if (¿Reflejo correcto?) then (no)
+    :Responder 503;
+    note right
+      La base conserva el rol, pero el
+      testimonio nuevo aún no lo concede.
+    end note
+    stop
+  endif
+else (retirar)
+  if (¿PLAYER o propio SUPER raíz?) then (sí)
+    :Responder 400;
+    stop
+  endif
+
+  :Calcular conjunto sin el rol;
+  :Reflejar primero en Cognito;
+  if (¿Reflejo correcto?) then (no)
+    :Responder 503 sin modificar PostgreSQL;
+    stop
+  endif
+  :Guardar account_roles;
+  :Cerrar sesiones globalmente;
+endif
+
+:Volver a consultar y presentar rol vigente;
+:Responder 200;
+stop
+
+@enduml
