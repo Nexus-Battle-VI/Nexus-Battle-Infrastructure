@@ -55,6 +55,13 @@ Agregado `Inventory`. La capacidad limita **ranuras distintas**, no unidades tot
 
 Agregado `Product`. Estados `DRAFT` → `PUBLISHED` → `ARCHIVED`. Solo lo publicado es visible en las consultas públicas; un borrador responde `404` por regla de dominio, no por fallo.
 
+**Contrato objetivo, todavía no implementado.**
+[ADR-013](../adr/ADR-013-canonical-product-contract.md) propone
+`POST /api/v1/catalog/products`, `productId` generado y las dimensiones
+`lifecycleStatus` / `printRunMode`. La ruta heredada coexistirá como adaptador;
+el detalle está en
+[catalog-product-v1.openapi.yaml](../contracts/catalog-product-v1.openapi.yaml).
+
 ### Community
 
 | Método | Ruta |

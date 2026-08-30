@@ -51,6 +51,8 @@ El alta crea el inventario si no existe: un jugador sin inventario y un inventar
 
 ### Catalog — `/api/products`
 
+**Estado implementado.** Esta sigue siendo la superficie desplegada y probada.
+
 | Método | Ruta | Códigos |
 | --- | --- | --- |
 | `POST` | `/api/products` | `201`, `400`, `409` |
@@ -61,6 +63,27 @@ El alta crea el inventario si no existe: un jugador sin inventario y un inventar
 | `POST` | `/api/products/:sku/price` | `200`, `400`, `404` |
 
 `GET /api/products/:sku` responde `404` para un producto en borrador o archivado. **No es un fallo: es la regla de visibilidad del dominio.**
+
+#### Contrato objetivo HU-33 — `Proposed`
+
+[ADR-013](../adr/ADR-013-canonical-product-contract.md) propone la ruta
+`POST /api/v1/catalog/products` con `productId` canónico y SKU como alias
+temporal. Su especificación está en
+[catalog-product-v1.openapi.yaml](catalog-product-v1.openapi.yaml).
+
+| Método | Ruta | Códigos | Estado |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/catalog/products` | `201`, `400`, `401`, `403`, `409`, `422` | **Proposed; no implementado** |
+
+La ruta nueva no sustituye todavía `/api/products`. Durante la transición, la
+superficie heredada se conserva como adaptador hacia los mismos casos de uso
+canónicos. El retiro requiere telemetría, ausencia confirmada de consumidores
+y aprobación del Product Owner.
+
+El contrato objetivo reserva `imageUrl`, pero el almacenamiento y ownership de
+la imagen dependen de EN-027.3. La matriz exacta de atributos por tipo también
+permanece pendiente: HU-33 referencia HU-012, mientras la HU-12 real no define
+categorías ni atributos de producto.
 
 ### Community — `/api/threads`
 
@@ -103,7 +126,7 @@ Sin API de negocio. Su entrada es la cola de mensajes; el contrato está en [eve
 | Formato | JSON |
 | **Importes** | **Entero en la unidad mínima de la moneda** |
 | Fechas | ISO 8601 en UTC |
-| Identificadores de catálogo | kebab-case |
+| Identificadores de catálogo | Implementado: SKU kebab-case. Objetivo ADR-013: `productId` UUID y SKU como alias temporal |
 | Campos no declarados | **Rechazados con `400`** |
 | Errores | `{ "statusCode", "message", "error" }` de NestJS |
 

@@ -47,15 +47,19 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [008](docs/adr/ADR-008-iac.md) | Infraestructura como código | Proposed |
 | [009](docs/adr/ADR-009-observability.md) | Observabilidad | Proposed |
 | [010](docs/adr/ADR-010-reverse-proxy.md) | Proxy inverso y entrada | Proposed |
+| [011](docs/adr/ADR-011-deployment-topology.md) | Topología de despliegue | Accepted |
+| [012](docs/adr/ADR-012-orm-odm.md) | Selección de ORM y ODM | Accepted |
+| [013](docs/adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Proposed |
 
 El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 `Accepted` con evidencia de aprobación registrada.
 
 ### Diagramas
 
-Once diagramas PlantUML en [docs/diagrams](docs/diagrams), incluidos los cuatro
-editables de HU-39. Los de despliegue **separan visualmente demo y objetivo**
-para que no se confundan.
+Doce diagramas PlantUML en [docs/diagrams](docs/diagrams), incluidos los cuatro
+editables de HU-39 y el contrato canónico de Producto. Los de despliegue
+**separan visualmente demo y objetivo** para que no se confundan; el de Producto
+distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 
 ### Costes y contratos
 
@@ -64,6 +68,7 @@ para que no se confundan.
 | [assumptions.md](docs/costs/assumptions.md) | Supuestos de la estimación. **Leer antes que las cifras** |
 | [sprint-demo-estimate.md](docs/costs/sprint-demo-estimate.md) | Estimación y requisitos previos al despliegue |
 | [service-catalog.md](docs/contracts/service-catalog.md) | Superficie HTTP de cada servicio |
+| [catalog-product-v1.openapi.yaml](docs/contracts/catalog-product-v1.openapi.yaml) | Contrato objetivo `Proposed` para HU-33; todavía no desplegado |
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
 
 ### Gobierno

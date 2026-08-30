@@ -1,0 +1,70 @@
+@startuml catalog-product-contract-compatibility
+!theme plain
+title EN-027.1 — Contrato canónico de Producto y compatibilidad
+
+skinparam defaultFontName sans-serif
+skinparam component {
+  BackgroundColor<<implemented>> #E8F5E9
+  BorderColor<<implemented>> #2E7D32
+  BackgroundColor<<proposed>> #FFF8E1
+  BorderColor<<proposed>> #F9A825
+  BackgroundColor<<blocked>> #FFEBEE
+  BorderColor<<blocked>> #C62828
+}
+skinparam database {
+  BackgroundColor #FAFAFA
+}
+
+actor "Administrador o\nSuper Administrador" as admin
+component "Web\nIMPLEMENTADO" <<implemented>> as web
+component "Caddy /api\nIMPLEMENTADO" <<implemented>> as gateway
+
+package "Catalog :3003" {
+  component "Rutas heredadas\n/api/products\nIMPLEMENTADAS" <<implemented>> as legacyApi
+  component "Adaptador de\ncompatibilidad\nPROPUESTO" <<proposed>> as compatibility
+  component "API canónica v1\n/api/v1/catalog/products\nPROPUESTA" <<proposed>> as canonicalApi
+  component "Casos de uso canónicos\nproductId + lifecycle + tiraje\nPROPUESTOS" <<proposed>> as canonicalCore
+  database "MongoDB Catalog\ncolección products vacía" as catalogDb
+}
+
+package "Consumidores" {
+  component "Commerce\nprecio local por SKU\nIMPLEMENTADO" <<implemented>> as commerce
+  component "Player / Inventory\nitemId textual\nIMPLEMENTADO" <<implemented>> as inventory
+}
+
+component "Matriz de atributos\npor tipo\nDECISIÓN PO" <<blocked>> as attributeMatrix
+component "Storage de imagen\nEN-027.3\nBLOQUEADO" <<blocked>> as imageStorage
+
+web --> gateway : GET /api/products
+gateway --> legacyApi : proxy actual
+
+admin ..> canonicalApi : POST objetivo
+legacyApi ..> compatibility : coexistencia temporal
+compatibility ..> canonicalCore : traduce SKU y estado
+canonicalApi ..> canonicalCore : DTO canónico
+canonicalCore ..> catalogDb : productId como _id
+
+commerce ..> canonicalCore : ProductRef futuro\nproductId + sku temporal
+inventory ..> canonicalCore : productId futuro
+attributeMatrix ..> canonicalApi : desbloquea validación
+imageStorage ..> canonicalApi : produce imageUrl válida
+
+note right of legacyApi
+  ACTIVE    -> PUBLISHED
+  SUSPENDED -> ARCHIVED
+  DRAFT no existe en el modelo canónico
+end note
+
+note bottom of canonicalCore
+  Línea discontinua = objetivo todavía no implementado.
+  Ningún consumidor accede a la base de Catalog.
+end note
+
+legend right
+  |= Color |= Estado |
+  |<#E8F5E9>| Implementado |
+  |<#FFF8E1>| Propuesto por ADR-013 |
+  |<#FFEBEE>| Decisión bloqueante |
+endlegend
+
+@enduml

@@ -19,6 +19,21 @@ Cada servicio posee su almacén **en exclusiva**. Ningún otro accede a él, ni 
 
 El criterio de motor no es preferencia: Player/Inventory y Catalog usan documentos porque sus agregados se leen y escriben enteros y tienen atributos variables; Account, Community y Commerce usan relacional porque sus consultas atraviesan relaciones claras y Commerce necesita integridad transaccional entre pedido y líneas.
 
+### Evolución propuesta de la referencia de Producto
+
+[ADR-013](../adr/ADR-013-canonical-product-contract.md) propone que Catalog
+genere `productId` y conserve SKU como alias temporal. Este cambio todavía no
+está implementado; la tabla anterior describe el contrato vigente.
+
+Cuando se adopte el contrato:
+
+- Player / Inventory persistirá `productId` en lugar de un `ItemId` ambiguo;
+- Commerce persistirá `productId` en nuevas líneas y conservará SKU solo como
+  dato de presentación o conciliación durante la transición;
+- el precio seguirá congelado dentro de la línea de Commerce;
+- ningún consumidor almacenará el documento de Product ni accederá a MongoDB
+  de Catalog.
+
 ## Cómo se cruza la frontera
 
 Las referencias externas son **identificadores opacos**. Un servicio que necesita más que el identificador **pregunta por la API**:
@@ -27,6 +42,7 @@ Las referencias externas son **identificadores opacos**. Un servicio que necesit
 Commerce necesita el precio de un producto
 
   ProductPricingPort.priceOf(sku)      <- correcto
+  ProductPricingPort.priceOf(productId)<- objetivo ADR-013, aun no implementado
   SELECT ... JOIN productos ...        <- PROHIBIDO
 ```
 

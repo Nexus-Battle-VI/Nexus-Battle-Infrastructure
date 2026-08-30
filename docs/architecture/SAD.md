@@ -194,3 +194,6 @@ Se dejan tachadas en lugar de borrarlas: quien haya leído una versión anterior
 | [008](../adr/ADR-008-iac.md) | Infraestructura como código | Proposed |
 | [009](../adr/ADR-009-observability.md) | Observabilidad | Proposed |
 | [010](../adr/ADR-010-reverse-proxy.md) | Proxy inverso y entrada | Proposed |
+| [011](../adr/ADR-011-deployment-topology.md) | Topología de despliegue | Accepted |
+| [012](../adr/ADR-012-orm-odm.md) | Selección de ORM y ODM | Accepted |
+| [013](../adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Proposed |

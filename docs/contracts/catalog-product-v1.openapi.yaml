@@ -1,0 +1,469 @@
+openapi: 3.1.0
+info:
+  title: Nexus Battles VI - Catalog Product API
+  version: 1.0.0-draft.1
+  license:
+    name: Licensing pending project governance
+    url: https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure#licencia
+  summary: Contrato objetivo de creación canónica de Producto
+  description: |
+    Contrato propuesto por ADR-013 para implementar HU-33 por etapas.
+    Esta especificación no afirma que la ruta esté desplegada. El contrato
+    generado por Catalog deberá compararse con este archivo durante la
+    implementación.
+
+    La estructura exacta de attributes.values continúa pendiente de una matriz
+    funcional válida por tipo. imageUrl reserva la referencia requerida por
+    HU-33, pero su almacenamiento depende de EN-027.3.
+  x-contract-status: proposed
+  x-management-issue: https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/281
+
+servers:
+  - url: /
+    description: Mismo origen; Caddy enruta el prefijo /api al servicio Catalog.
+
+tags:
+  - name: Catalog Products
+    description: Administración del producto canónico de Catalog
+
+paths:
+  /api/v1/catalog/products:
+    post:
+      operationId: createCatalogProductV1
+      tags:
+        - Catalog Products
+      summary: Crea y deja disponible un producto canónico
+      description: |
+        Requiere testimonio JWT vigente, rol ADMINISTRATOR o
+        SUPER_ADMINISTRATOR y segundo factor administrativo verificado.
+        productId, lifecycleStatus y printRunMode son calculados por Catalog.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+            examples:
+              limitedWeapon:
+                summary: Arma de tiraje limitado
+                value:
+                  sku: espada-de-fuego
+                  name: Espada de Fuego
+                  imageUrl: https://assets.example.test/catalog/espada-de-fuego.webp
+                  description: Espada de dos manos con daño de fuego.
+                  type: ARMA
+                  attributes:
+                    schemaVersion: '1'
+                    values: {}
+                  printRun: 150
+                  creditsPrice: 40
+                  premium: false
+              premiumUnique:
+                summary: Producto épico, único y premium
+                value:
+                  name: Corona del Máster Eterno
+                  imageUrl: https://assets.example.test/catalog/corona-master-eterno.webp
+                  description: Recompensa única de edición especial.
+                  type: EPICA
+                  attributes:
+                    schemaVersion: '1'
+                    values:
+                      abilities:
+                        - ability-master-aura
+                      effects:
+                        - effect-eternal-glow
+                  printRun: 1
+                  creditsPrice: 0
+                  premium: true
+                  realMoneyPrice:
+                    amount: 999
+                    currency: USD
+      responses:
+        '201':
+          description: Producto creado y disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+              examples:
+                created:
+                  value:
+                    productId: 3f6af5b5-5f43-4dd8-93cb-e8e73355ae42
+                    sku: espada-de-fuego
+                    name: Espada de Fuego
+                    imageUrl: https://assets.example.test/catalog/espada-de-fuego.webp
+                    description: Espada de dos manos con daño de fuego.
+                    type: ARMA
+                    attributes:
+                      schemaVersion: '1'
+                      values: {}
+                    printRun: 150
+                    printRunMode: LIMITED
+                    lifecycleStatus: ACTIVE
+                    creditsPrice: 40
+                    premium: false
+                    realMoneyPrice: null
+                    createdAt: '2026-08-30T20:30:00.000Z'
+                    updatedAt: '2026-08-30T20:30:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Testimonio emitido por el proveedor aprobado. El backend valida firma,
+        vigencia, rol administrativo y evidencia del segundo factor conforme al
+        contrato de identidad vigente.
+
+  schemas:
+    CreateProductRequest:
+      oneOf:
+        - $ref: '#/components/schemas/StandardProductRequest'
+        - $ref: '#/components/schemas/PremiumProductRequest'
+      description: |
+        Unión exclusiva: premium=false no admite precio real; premium=true lo
+        exige con importe mayor que cero.
+
+    StandardProductRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - imageUrl
+        - description
+        - type
+        - attributes
+        - printRun
+        - creditsPrice
+        - premium
+      properties:
+        sku:
+          type: string
+          pattern: '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'
+          deprecated: true
+          description: |
+            Alias comercial opcional durante la compatibilidad. Si se omite,
+            Catalog genera uno. Nunca es la identidad canónica.
+          examples:
+            - espada-de-fuego
+        name:
+          type: string
+          minLength: 3
+          maxLength: 80
+          examples:
+            - Espada de Fuego
+        imageUrl:
+          type: string
+          format: uri
+          minLength: 1
+          description: |
+            Referencia al recurso; Catalog no recibe el binario. Ownership y
+            almacenamiento permanecen bloqueados por EN-027.3.
+        description:
+          type: string
+          minLength: 1
+          description: Descripción detallada del producto.
+        type:
+          $ref: '#/components/schemas/ProductType'
+        attributes:
+          $ref: '#/components/schemas/ProductAttributes'
+        printRun:
+          $ref: '#/components/schemas/PrintRun'
+        creditsPrice:
+          type: integer
+          minimum: 0
+          description: Precio entero en créditos; cero es válido.
+          examples:
+            - 40
+        premium:
+          type: boolean
+          const: false
+        realMoneyPrice:
+          type: 'null'
+          description: Puede omitirse; si se envía debe ser null.
+
+    PremiumProductRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - imageUrl
+        - description
+        - type
+        - attributes
+        - printRun
+        - creditsPrice
+        - premium
+        - realMoneyPrice
+      properties:
+        sku:
+          type: string
+          pattern: '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'
+          deprecated: true
+          description: |
+            Alias comercial opcional durante la compatibilidad. Si se omite,
+            Catalog genera uno. Nunca es la identidad canónica.
+          examples:
+            - corona-master-eterno
+        name:
+          type: string
+          minLength: 3
+          maxLength: 80
+          examples:
+            - Corona del Máster Eterno
+        imageUrl:
+          type: string
+          format: uri
+          minLength: 1
+          description: |
+            Referencia al recurso; Catalog no recibe el binario. Ownership y
+            almacenamiento permanecen bloqueados por EN-027.3.
+        description:
+          type: string
+          minLength: 1
+          description: Descripción detallada del producto.
+        type:
+          $ref: '#/components/schemas/ProductType'
+        attributes:
+          $ref: '#/components/schemas/ProductAttributes'
+        printRun:
+          $ref: '#/components/schemas/PrintRun'
+        creditsPrice:
+          type: integer
+          minimum: 0
+          description: Precio entero en créditos; cero es válido.
+          examples:
+            - 0
+        premium:
+          type: boolean
+          const: true
+        realMoneyPrice:
+          $ref: '#/components/schemas/RealMoneyPrice'
+
+    Product:
+      type: object
+      additionalProperties: false
+      required:
+        - productId
+        - sku
+        - name
+        - imageUrl
+        - description
+        - type
+        - attributes
+        - printRun
+        - printRunMode
+        - lifecycleStatus
+        - creditsPrice
+        - premium
+        - realMoneyPrice
+        - createdAt
+        - updatedAt
+      properties:
+        productId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Identidad canónica generada por Catalog.
+        sku:
+          type: string
+          pattern: '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'
+          readOnly: true
+          deprecated: true
+          description: Alias temporal de compatibilidad.
+        name:
+          type: string
+          minLength: 3
+          maxLength: 80
+        imageUrl:
+          type: string
+          format: uri
+        description:
+          type: string
+          minLength: 1
+        type:
+          $ref: '#/components/schemas/ProductType'
+        attributes:
+          $ref: '#/components/schemas/ProductAttributes'
+        printRun:
+          $ref: '#/components/schemas/PrintRun'
+        printRunMode:
+          $ref: '#/components/schemas/PrintRunMode'
+        lifecycleStatus:
+          $ref: '#/components/schemas/LifecycleStatus'
+        creditsPrice:
+          type: integer
+          minimum: 0
+        premium:
+          type: boolean
+        realMoneyPrice:
+          oneOf:
+            - $ref: '#/components/schemas/RealMoneyPrice'
+            - type: 'null'
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    ProductType:
+      type: string
+      enum:
+        - HEROE
+        - HABILIDAD
+        - ARMA
+        - ARMADURA
+        - ITEM
+        - EPICA
+
+    ProductAttributes:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - values
+      description: |
+        Sobre versionado. La matriz exacta de values por ProductType requiere
+        decisión funcional porque la referencia HU-012 de HU-33 no identifica
+        un esquema de catálogo válido.
+      x-decision-pending: product-attribute-matrix
+      properties:
+        schemaVersion:
+          type: string
+          minLength: 1
+        values:
+          type: object
+          additionalProperties: true
+
+    PrintRun:
+      description: -1 significa infinito; cualquier entero mayor o igual a 1 es finito.
+      oneOf:
+        - type: integer
+          const: -1
+        - type: integer
+          minimum: 1
+
+    PrintRunMode:
+      type: string
+      readOnly: true
+      enum:
+        - UNIQUE
+        - LIMITED
+        - INFINITE
+
+    LifecycleStatus:
+      type: string
+      readOnly: true
+      enum:
+        - ACTIVE
+        - SUSPENDED
+
+    RealMoneyPrice:
+      type: object
+      additionalProperties: false
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          description: Importe en la unidad mínima de la moneda.
+        currency:
+          type: string
+          enum:
+            - COP
+            - USD
+            - EUR
+
+    ApiError:
+      type: object
+      additionalProperties: false
+      required:
+        - statusCode
+        - message
+        - error
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string
+        code:
+          type: string
+          description: Código estable opcional para clientes.
+
+  responses:
+    BadRequest:
+      description: JSON, tipo o campos no declarados inválidos
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 400
+            message: El cuerpo contiene campos no declarados.
+            error: Bad Request
+            code: CATALOG_REQUEST_INVALID
+    Unauthorized:
+      description: Testimonio ausente, inválido o vencido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 401
+            message: Se requiere autenticación válida.
+            error: Unauthorized
+            code: AUTH_TOKEN_INVALID
+    Forbidden:
+      description: Rol no autorizado o segundo factor administrativo ausente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 403
+            message: No tiene permisos para gestionar el catálogo.
+            error: Forbidden
+            code: CATALOG_MANAGEMENT_FORBIDDEN
+    Conflict:
+      description: Nombre + tipo activo o SKU ya existente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 409
+            message: Ya existe un producto activo de este tipo con el mismo nombre.
+            error: Conflict
+            code: CATALOG_PRODUCT_ALREADY_EXISTS
+    UnprocessableEntity:
+      description: Regla de negocio incumplida por datos sintácticamente válidos
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 422
+            message: El tiraje debe ser un entero positivo o -1 para tiraje infinito.
+            error: Unprocessable Entity
+            code: CATALOG_PRINT_RUN_INVALID
