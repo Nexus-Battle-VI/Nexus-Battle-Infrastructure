@@ -18,6 +18,7 @@ que describía está resuelto en lo técnico:
 | Validar el testimonio en cada servicio | **Hecho**: los cinco servicios NestJS |
 | Activar RBAC en operaciones sensibles | **Hecho** |
 | Reflejar el rol en el proveedor | **Hecho**: Account decide, el pool recoge |
+| Gestionar roles | **Hecho**: solo Super Administrador; TOTP previo para Administrador |
 
 La comprobación, contra el sistema desplegado:
 
@@ -33,15 +34,12 @@ verificación **no vive solo en Account**: la hace cada servicio.
 
 ## Lo que sigue abierto
 
-- **Segundo factor de los roles administrativos.** ADR-004 lo previó por correo;
-  el correo exige SES, que no está aprobado. `LoginAccount` **falla cerrado**
-  mientras tanto: un rol administrativo con testimonio pero sin reto devuelve
-  `providerUnavailable`. No se rebajó la regla para que el flujo pasara.
-- **Exposición a internet, que son dos cambios acoplados.**
-  `public_ingress_cidrs` está vacío, y la única URL de retorno registrada en
-  Cognito es la de desarrollo local. Abrir lo primero sin añadir el origen
-  desplegado a `callback_urls` rompe el inicio de sesión en cuanto alguien lo
-  use.
+- **Ventana de testimonios ya emitidos.** La retirada cierra globalmente las
+  sesiones en Cognito, pero los servicios validan el JWT localmente. Un access
+  token anterior puede conservar sus claims hasta `exp`, máximo 15 minutos.
+- **Aceptación humana de HU-39.** El despliegue, los controles automáticos y la
+  inicialización del único rol raíz están comprobados; el recorrido completo de
+  asignación, TOTP, Catalog y retirada se registra en la evidencia de HU-39.
 - **Una sola identidad de AWS para todo el nodo `app`.** Cualquier contenedor de
   ese nodo puede obtener las mismas credenciales que Account. Es una limitación
   aceptada de la topología de ADR-011, no un descuido, y aislarla exige cambiar
@@ -77,9 +75,11 @@ Lo que sí se implementó es todo lo que **no** depende del proveedor:
 
 - El modelo de roles completo en el dominio de Account.
 - La regla de que el rol base no puede retirarse.
-- La regla de que solo un administrador gestiona roles.
+- La regla de que solo el Super Administrador gestiona roles.
 
-Cuando exista identidad verificable, activar el control será conectar el testimonio con reglas que ya están escritas y probadas.
+Desde el 2026-08-29 la identidad es verificable y esos controles se conectan al
+testimonio emitido por Cognito; HU-39 añadió la gestión de roles sobre la misma
+frontera.
 
 ## Lo que sí protege el sistema hoy
 

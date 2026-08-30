@@ -1,6 +1,6 @@
 # ADR-004 — Identidad, directorio y control de acceso
 
-- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **El rol viaja en el testimonio** desde el 2026-08-29 (Account decide, el pool refleja). **TOTP confirmado como segundo factor administrativo** el 2026-08-29. El pool lo tiene activo con `mfa_configuration = OPTIONAL`, que según AWS solo reta a quien tenga factor inscrito. **Comprobado de extremo a extremo el 2026-08-29**: una identidad real inscribió TOTP y Cognito le exigió el código al volver a entrar. **Existe ya una cuenta `ADMINISTRATOR`**, elevada con el bootstrap único, con los dos lados coincidiendo, así que el control de segundo factor deja de pasar por ausencia. **Recuperación de cuenta en `verified_email`** desde el 2026-08-29: estaba en `admin_only` y dejaba fuera a quien olvidara su contraseña. **La arquitectura admite TOTP y OTP por correo a la vez** (`SELECT_MFA_TYPE`); el correo no está activo por los límites de SES y de la recuperación, documentados abajo.
+- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **El rol viaja en el testimonio** desde el 2026-08-29 (Account decide, el pool refleja). **TOTP confirmado como segundo factor administrativo** el 2026-08-29. El pool lo tiene activo con `mfa_configuration = OPTIONAL`, que según AWS solo reta a quien tenga factor inscrito. **HU-39 desplegada el 2026-08-30:** solo el Super Administrador gestiona `MODERATOR`/`ADMINISTRATOR`, se exige TOTP antes de elevar a Administrador y existe una única cuenta raíz con `PLAYER + SUPER_ADMINISTRATOR`, coincidente en PostgreSQL y Cognito. **Recuperación de cuenta en `verified_email`** desde el 2026-08-29. **La arquitectura admite TOTP y OTP por correo a la vez** (`SELECT_MFA_TYPE`); el correo no está activo por los límites de SES y de la recuperación, documentados abajo.
 - **Fecha:** 2026-08-21, aceptado el 2026-08-25
 - **Decide:** Arquitectura, con aprobación obligatoria de gobierno del proyecto y presupuesto
 - **Relacionado:** [ADR-007](ADR-007-aws-cost-optimized-platform.md)
@@ -21,9 +21,11 @@ Este ADR existe porque «identidad» se usa habitualmente para nombrar cinco cos
 | **RBAC** | Qué puede hacer cada quien | **Account**, en su dominio | Nulo |
 | **Segundo factor por correo** | Refuerzo de la prueba de identidad | IdP + Notifications | Bajo, por envío |
 
-De las cinco, **solo RBAC pertenece hoy al producto**. Account ya lo implementa: roles `PLAYER`, `MODERATOR` y `ADMINISTRATOR`, con la regla de que el rol base no puede retirarse y solo un administrador gestiona los demás.
-
-Las otras cuatro dependen de un proveedor que **no existe todavía**.
+De las cinco, **RBAC pertenece al producto**. Account implementa los cuatro
+roles, conserva `PLAYER` como base no retirable y permite que solo
+`SUPER_ADMINISTRATOR` gestione `MODERATOR` y `ADMINISTRATOR`. Cognito provee la
+identidad, los testimonios y el segundo factor; el Directorio Activo literal
+sigue fuera del alcance por la decisión de coste de este ADR.
 
 ## Decisión
 
@@ -35,7 +37,9 @@ Las otras cuatro dependen de un proveedor que **no existe todavía**.
 
 ## BLOCKER — Identity provider approval
 
-**Estado del blocker al 2026-08-29: resuelto en su parte técnica. Queda abierto el segundo factor administrativo.**
+**Estado del blocker al 2026-08-30: resuelto.** Identidad, RBAC, inscripción
+TOTP y gestión de roles están desplegados. El recorrido humano completo de
+HU-39 se conserva como evidencia de aceptación, no como dependencia técnica.
 
 El pool existe, está aplicado, y los cinco servicios corren con `AUTH_MODE=jwt`
 sobre los nodos de la demo. La tabla de más abajo describe lo que ocurría con
@@ -65,15 +69,11 @@ en el pool no puede fabricar un permiso.
 
 ### Lo que sigue abierto
 
-- **Segundo factor por correo para `ADMINISTRATOR` y `SUPER_ADMINISTRATOR`.**
-  El pool tiene TOTP porque el MFA por correo exige SES, decisión pendiente.
-  `LoginAccount` **falla cerrado** mientras tanto: si Cognito entrega un token
-  para un rol administrativo sin haber retado el segundo factor, devuelve
-  `providerUnavailable` en lugar de autenticar.
-- **HU-01 no crea todavía la identidad en Cognito.** La cuenta de prueba se
-  alineó a mano entre el pool y PostgreSQL.
-- **`public_ingress_cidrs` sigue vacío.** Abrirlo es una decisión aparte, que
-  ahora es discutible y antes no lo era.
+- El OTP por correo no está activo; TOTP es la decisión vigente para roles
+  administrativos.
+- Un access token ya emitido puede conservar sus claims hasta `exp` (máximo 15
+  minutos), aunque la retirada ejecute `AdminUserGlobalSignOut`.
+- La topología de demo comparte un rol IAM entre contenedores del nodo `app`.
 
 **Estado anterior, conservado como referencia:**
 
@@ -170,7 +170,11 @@ No se creó un segundo App Client. Se evaluó y se descartó: los cuatro servici
 
 Ese control tiene un límite que este ADR no puede disimular: **es el único rol que existe para el nodo `app`**, y ADR-011 pone los seis contenedores de ese nodo —proxy, web, account, inventory, catalog, community, commerce— en la misma instancia EC2. Docker no aísla por contenedor el acceso al servicio de metadatos; en la práctica, cualquier contenedor del nodo `app` puede obtener las mismas credenciales que Account y llamar estas dos acciones, no solo Account. Aislarlo de verdad —una identidad de AWS por servicio— es la clase de cambio de topología (ECS/Fargate con roles de tarea, instancia por servicio) que ADR-011 ya descartó por coste. Es una limitación aceptada de esta topología, no un descuido de esta rama, y queda dicha en lugar de aparentar un aislamiento que no existe.
 
-**`SUPER_ADMINISTRATOR`.** El dominio de Account (y el backlog de Management, HU-02/HU-39) ya reconocen un cuarto rol, además de `PLAYER`/`MODERATOR`/`ADMINISTRATOR`. Este pool ahora tiene el grupo `SUPER_ADMINISTRATOR` (`precedence = 0`, por encima de `ADMINISTRATOR`). El grupo existe; no hay cuenta, no hay contraseña, no hay usuario aprovisionado y no se asigna a nadie desde el login — eso es HU-39, no esta rama. **Inconsistencia transversal registrada, no resuelta aquí**: los cuatro servicios de dominio todavía reconocen solo tres roles en su propio enum (`ALL_ROLES`); ese código está fuera de este repositorio.
+**`SUPER_ADMINISTRATOR`.** HU-39 reconoce el cuarto rol de extremo a extremo.
+El pool tiene el grupo con `precedence = 0` y existe exactamente una cuenta raíz
+con `PLAYER + SUPER_ADMINISTRATOR`. La API no concede otro rol raíz. Account y
+Web reservan la gestión de roles al Super Administrador; Catalog y Community
+aceptan su jerarquía allí donde exigen Administrador o moderación.
 
 **Corrección de política de contraseña.** `minimum_length` baja de 12 a 9. HU-01 (CA-03) exige "más de ocho caracteres"; nueve es el mínimo que lo cumple, y no existe ninguna aclaración formal del cliente ni del profesor —auditada contra el backlog de Management— que autorice doce. Era una política más estricta que la historia de usuario sin decisión que la respalde.
 
@@ -349,9 +353,8 @@ Comprobado desde fuera: HTTPS valida sin `-k`, `/api/products` responde 200 y
 `/api/orders` responde **401**. La autorizacion funciona contra el origen
 publico, no solo contra `127.0.0.1`.
 
-**Lo que sigue abierto es el segundo factor**, y con el sistema ya expuesto pasa
-a ser lo mas urgente. Ver la seccion siguiente: el codigo esta, las variables no
-estan puestas.
+**El segundo factor administrativo está operativo.** HU-39 además impide elevar
+a `ADMINISTRATOR` mientras Cognito no confirme `SOFTWARE_TOKEN_MFA`.
 
 ## Exponer el sistema: lo que hizo falta, y lo que sigue desaconsejando abrirlo del todo
 
@@ -410,9 +413,9 @@ configuración del pool ni SES: es que **alguien inscriba el factor** en las
 cuentas administrativas. La protección se consigue por inscripción, no por
 imposición, y por eso no hay ningún error que delate su ausencia.
 
-**Segundo, hoy no hay nada expuesto.** El pool no tiene ninguna cuenta en
-`ADMINISTRATOR` ni en `SUPER_ADMINISTRATOR`. El riesgo es **latente**: aparece en
-el momento en que se cree la primera, no antes.
+**Estado superado el 2026-08-30.** Ya existe una única cuenta
+`SUPER_ADMINISTRATOR`, con TOTP confirmado. El control dejó de pasar por
+ausencia y HU-39 exige el factor antes de cualquier elevación a Administrador.
 
 **El control.** `scripts/verificar-segundo-factor-administrativo.py` lista los
 miembros de ambos grupos y exige que cada uno tenga un factor **confirmado**
