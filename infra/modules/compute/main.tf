@@ -88,9 +88,16 @@ data "aws_iam_policy_document" "cognito_admin_auth" {
    * `PLAYER` -todas piden `ADMINISTRATOR` o `MODERATOR`- y por eso la
    * divergencia era invisible en lugar de inexistente.
    *
-   * SON TRES ACCIONES Y NO MAS, deliberadamente. `AdminListGroupsForUser` es de
-   * lectura y hace falta para calcular la diferencia: sin ella el reflejo solo
-   * podria sumar, y retirar un rol en Account nunca llegaria al testimonio.
+   * SON CUATRO ACCIONES Y NO MAS, deliberadamente. `AdminListGroupsForUser` es
+   * de lectura y hace falta para calcular la diferencia: sin ella el reflejo
+   * solo podria sumar, y retirar un rol en Account nunca llegaria al testimonio.
+   *
+   * `AdminGetUser` se anadio el 2026-08-30 y tiene su propio motivo: el correo
+   * verificado NO viaja en el access token -ese atributo vive en el ID token, y
+   * cambiar `tokenUse` romperia el RBAC de los cinco servicios-, asi que Account
+   * tiene que preguntarselo al proveedor por el sujeto. Sin este permiso el
+   * registro falla CERRADO con 503, que es el comportamiento correcto pero deja
+   * el alta inutilizable.
    * NO se conceden `AdminCreateUser` ni `AdminDeleteUser`: Account dejo de
    * crear identidades y no debe recuperar esa capacidad por la puerta de atras.
    * Tampoco `CreateGroup` ni `DeleteGroup`: los grupos los declara el modulo
@@ -108,6 +115,10 @@ data "aws_iam_policy_document" "cognito_admin_auth" {
       "cognito-idp:AdminListGroupsForUser",
       "cognito-idp:AdminAddUserToGroup",
       "cognito-idp:AdminRemoveUserFromGroup",
+      # Solo LECTURA de atributos. No se concede AdminUpdateUserAttributes: el
+      # producto lee lo que el proveedor comprobo, nunca lo declara por su
+      # cuenta. Poder escribirlo convertiria la prueba en una afirmacion propia.
+      "cognito-idp:AdminGetUser",
     ]
 
     resources = [var.cognito_user_pool_arn]
