@@ -61,7 +61,7 @@ resource "aws_cognito_user_pool" "this" {
    * ADR-004 tiene que registrar esta correccion.
    */
   dynamic "software_token_mfa_configuration" {
-    for_each = var.mfa_method == "software_token" ? [1] : []
+    for_each = contains(var.mfa_methods, "software_token") ? [1] : []
 
     content {
       enabled = true
@@ -69,7 +69,7 @@ resource "aws_cognito_user_pool" "this" {
   }
 
   dynamic "email_mfa_configuration" {
-    for_each = var.mfa_method == "email" ? [1] : []
+    for_each = contains(var.mfa_methods, "email") ? [1] : []
 
     content {
       message = "Tu codigo de verificacion de Nexus Battles VI es {####}"
@@ -110,8 +110,24 @@ resource "aws_cognito_user_pool" "this" {
    */
   account_recovery_setting {
     recovery_mechanism {
-      name     = "verified_email"
+      name     = var.account_recovery
       priority = 1
+    }
+  }
+
+  /**
+   * SMS, solo si se aporta el rol. Es lo que habilita la recuperacion por
+   * telefono, que es la unica que Cognito admite junto al MFA por correo.
+   *
+   * Se declara aparte de `mfa_methods` a proposito: recuperar una cuenta NO es
+   * autenticarse, y mezclarlos es justo lo que cierra el circulo.
+   */
+  dynamic "sms_configuration" {
+    for_each = var.sms_role_arn == "" ? [] : [1]
+
+    content {
+      external_id    = var.sms_external_id
+      sns_caller_arn = var.sms_role_arn
     }
   }
 
@@ -148,24 +164,41 @@ resource "aws_cognito_user_pool" "this" {
    */
   lifecycle {
     precondition {
-      condition     = var.mfa_method != "email" || var.ses_identity_arn != ""
-      error_message = "mfa_method = \"email\" exige ses_identity_arn: el emisor por defecto de Cognito no admite MFA por correo."
+      condition     = !contains(var.mfa_methods, "email") || var.ses_identity_arn != ""
+      error_message = "mfa_methods con \"email\" exige ses_identity_arn: el emisor por defecto de Cognito no admite MFA por correo."
     }
 
     /**
-     * La recuperacion pasa a `verified_email` porque el segundo factor es TOTP.
-     * Volver a `mfa_method = "email"` cerraria el circulo que ese cambio da por
-     * abierto: quien tenga el correo recuperaria la cuenta Y recibiria el
-     * codigo, de modo que el segundo factor dejaria de serlo.
+     * El circulo que no debe cerrarse.
      *
-     * Cognito rechaza esa combinacion, pero lo hace DURANTE el apply y con un
-     * mensaje que describe el sintoma. Aqui se dice la causa antes de tocar
-     * nada, que es lo que este proyecto ya aprendio por las malas con el
-     * apostrofo de una regla de seguridad.
+     * Si el correo es a la vez el segundo factor y la via de recuperacion,
+     * quien tenga el correo se salta el segundo factor pidiendo una
+     * recuperacion, y el factor deja de serlo. Cognito rechaza la combinacion,
+     * pero lo hace DURANTE el apply y con un mensaje que describe el sintoma.
+     * Aqui se dice la causa antes de tocar nada.
      */
     precondition {
-      condition     = var.mfa_method != "email"
-      error_message = "mfa_method = \"email\" es incompatible con la recuperacion por correo verificado: el correo seria a la vez el segundo factor y la via de recuperacion. Si se quiere el correo como factor, hay que decidir antes otro mecanismo de recuperacion."
+      condition     = !contains(var.mfa_methods, "email") || var.account_recovery != "verified_email"
+      error_message = "El correo no puede ser a la vez segundo factor y via de recuperacion: quien tenga el correo se saltaria el factor pidiendo una recuperacion. Usa account_recovery = \"verified_phone_number\" (exige sms_role_arn) o retira \"email\" de mfa_methods."
+    }
+
+    /**
+     * Recuperacion por telefono sin SMS configurado deja a TODO EL MUNDO fuera,
+     * y en silencio: la pantalla alojada no muestra el enlace y no hay error que
+     * lo explique. Este proyecto ya lo vivio con `admin_only`.
+     */
+    precondition {
+      condition     = var.account_recovery != "verified_phone_number" || var.sms_role_arn != ""
+      error_message = "account_recovery = \"verified_phone_number\" exige sms_role_arn: sin SMS configurado no hay recuperacion posible, y no lo dice ningun error."
+    }
+
+    /**
+     * Quedarse sin ningun factor no es una configuracion valida: el pool esta
+     * en OPTIONAL y sin factores nadie podria inscribir ninguno.
+     */
+    precondition {
+      condition     = length(var.mfa_methods) > 0
+      error_message = "mfa_methods no puede estar vacio: sin factores declarados nadie puede inscribir uno."
     }
   }
 

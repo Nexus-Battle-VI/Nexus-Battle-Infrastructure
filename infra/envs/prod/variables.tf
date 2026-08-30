@@ -162,20 +162,45 @@ variable "from_email_address" {
   default     = ""
 }
 
-variable "mfa_method" {
+variable "mfa_methods" {
   description = <<-DESC
-    Segundo factor del pool: "software_token" o "email".
+    Segundos factores que ofrece el pool. Con los dos, Cognito reta con
+    `SELECT_MFA_TYPE` y quien entra elige.
 
-    ADR-004 previo el correo. Se mantuvo "software_token" mientras SES no estaba
-    resuelto, y se registro como correccion del ADR en lugar de disimularla.
+    Se queda en solo `software_token` MIENTRAS no haya recuperacion por SMS:
+    activar `email` obliga a que la recuperacion deje de ser por correo, y hoy
+    nadie tiene telefono registrado. Cambiar una sin la otra deja a todo el
+    mundo sin poder recuperar su cuenta, que es exactamente lo que ya paso con
+    `admin_only`.
+
+    Ver `docs/adr/ADR-004-identity-directory.md`, seccion del segundo factor.
   DESC
-  type        = string
-  default     = "software_token"
+  type        = set(string)
+  default     = ["software_token"]
 }
 
-# ---------------------------------------------------------------------------
-# Exposicion del sitio publico
-# ---------------------------------------------------------------------------
+variable "account_recovery" {
+  description = <<-DESC
+    Via de recuperacion de cuenta. NO es autenticacion, y por eso va aparte.
+
+    `verified_email` es incompatible con `email` en `mfa_methods`, y hay una
+    precondicion que lo detiene en el plan.
+  DESC
+  type        = string
+  default     = "verified_email"
+}
+
+variable "sms_role_arn" {
+  description = "Rol de SNS para SMS. Vacio deja el pool sin SMS y sin recuperacion por telefono."
+  type        = string
+  default     = ""
+}
+
+variable "sms_external_id" {
+  description = "Identificador externo del rol de SMS."
+  type        = string
+  default     = ""
+}
 
 variable "public_site_address" {
   description = <<-DESC

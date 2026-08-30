@@ -1,6 +1,6 @@
 # ADR-004 — Identidad, directorio y control de acceso
 
-- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **El rol viaja en el testimonio** desde el 2026-08-29 (Account decide, el pool refleja). **TOTP confirmado como segundo factor administrativo** el 2026-08-29. El pool lo tiene activo con `mfa_configuration = OPTIONAL`, que según AWS solo reta a quien tenga factor inscrito: falta crear la identidad e inscribir su autenticador, no configurar el pool. **Ninguna cuenta administrativa existe todavía**, así que el control pasa por ausencia.
+- **Estado:** **Accepted** el 2026-08-25 — proveedor elegido. **Pool aprovisionado** el 2026-08-26 (`us-east-1_HrEiSzzKW`). **Verificación de identidad ACTIVA en los cinco servicios** desde el 2026-08-29 (`AUTH_MODE=jwt`, comprobada de extremo a extremo). **El rol viaja en el testimonio** desde el 2026-08-29 (Account decide, el pool refleja). **TOTP confirmado como segundo factor administrativo** el 2026-08-29. El pool lo tiene activo con `mfa_configuration = OPTIONAL`, que según AWS solo reta a quien tenga factor inscrito. **Comprobado de extremo a extremo el 2026-08-29**: una identidad real inscribió TOTP y Cognito le exigió el código al volver a entrar. **Existe ya una cuenta `ADMINISTRATOR`**, elevada con el bootstrap único, con los dos lados coincidiendo, así que el control de segundo factor deja de pasar por ausencia. **Recuperación de cuenta en `verified_email`** desde el 2026-08-29: estaba en `admin_only` y dejaba fuera a quien olvidara su contraseña. **La arquitectura admite TOTP y OTP por correo a la vez** (`SELECT_MFA_TYPE`); el correo no está activo por los límites de SES y de la recuperación, documentados abajo.
 - **Fecha:** 2026-08-21, aceptado el 2026-08-25
 - **Decide:** Arquitectura, con aprobación obligatoria de gobierno del proyecto y presupuesto
 - **Relacionado:** [ADR-007](ADR-007-aws-cost-optimized-platform.md)
@@ -405,6 +405,88 @@ logout:    ["http://localhost:5173/",
 La URL pública se **deriva** de `public_site_address` en `envs/prod/main.tf`, no
 se escribe a mano. Es lo que impide que vuelvan a separarse: no se puede fijar un
 dominio sin registrar su retorno.
+
+## Los dos segundos factores, y por que todavia no estan los dos activos
+
+**Registrado el 2026-08-29.** Decision de producto: el pool debe ofrecer **TOTP
+y OTP por correo**, y quien entra elige mediante `SELECT_MFA_TYPE`. La
+arquitectura ya lo soporta; lo que falta no es codigo.
+
+### Lo que el modulo admite ahora
+
+`mfa_methods` es un conjunto, no una eleccion excluyente. Con los dos valores,
+Cognito emite `SELECT_MFA_TYPE`. Y `account_recovery` se declara **aparte**, con
+`sms_role_arn` para la via por telefono.
+
+Que esten separadas es el punto: **recuperar una cuenta no es autenticarse**, y
+mezclarlas es lo que cierra el circulo.
+
+### El circulo, dicho una vez y bien
+
+Si el correo es a la vez el segundo factor y la via de recuperacion, quien tenga
+el correo **se salta el segundo factor pidiendo una recuperacion**. El factor
+deja de ser un factor. Cognito rechaza esa combinacion, y hace bien.
+
+La consecuencia practica no es negociable: **activar el OTP por correo obliga a
+que la recuperacion deje de ser por correo.** La unica alternativa de
+autoservicio que AWS ofrece es el telefono.
+
+### Por que no se activa hoy
+
+Dos limites reales, ninguno disimulado:
+
+| Limite | Efecto |
+| --- | --- |
+| **SES en entorno de pruebas, salida DENEGADA** (caso 178781013000904) | El codigo por correo llega **solo a las direcciones ya verificadas**. Para el resto no llega, y Cognito no distingue eso de un correo que tarda |
+| **Nadie tiene telefono registrado** | Poner `verified_phone_number` hoy deja a **todo el mundo** sin recuperacion, en silencio. Es exactamente lo que ya paso con `admin_only` |
+
+El segundo es el que manda. Activar el correo como factor sin resolver antes la
+recuperacion repetiria un fallo que este proyecto ya cometio y ya sufrio: alguien
+olvido su contrasena y no habia forma de recuperarla.
+
+**Por eso el entorno queda en `mfa_methods = ["software_token"]` y
+`account_recovery = "verified_email"`.** No es que falte implementar: es que
+falta el paso de datos que hace que la otra mitad no rompa nada.
+
+### Que hace falta para activarlo, exactamente
+
+1. Aprovisionar el rol de SNS para SMS y decidir su coste contra el techo de
+   ADR-007. SNS tiene su **propio** entorno de pruebas para SMS: solo entrega a
+   numeros verificados, el mismo limite que SES y por el mismo motivo.
+2. Recoger telefono de las cuentas que vayan a existir, y verificarlo.
+3. Aplicar los cuatro valores a la vez, **nunca uno sin el otro**:
+
+```hcl
+mfa_methods      = ["software_token", "email"]
+ses_identity_arn = "arn:aws:ses:us-east-1:658430303197:identity/simuladorupbbga.app"
+account_recovery = "verified_phone_number"
+sms_role_arn     = "arn:aws:iam::658430303197:role/<el-rol-de-sms>"
+```
+
+Comprobado que esa combinacion planifica limpia: `0 to add, 1 to change,
+0 to destroy`.
+
+### Las guardas, y por que estan en el plan y no en el apply
+
+Tres precondiciones detienen el `plan` en lugar de dejar que AWS falle a mitad
+del `apply`. Es la leccion del apostrofo en la descripcion de una regla de
+seguridad, que paso el plan y reventó **despues** de reemplazar un nodo.
+
+| Combinacion | Que dice |
+| --- | --- |
+| `email` sin `ses_identity_arn` | el emisor por defecto no admite MFA por correo |
+| `email` + `verified_email` | el correo seria factor y recuperacion a la vez |
+| `verified_phone_number` sin `sms_role_arn` | no habria recuperacion, y nada lo diria |
+
+Las tres comprobadas disparando. Una guarda que no sabe fallar no guarda nada.
+
+### Lo que NO se hizo, a proposito
+
+No se limita el OTP por correo a las siete direcciones verificadas como solucion
+definitiva, ni se retira TOTP. Lo primero seria vender como general una
+capacidad que no lo es; lo segundo, cambiar un factor que funciona por otro que
+depende de un permiso que nos denegaron.
+
 
 ## Decisión de proveedor: Amazon Cognito, plan Essentials
 
