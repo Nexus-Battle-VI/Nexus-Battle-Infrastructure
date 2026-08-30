@@ -72,7 +72,10 @@ module "identity" {
   # emisor por defecto y el segundo factor en aplicacion autenticadora.
   ses_identity_arn   = var.ses_identity_arn
   from_email_address = var.from_email_address
-  mfa_method         = var.mfa_method
+  mfa_methods        = var.mfa_methods
+  account_recovery   = var.account_recovery
+  sms_role_arn       = var.sms_role_arn
+  sms_external_id    = var.sms_external_id
 
   /**
    * Las URL de retorno incluyen el sitio publico AUTOMATICAMENTE.

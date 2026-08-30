@@ -28,3 +28,7 @@ crash.log
 # repositorio es publico. Solo se versiona el ejemplo.
 *.tfvars
 !*.tfvars.example
+
+# Cache de Python de los guiones de operacion.
+__pycache__/
+*.pyc

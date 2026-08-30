@@ -54,22 +54,82 @@ variable "from_email_address" {
   default     = ""
 }
 
-variable "mfa_method" {
+variable "mfa_methods" {
   description = <<-DESC
-    Segundo factor del pool: "software_token" o "email".
+    Segundos factores que el pool ofrece. Uno, o los dos.
 
-    Por defecto es la aplicacion autenticadora, y no por preferencia de estilo:
-    el MFA por correo EXIGE SES. Cognito rechaza configurarlo mientras el pool
-    use su emisor por defecto.
+    Con los dos activos, Cognito reta con `SELECT_MFA_TYPE` y quien entra elige.
+    Con uno solo, va directo a ese.
 
-    Poner "email" sin `ses_identity_arn` hace fallar el plan, no el apply: hay
-    una precondicion que lo comprueba y explica por que.
+    `software_token` (aplicacion autenticadora) no cuesta nada y no depende de
+    ningun servicio externo. `email` EXIGE SES: Cognito rechaza
+    `email_mfa_configuration` mientras el pool use su emisor por defecto, y hay
+    una precondicion que lo comprueba en el PLAN en lugar de dejarlo fallar a
+    mitad del apply.
+
+    LIMITE REAL DE ESTA CUENTA, que no se disimula: SES esta en su entorno de
+    pruebas y la solicitud para salir fue DENEGADA (caso 178781013000904). El
+    codigo por correo llegara SOLO a las direcciones ya verificadas en SES. Para
+    cualquier otra persona no llegara, y Cognito no distingue ese caso de un
+    correo que tarda. Por eso `email` no es el unico factor por defecto: dejar a
+    alguien con un unico factor que no le llega es dejarlo fuera.
   DESC
-  type        = string
-  default     = "software_token"
+  type        = set(string)
+  default     = ["software_token"]
 
   validation {
-    condition     = contains(["software_token", "email"], var.mfa_method)
-    error_message = "mfa_method debe ser \"software_token\" o \"email\"."
+    condition = length(var.mfa_methods) > 0 && length(
+      setsubtract(var.mfa_methods, ["software_token", "email"])
+    ) == 0
+    error_message = "mfa_methods admite \"software_token\" y \"email\", y no puede estar vacio."
   }
+}
+
+variable "account_recovery" {
+  description = <<-DESC
+    Como se recupera una cuenta cuya contrasena se olvido.
+
+    NO es un mecanismo de autenticacion y no debe mezclarse con `mfa_methods`.
+    Se declara aparte justo para que la relacion entre ambos sea visible: si el
+    correo es a la vez el segundo factor y la via de recuperacion, quien tenga
+    el correo se salta el segundo factor pidiendo una recuperacion. Cognito
+    rechaza esa combinacion, y aqui hay una precondicion que la detiene antes.
+
+    - `verified_email`         autoservicio por correo. Incompatible con
+                               `email` en `mfa_methods`.
+    - `verified_phone_number`  autoservicio por SMS. Exige `sms_role_arn`.
+    - `admin_only`             sin autoservicio. Comprobado en este proyecto: la
+                               pantalla alojada deja de mostrar el enlace de
+                               recuperacion y quien olvide su contrasena queda
+                               fuera. No usar sin saberlo.
+  DESC
+  type        = string
+  default     = "verified_email"
+
+  validation {
+    condition = contains(
+      ["verified_email", "verified_phone_number", "admin_only"], var.account_recovery
+    )
+    error_message = "account_recovery debe ser verified_email, verified_phone_number o admin_only."
+  }
+}
+
+variable "sms_role_arn" {
+  description = <<-DESC
+    Rol que Cognito asume para publicar SMS por SNS. Vacio deja el pool sin SMS.
+
+    Necesario para `account_recovery = "verified_phone_number"`.
+
+    Mismo limite que SES y por el mismo motivo: SNS tiene su propio entorno de
+    pruebas para SMS, y ahi solo entrega a numeros verificados. Ademas el SMS se
+    cobra por mensaje, asi que entra en el techo de USD 100 de ADR-007.
+  DESC
+  type        = string
+  default     = ""
+}
+
+variable "sms_external_id" {
+  description = "Identificador externo del rol de SMS. Evita el problema del diputado confuso."
+  type        = string
+  default     = ""
 }
