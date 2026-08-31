@@ -81,11 +81,12 @@ canónicos. El retiro requiere telemetría, ausencia confirmada de consumidores
 y aprobación del Product Owner.
 
 El contrato objetivo reserva `imageUrl`, pero el almacenamiento y ownership de
-la imagen dependen de EN-027.3. La matriz exacta de atributos por tipo depende
-de la decisión funcional `PO-ATTR-01`: HU-33 referencia HU-012, mientras la
-HU-12 real no define categorías ni atributos de producto. El PO debe corregir
-la fuente y aprobar obligatoriedad, tipo de dato, restricciones, cardinalidad y
-ejemplos válidos e inválidos para los seis tipos de producto.
+la imagen dependen de EN-027.3.
+[`PO-ATTR-01`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286)
+fue aprobada por el Product Owner el 30 de agosto de 2026: el OpenAPI define una
+unión cerrada y versionada para los seis tipos, rechaza propiedades desconocidas
+y exige que el discriminador de atributos coincida con `type`. La ruta continúa
+como **Proposed** hasta que ADR-013 sea aceptado y Catalog la implemente.
 
 ### Community — `/api/threads`
 

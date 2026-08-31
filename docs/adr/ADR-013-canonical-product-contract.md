@@ -28,6 +28,14 @@ La revisión técnica de EN-027 aprobó estas decisiones antes de este ADR:
 7. entregar HU-33 en dos carriles;
 8. omitir backfill: la colección desplegada `catalog.products` está vacía.
 
+El Product Owner aprobó además
+[`PO-ATTR-01`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286)
+el 30 de agosto de 2026. La
+decisión quedó registrada en EN-027, corrigió la referencia equivocada de
+HU-33 a HU-12 #21 y definió la semántica de atributos, efectos, validaciones y
+ownership para los seis tipos de producto. Este ADR decide su representación
+técnica; no reabre las reglas funcionales aprobadas.
+
 ### Evidencia de consumidores actuales
 
 | Consumidor | Contrato implementado | Acoplamiento que debe retirarse |
@@ -112,46 +120,57 @@ contrato reserva un sobre versionado:
 }
 ```
 
-El sobre permite evolucionar la matriz sin cambiar la forma raíz de Producto,
-pero **no autoriza valores arbitrarios**. La matriz exacta de campos permitidos
-y obligatorios por tipo continúa pendiente de decisión funcional.
+El sobre permite evolucionar la matriz sin cambiar la forma raíz de Producto y
+**no autoriza valores arbitrarios**. En la versión `1`, `values` es una unión
+cerrada discriminada por `kind`:
 
-HU-33 remite a «HU-012» como fuente del esquema, pero la HU-12 real del backlog
-es «Prevención de daño entre aliados». Esa referencia no puede usarse como
-fuente de verdad. El Product Owner debe corregir la referencia o aprobar una
-matriz dentro de HU-33 antes de aceptar la validación de atributos.
+```json
+{
+  "attributes": {
+    "schemaVersion": "1",
+    "values": {
+      "kind": "ARMA",
+      "compatibilityScope": "ALL_HEROES",
+      "effects": []
+    }
+  }
+}
+```
 
-#### Decisión funcional requerida: PO-ATTR-01
+`kind` duplica deliberadamente el valor de `type`: permite que JSON Schema y
+los generadores de clientes seleccionen una variante sin inferirla por la
+presencia accidental de campos. Catalog rechaza la solicitud si
+`type != attributes.values.kind`. Los atributos desconocidos, los obligatorios
+ausentes y los objetos vacíos se rechazan. Una nueva propiedad o variante exige
+una nueva versión de esquema o un cambio compatible explícitamente revisado.
 
-El Product Owner debe aprobar la fuente de verdad y la matriz funcional de
-atributos para `HEROE`, `HABILIDAD`, `ARMA`, `ARMADURA`, `ITEM` y `EPICA`. La
-decisión debe responder, como mínimo:
+#### Decisión funcional aprobada: [PO-ATTR-01](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286)
 
-1. qué documento o ítem de backlog reemplaza la referencia inválida a HU-012,
-   o si la matriz quedará definida directamente en HU-33;
-2. para cada tipo, qué atributos son obligatorios, cuáles son opcionales y si
-   se permite un conjunto vacío;
-3. para cada atributo, su significado funcional, tipo de dato, unidad, valores
-   permitidos, rango y cardinalidad cuando correspondan;
-4. para `HEROE`, `HABILIDAD` y `EPICA`, qué significan `habilidades` y
-   `efectos`, cuáles son obligatorios, su cantidad mínima y si referencian
-   conceptos existentes o se crean en línea;
-5. si un atributo desconocido debe rechazarse y cuál es el comportamiento
-   esperado cuando falta uno obligatorio;
-6. un ejemplo válido y uno inválido por cada tipo; y
-7. si una matriz aún no aprobada bloquea todos los tipos o solo el tipo
-   afectado durante una liberación incremental.
+La versión `1` materializa la matriz aprobada así:
 
-El resultado aceptable es una matriz aprobada y enlazada desde HU-33, EN-027 y
-EN-027.1, junto con la corrección de la referencia funcional. El PO decide el
-significado y las reglas de negocio; el Tech Lead y el equipo deciden la forma
-JSON, el versionado del esquema, el almacenamiento y la implementación de las
-validaciones.
+| Tipo | Contrato de atributos |
+| --- | --- |
+| `HEROE` | subtipo; poder, vida y defensa base; rama ofensiva o de sanación según el subtipo; exactamente tres referencias canónicas a `HABILIDAD` |
+| `HABILIDAD` | uno o más subtipos compatibles; coste fijo o todo el poder disponible; un turno de carga; uno o más efectos |
+| `ARMA` | alcance para todos los héroes o subtipos seleccionados; uno o más efectos; código de set opcional |
+| `ARMADURA` | misma compatibilidad; pieza cerrada; uno o más efectos; código de set opcional |
+| `ITEM` | misma compatibilidad; uno o más efectos |
+| `EPICA` | exactamente un subtipo compatible; efecto general opcional y efecto específico obligatorio; coste cero y recarga de dos turnos |
 
-Hasta entonces, OpenAPI marca `attributes.values` como extensión pendiente y
-la ruta no puede declararse funcionalmente completa. El resto del contrato
-(identidad, estados, tiraje y precios) puede avanzar, pero EN-027.1 no puede
-cerrarse ni HU-33 declararse conforme mientras PO-ATTR-01 siga pendiente.
+Los subtipos de héroe se representan como referencias de texto al registro
+funcional vigente, no como un enum congelado en OpenAPI, porque el PO autorizó
+su ampliación. Catalog valida su existencia mediante un puerto. Las habilidades
+se referencian por `productId` y deben existir con `type=HABILIDAD`.
+
+Los efectos son una unión discriminada y estructurada. Expresan tipo, objetivo,
+magnitud, duración y condición de activación cuando correspondan. La versión
+`1` no permite acumulación; habilitarla exige una regla funcional posterior y
+evolución contractual. No se persiste narrativa ejecutable ni
+`Record<string, unknown>` sin validación.
+
+La probabilidad de loot, el nivel y las estadísticas actuales, el equipo
+instalado y la ejecución durante combate quedan fuera de Catalog. Pertenecen a
+Misiones/Loot, Player Inventory o Juego conforme a la matriz de ownership.
 
 ### 4. Precios
 
@@ -260,7 +279,7 @@ al sucesor. `Sunset` solo se añade cuando el Product Owner apruebe una fecha.
 
 ## Secuencia de adopción
 
-1. Aprobar este ADR, corregir la fuente de atributos y validar OpenAPI.
+1. Aprobar este ADR y validar el OpenAPI que incorpora PO-ATTR-01.
 2. Implementar identidad y agregado canónicos en Catalog sin retirar rutas.
 3. Exponer la ruta versionada y el adaptador heredado sobre los mismos casos de
    uso.
@@ -291,7 +310,6 @@ No hay fase de backfill: la colección de productos desplegada está vacía.
 
 ### Lo que permanece bloqueado
 
-- la matriz exacta de atributos por tipo, por referencia funcional inválida;
 - el almacenamiento y ownership de imágenes, por EN-027.3;
 - auditoría, outbox y `catalog.product.created`, por EN-027.2 y EN-027.4;
 - ownership de Vitrine, Auction y notificaciones in-app, por decisión del PO.
@@ -304,7 +322,8 @@ No hay fase de backfill: la colección de productos desplegada está vacía.
 | Sustituir SKU y `/api/products` en un solo despliegue | descartada: rompe Web y los contratos de Commerce sin una ventana observable |
 | Conservar `DRAFT/PUBLISHED/ARCHIVED` junto con estados funcionales | descartada: crea dos máquinas de estados y combinaciones contradictorias |
 | Modelar `activo/único/suspendido` como un único enum | descartada: suspender perdería la modalidad de tiraje |
-| Inventar la matriz de atributos en Arquitectura | descartada: es una decisión funcional sin fuente válida |
+| Mantener atributos abiertos con `additionalProperties: true` | descartada: contradice PO-ATTR-01 y traslada errores funcionales a los consumidores |
+| Inferir el tipo de `values` por los campos presentes | descartada: `ARMA`, `ARMADURA` e `ITEM` comparten propiedades; un discriminador explícito evita variantes ambiguas |
 | Mantener OpenAPI solo generado desde el código | insuficiente para esta fase: impediría revisar el contrato antes de implementar; se mantiene la comparación obligatoria con el generado |
 
 ## Evidencia y aceptación
@@ -312,8 +331,7 @@ No hay fase de backfill: la colección de productos desplegada está vacía.
 Para pasar este ADR a `Accepted` se requiere:
 
 - aprobación registrada del Tech Lead en #281;
-- confirmación del Product Owner sobre la matriz de atributos o corrección de
-  la referencia funcional;
+- evidencia de la aprobación del Product Owner registrada en #280 y #281;
 - OpenAPI válido y ejemplos de `201`, `403`, `409` y `422`;
 - revisión de Catalog y al menos un consumidor;
 - diagrama de compatibilidad renderizado;

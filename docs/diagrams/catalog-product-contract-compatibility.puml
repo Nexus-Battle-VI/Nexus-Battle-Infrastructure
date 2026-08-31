@@ -32,7 +32,7 @@ package "Consumidores" {
   component "Player / Inventory\nitemId textual\nIMPLEMENTADO" <<implemented>> as inventory
 }
 
-component "PO-ATTR-01\nMatriz de atributos por tipo\nDECISIÓN PO" <<blocked>> as attributeMatrix
+component "PO-ATTR-01\nMatriz de atributos por tipo\nAPROBADA POR PO" <<implemented>> as attributeMatrix
 component "Storage de imagen\nEN-027.3\nBLOQUEADO" <<blocked>> as imageStorage
 
 web --> gateway : GET /api/products
@@ -46,7 +46,7 @@ canonicalCore ..> catalogDb : productId como _id
 
 commerce ..> canonicalCore : ProductRef futuro\nproductId + sku temporal
 inventory ..> canonicalCore : productId futuro
-attributeMatrix ..> canonicalApi : desbloquea validación
+attributeMatrix ..> canonicalApi : alimenta esquema v1 cerrado
 imageStorage ..> canonicalApi : produce imageUrl válida
 
 note right of legacyApi
