@@ -1,0 +1,46 @@
+schemaVersion: '1'
+decision:
+  id: PO-ATTR-01
+  managementIssue: https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286
+  approvedOn: '2026-08-30'
+source:
+  document: Proyecto Integrador II
+  version: 1.26.10
+  sections:
+    - 6.1.1
+  tables:
+    - 5
+    - 6
+governance:
+  functionalOwner: Product Owner
+  technicalCustodian: Infrastructure
+  validationOwner: Catalog
+  extensionPolicy: A new code requires Product Owner approval and a new registry version.
+heroSubtypes:
+  - code: GUERRERO_TANQUE
+    displayName: Guerrero Tanque
+    combatBranch: OFFENSIVE
+  - code: GUERRERO_ARMAS
+    displayName: Guerrero Armas
+    combatBranch: OFFENSIVE
+  - code: MAGO_FUEGO
+    displayName: Mago Fuego
+    combatBranch: OFFENSIVE
+  - code: MAGO_HIELO
+    displayName: Mago Hielo
+    combatBranch: OFFENSIVE
+  - code: PICARO_VENENO
+    displayName: Pícaro Veneno
+    combatBranch: OFFENSIVE
+  - code: PICARO_MACHETE
+    displayName: Pícaro Machete
+    combatBranch: OFFENSIVE
+  - code: CHAMAN
+    displayName: Chamán
+    combatBranch: HEALING
+  - code: MEDICO
+    displayName: Médico
+    combatBranch: HEALING
+excludedCodes:
+  - code: MASTER
+    reason: Enemy encountered in missions that grants an epic ability; it is not a hero subtype.
