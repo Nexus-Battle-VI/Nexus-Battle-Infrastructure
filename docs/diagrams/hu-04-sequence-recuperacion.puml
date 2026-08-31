@@ -1,0 +1,74 @@
+@startuml hu-04-sequence-recuperacion
+!theme plain
+title HU-04 — Secuencia de recuperación de contraseña
+
+skinparam defaultFontName sans-serif
+skinparam sequence {
+  LifeLineBorderColor #999999
+}
+
+actor "Usuario" as user
+participant "Web\n/recover" as web
+participant "Caso de uso\nAccount" as usecase
+participant "RecoveryChallenge\n(dominio)" as domain
+database "recovery_challenges\n(o memoria)" as db
+participant "Cuenta / preguntas\nde HU-01" as accounts
+participant "Proveedor de\nidentidad" as identity
+participant "Notifications\n(HU-55)" as notify
+
+user -> web : ingresa correo
+web -> usecase : POST /accounts/recovery
+usecase -> accounts : buscar por correo
+accounts --> usecase : cuenta o ninguna
+usecase -> domain : start(token, correo, cuentaId?)
+domain --> usecase : desafio IDENTIFIED
+usecase -> db : guardar
+usecase --> web : token + catalogo de preguntas\n(igual exista o no la cuenta)
+
+user -> web : responde preguntas
+web -> usecase : POST /accounts/recovery/answers
+usecase -> db : buscar por token
+db --> usecase : desafio IDENTIFIED
+usecase -> accounts : respuestas guardadas (HU-01)
+accounts --> usecase : resumenes de respuesta
+alt respuestas no coinciden
+  usecase --> web : rechazo generico
+else respuestas coinciden
+  usecase -> usecase : emitir codigo\n(fijo o aleatorio segun proveedor)
+  usecase -> domain : markQuestionsVerified(codeHash)
+  domain --> usecase : desafio QUESTIONS_VERIFIED
+  usecase -> db : guardar
+  usecase -> notify : solicitar envio\n(account-password-recovery-code)
+  notify --> usecase : ok
+  usecase --> web : 200
+end
+
+user -> web : ingresa el codigo recibido
+web -> usecase : POST /accounts/recovery/code
+usecase -> db : buscar por token
+db --> usecase : desafio QUESTIONS_VERIFIED
+alt codigo no coincide o etapa distinta
+  usecase --> web : rechazo generico
+else codigo valido
+  usecase -> domain : markCodeVerified()
+  domain --> usecase : desafio CODE_VERIFIED\n(codeHash limpiado)
+  usecase -> db : guardar
+  usecase --> web : 200
+end
+
+user -> web : define nueva contrasena
+web -> usecase : POST /accounts/recovery/password
+usecase -> db : buscar por token
+db --> usecase : desafio CODE_VERIFIED
+usecase -> usecase : validar politica de contrasena
+usecase -> identity : setPassword(correo, nueva)
+identity --> usecase : actualizado
+usecase -> domain : markCompleted()
+domain --> usecase : desafio COMPLETED
+usecase -> db : guardar
+usecase -> notify : solicitar confirmacion\n(account-password-reset-confirmation)
+notify --> usecase : ok
+usecase --> web : 200
+web --> user : contrasena actualizada
+
+@enduml

@@ -1,0 +1,74 @@
+@startuml hu-04-domain-recovery
+!theme plain
+title HU-04 — Fragmento conceptual del dominio de recuperación
+
+skinparam defaultFontName sans-serif
+skinparam classAttributeIconSize 0
+
+class Cuenta <<de HU-01>> {
+  id
+  correo
+  --
+  preguntasDeSeguridad()
+}
+
+class PreguntaSeguridad <<de HU-01>> {
+  id
+  enunciado
+  respuestaResumen
+}
+
+class RecoveryChallenge {
+  token
+  correo
+  cuentaId : opcional
+  etapa
+  codigoResumen : opcional
+  creadoEn
+  --
+  markQuestionsVerified(codigoResumen)
+  markCodeVerified()
+  markCompleted()
+}
+
+enum RecoveryStage {
+  IDENTIFIED
+  QUESTIONS_VERIFIED
+  CODE_VERIFIED
+  COMPLETED
+}
+
+class PoliticaDeContrasena <<policy>> {
+  assertValid(contrasena)
+}
+
+class ProveedorDeIdentidad <<external>> {
+  setPassword(correo, contrasena)
+}
+
+class ServicioDeCorreo <<HU-55>> {
+  request(plantilla, variables)
+}
+
+RecoveryChallenge "1" -- "1" RecoveryStage : etapa actual
+RecoveryChallenge ..> Cuenta : referencia opcional\n(no enumera correos)
+RecoveryChallenge ..> PreguntaSeguridad : compara respuestas\ncontra el resumen de HU-01
+RecoveryChallenge ..> PoliticaDeContrasena : valida antes de\nestablecer la nueva
+RecoveryChallenge ..> ProveedorDeIdentidad : actualiza la credencial\nal completarse
+RecoveryChallenge ..> ServicioDeCorreo : solicita envio\ndel codigo y la confirmacion
+
+note right of RecoveryChallenge
+  No es el agregado Cuenta: es un proceso
+  temporal. El codigo en claro nunca vive
+  aqui, solo su resumen (codeHash), y se
+  limpia al consumirse.
+end note
+
+note bottom of RecoveryStage
+  Transicion estrictamente secuencial.
+  Saltar una etapa o reutilizar un codigo
+  ya consumido se rechaza igual que una
+  respuesta o codigo invalidos.
+end note
+
+@enduml

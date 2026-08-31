@@ -1,0 +1,58 @@
+@startuml hu-04-activity-recuperacion
+!theme plain
+title HU-04 — Actividad de recuperación de contraseña
+
+skinparam defaultFontName sans-serif
+
+start
+:Recibir correo de la cuenta;
+:Crear desafío (token) en estado IDENTIFIED;
+:Responder siempre con el mismo catálogo\nde preguntas y el token;
+note right
+  Exista o no la cuenta: la respuesta
+  no permite enumerar correos.
+end note
+
+:Usuario responde las preguntas de seguridad;
+if (¿Respuestas coinciden con HU-01?) then (no)
+  :Responder rechazo genérico;
+  stop
+endif
+
+:Emitir código de un solo uso;
+:Guardar solo el resumen del código (codeHash);
+:Avanzar a QUESTIONS_VERIFIED;
+:Solicitar a HU-55 el envío del código;
+
+:Usuario ingresa el código recibido;
+if (¿Etapa es QUESTIONS_VERIFIED\ny código coincide con el resumen?) then (no)
+  :Responder rechazo genérico;
+  stop
+endif
+
+:Avanzar a CODE_VERIFIED;
+:Limpiar el resumen del código\n(ya no puede reutilizarse);
+
+:Usuario ingresa la nueva contraseña;
+if (¿Etapa es CODE_VERIFIED?) then (no)
+  :Responder rechazo genérico;
+  stop
+endif
+
+if (¿Contraseña cumple la política vigente?) then (no)
+  :Responder rechazo genérico;
+  stop
+endif
+
+:Actualizar credencial en el proveedor de identidad;
+if (¿Proveedor confirma la actualización?) then (no)
+  :Responder fallo del proveedor;
+  stop
+endif
+
+:Avanzar a COMPLETED;
+:Solicitar a HU-55 la confirmación por correo;
+:Responder éxito;
+stop
+
+@enduml
