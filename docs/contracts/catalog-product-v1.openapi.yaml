@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
   title: Nexus Battles VI - Catalog Product API
-  version: 1.0.0-draft.4
+  version: 1.0.0
   license:
     name: Licensing pending project governance
     url: https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure#licencia
   summary: Contrato objetivo de creación canónica de Producto
   description: |
-    Contrato propuesto por ADR-013 para implementar HU-33 por etapas.
+    Contrato aceptado mediante ADR-013 para implementar HU-33 por etapas.
     Esta especificación no afirma que la ruta esté desplegada. El contrato
     generado por Catalog deberá compararse con este archivo durante la
     implementación.
@@ -20,7 +20,7 @@ info:
     attributes.values es una unión cerrada para los seis tipos y rechaza
     propiedades desconocidas. imageUrl reserva la referencia requerida por
     HU-33, pero su almacenamiento depende de EN-027.3.
-  x-contract-status: proposed
+  x-contract-status: accepted
   x-management-issue: https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/281
   x-functional-decision: https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286
 
