@@ -136,7 +136,17 @@ cerrada discriminada por `kind`:
     "values": {
       "kind": "ARMA",
       "compatibilityScope": "ALL_HEROES",
-      "effects": []
+      "effects": [
+        {
+          "kind": "DAMAGE",
+          "target": "OPPONENT",
+          "magnitude": {
+            "mode": "DICE",
+            "count": 2,
+            "sides": 6
+          }
+        }
+      ]
     }
   }
 }
