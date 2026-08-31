@@ -28,13 +28,14 @@ La revisión técnica de EN-027 aprobó estas decisiones antes de este ADR:
 7. entregar HU-33 en dos carriles;
 8. omitir backfill: la colección desplegada `catalog.products` está vacía.
 
-El Product Owner aprobó además
+El Product Owner aprobó además las matrices base de
 [`PO-ATTR-01`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286)
-el 30 de agosto de 2026. La
-decisión quedó registrada en EN-027, corrigió la referencia equivocada de
-HU-33 a HU-12 #21 y definió la semántica de atributos, efectos, validaciones y
-ownership para los seis tipos de producto. Este ADR decide su representación
-técnica; no reabre las reglas funcionales aprobadas.
+el 30 de agosto de 2026. La decisión corrigió la referencia equivocada de
+HU-33 a HU-12 #21 y definió semántica y ownership para los seis tipos. La
+revisión posterior del Tech Lead reabrió #286: todavía deben aprobarse y
+ubicarse el catálogo inicial de `heroSubtype` y el catálogo de condiciones de
+activación y operadores. Este ADR decide únicamente la representación técnica
+de lo funcionalmente aprobado y no inventa esos catálogos pendientes.
 
 ### Evidencia de consumidores actuales
 
@@ -144,7 +145,7 @@ presencia accidental de campos. Catalog rechaza la solicitud si
 ausentes y los objetos vacíos se rechazan. Una nueva propiedad o variante exige
 una nueva versión de esquema o un cambio compatible explícitamente revisado.
 
-#### Decisión funcional aprobada: [PO-ATTR-01](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286)
+#### Decisión funcional base y pendientes: [PO-ATTR-01](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286)
 
 La versión `1` materializa la matriz aprobada así:
 
@@ -157,16 +158,28 @@ La versión `1` materializa la matriz aprobada así:
 | `ITEM` | misma compatibilidad; uno o más efectos |
 | `EPICA` | exactamente un subtipo compatible; efecto general opcional y efecto específico obligatorio; coste cero y recarga de dos turnos |
 
-Los subtipos de héroe se representan como referencias de texto al registro
-funcional vigente, no como un enum congelado en OpenAPI, porque el PO autorizó
-su ampliación. Catalog valida su existencia mediante un puerto. Las habilidades
-se referencian por `productId` y deben existir con `type=HABILIDAD`.
+Los subtipos de héroe se representan como referencias de texto y no como un
+enum técnico congelado, porque el PO autorizó su ampliación. #286 todavía no
+define la ubicación ni los códigos iniciales del registro funcional. Hasta que
+el PO los apruebe, el OpenAPI solo limita la forma sintáctica del código, no usa
+ejemplos de subtipos ni permite afirmar que Catalog puede validar existencia.
+Una vez resuelto el registro, Catalog realizará esa validación mediante un
+puerto. Las habilidades se referencian por `productId` y deben existir con
+`type=HABILIDAD`.
 
 Los efectos son una unión discriminada y estructurada. Expresan tipo, objetivo,
-magnitud, duración y condición de activación cuando correspondan. La versión
-`1` no permite acumulación; habilitarla exige una regla funcional posterior y
-evolución contractual. No se persiste narrativa ejecutable ni
-`Record<string, unknown>` sin validación.
+magnitud y duración. Aunque PO-ATTR-01 contempla una condición de activación
+opcional, no aprobó su catálogo ni sus operadores; por ello el borrador V1 no
+acepta `activationCondition` hasta resolver #286. La versión `1` no permite
+acumulación; habilitarla exige una regla funcional posterior y evolución
+contractual. No se persiste narrativa ejecutable ni `Record<string, unknown>`
+sin validación.
+
+Los valores fijos de V1 son derivados por Catalog y no se exigen al cliente:
+`chargeTurns=1` para HABILIDAD, `stackable=false` para efectos y
+`powerCost=0`/`cooldownTurns=2` para EPICA. En OpenAPI se declaran `readOnly`
+cuando forman parte de la proyección de salida. `kind` permanece en la solicitud
+porque es el discriminador explícito de la unión.
 
 La probabilidad de loot, el nivel y las estadísticas actuales, el equipo
 instalado y la ejecución durante combate quedan fuera de Catalog. Pertenecen a
@@ -330,6 +343,9 @@ No hay fase de backfill: la colección de productos desplegada está vacía.
 
 Para pasar este ADR a `Accepted` se requiere:
 
+- catálogo inicial y ubicación normativa de `heroSubtype` aprobados en #286;
+- catálogo de condiciones de activación y operadores aprobado en #286, o
+  exclusión funcional explícita de V1;
 - aprobación registrada del Tech Lead en #281;
 - evidencia de la aprobación del Product Owner registrada en #280 y #281;
 - OpenAPI válido y ejemplos de `201`, `403`, `409` y `422`;

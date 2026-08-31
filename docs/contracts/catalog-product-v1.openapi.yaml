@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Nexus Battles VI - Catalog Product API
-  version: 1.0.0-draft.2
+  version: 1.0.0-draft.3
   license:
     name: Licensing pending project governance
     url: https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure#licencia
@@ -12,7 +12,10 @@ info:
     generado por Catalog deberá compararse con este archivo durante la
     implementación.
 
-    PO-ATTR-01 fue aprobada por el Product Owner el 30 de agosto de 2026.
+    Las matrices base de PO-ATTR-01 fueron aprobadas por el Product Owner el
+    30 de agosto de 2026. La revisión posterior del Tech Lead reabrió #286
+    para completar el catálogo inicial de heroSubtype y el catálogo funcional
+    de condiciones de activación y operadores. Ninguno se fija en este borrador.
     attributes.values es una unión cerrada para los seis tipos y rechaza
     propiedades desconocidas. imageUrl reserva la referencia requerida por
     HU-33, pero su almacenamiento depende de EN-027.3.
@@ -68,34 +71,9 @@ paths:
                             mode: DICE
                             count: 2
                             sides: 6
-                          stackable: false
                   printRun: 150
                   creditsPrice: 40
                   premium: false
-              premiumUnique:
-                summary: Producto épico, único y premium
-                value:
-                  name: Corona del Máster Eterno
-                  imageUrl: https://assets.example.test/catalog/corona-master-eterno.webp
-                  description: Recompensa única de edición especial.
-                  type: EPICA
-                  attributes:
-                    schemaVersion: '1'
-                    values:
-                      kind: EPICA
-                      compatibleHeroSubtype: MASTER
-                      specificEffect:
-                        kind: TEMPORARY_STATUS
-                        target: SELF
-                        statusCode: ETERNAL_GLOW
-                        durationTurns: 2
-                        stackable: false
-                  printRun: 1
-                  creditsPrice: 0
-                  premium: true
-                  realMoneyPrice:
-                    amount: 999
-                    currency: USD
       responses:
         '201':
           description: Producto creado y disponible
@@ -477,6 +455,8 @@ components:
         chargeTurns:
           type: integer
           const: 1
+          readOnly: true
+          description: Calculado por Catalog; no se recibe en la solicitud.
         effects:
           $ref: '#/components/schemas/Effects'
       oneOf:
@@ -608,9 +588,11 @@ components:
       minLength: 1
       maxLength: 64
       pattern: '^[A-Z][A-Z0-9_]*$'
+      x-functional-registry-status: pending
       description: |
-        Código del registro funcional vigente. No es un enum cerrado porque el
-        Product Owner puede ampliar la lista de subtipos.
+        Código cuya existencia se validará contra el registro funcional que
+        debe aprobarse y ubicarse en Management #286. No es un enum técnico y
+        este borrador no presupone ningún código válido.
 
     SelectedHeroSubtypes:
       type: array
@@ -688,6 +670,9 @@ components:
 
     EffectBase:
       type: object
+      description: |
+        schemaVersion 1 no recibe condiciones de activación hasta que el
+        Product Owner apruebe su catálogo y operadores en Management #286.
       required:
         - target
         - stackable
@@ -698,12 +683,11 @@ components:
           type: integer
           minimum: 1
           description: Ausente para un efecto inmediato.
-        activationCondition:
-          $ref: '#/components/schemas/ActivationCondition'
         stackable:
           type: boolean
           const: false
-          description: PO-ATTR-01 no autoriza acumulación en schemaVersion 1.
+          readOnly: true
+          description: Calculado por Catalog; schemaVersion 1 no admite acumulación.
 
     StatisticModifierEffect:
       allOf:
@@ -914,75 +898,6 @@ components:
         sides:
           type: integer
           minimum: 2
-
-    ActivationCondition:
-      oneOf:
-        - $ref: '#/components/schemas/SimpleActivationCondition'
-        - $ref: '#/components/schemas/StatComparisonCondition'
-        - $ref: '#/components/schemas/EveryNTurnsCondition'
-      discriminator:
-        propertyName: kind
-        mapping:
-          ALWAYS: '#/components/schemas/SimpleActivationCondition'
-          ON_ATTACK: '#/components/schemas/SimpleActivationCondition'
-          ON_DAMAGE_RECEIVED: '#/components/schemas/SimpleActivationCondition'
-          ON_DEATH: '#/components/schemas/SimpleActivationCondition'
-          STAT_COMPARISON: '#/components/schemas/StatComparisonCondition'
-          EVERY_N_TURNS: '#/components/schemas/EveryNTurnsCondition'
-
-    SimpleActivationCondition:
-      type: object
-      additionalProperties: false
-      required:
-        - kind
-      properties:
-        kind:
-          type: string
-          enum:
-            - ALWAYS
-            - ON_ATTACK
-            - ON_DAMAGE_RECEIVED
-            - ON_DEATH
-
-    StatComparisonCondition:
-      type: object
-      additionalProperties: false
-      required:
-        - kind
-        - statistic
-        - operator
-        - threshold
-      properties:
-        kind:
-          type: string
-          const: STAT_COMPARISON
-        statistic:
-          $ref: '#/components/schemas/Statistic'
-        operator:
-          type: string
-          enum:
-            - LT
-            - LTE
-            - EQ
-            - GTE
-            - GT
-        threshold:
-          type: integer
-          minimum: 0
-
-    EveryNTurnsCondition:
-      type: object
-      additionalProperties: false
-      required:
-        - kind
-        - intervalTurns
-      properties:
-        kind:
-          type: string
-          const: EVERY_N_TURNS
-        intervalTurns:
-          type: integer
-          minimum: 1
 
     PrintRun:
       description: -1 significa infinito; cualquier entero mayor o igual a 1 es finito.
