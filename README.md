@@ -49,7 +49,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [010](docs/adr/ADR-010-reverse-proxy.md) | Proxy inverso y entrada | Proposed |
 | [011](docs/adr/ADR-011-deployment-topology.md) | Topología de despliegue | Accepted |
 | [012](docs/adr/ADR-012-orm-odm.md) | Selección de ORM y ODM | Accepted |
-| [013](docs/adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Proposed |
+| [013](docs/adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Accepted |
 
 El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 `Accepted` con evidencia de aprobación registrada.
