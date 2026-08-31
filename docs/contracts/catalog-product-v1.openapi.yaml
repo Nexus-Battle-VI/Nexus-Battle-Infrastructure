@@ -1,0 +1,1121 @@
+openapi: 3.1.0
+info:
+  title: Nexus Battles VI - Catalog Product API
+  version: 1.0.0
+  license:
+    name: Licensing pending project governance
+    url: https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure#licencia
+  summary: Contrato objetivo de creación canónica de Producto
+  description: |
+    Contrato aceptado mediante ADR-013 para implementar HU-33 por etapas.
+    Esta especificación no afirma que la ruta esté desplegada. El contrato
+    generado por Catalog deberá compararse con este archivo durante la
+    implementación.
+
+    PO-ATTR-01 fue completada y aprobada por el Product Owner el 30 de agosto
+    de 2026. El registro inicial contiene ocho heroSubtype y excluye MASTER.
+    schemaVersion 1 admite únicamente EVERY_N_TURNS, STAT_COMPARISON con LT,
+    ON_LINKED_ALLY_DEATH y PREVIOUS_TURN_DAMAGE_RECEIVED. La ausencia de
+    activationCondition representa aplicación directa y no se define ALWAYS.
+    attributes.values es una unión cerrada para los seis tipos y rechaza
+    propiedades desconocidas. imageUrl reserva la referencia requerida por
+    HU-33, pero su almacenamiento depende de EN-027.3.
+  x-contract-status: accepted
+  x-management-issue: https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/281
+  x-functional-decision: https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286
+
+servers:
+  - url: /
+    description: Mismo origen; Caddy enruta el prefijo /api al servicio Catalog.
+
+tags:
+  - name: Catalog Products
+    description: Administración del producto canónico de Catalog
+
+paths:
+  /api/v1/catalog/products:
+    post:
+      operationId: createCatalogProductV1
+      tags:
+        - Catalog Products
+      summary: Crea y deja disponible un producto canónico
+      description: |
+        Requiere testimonio JWT vigente, rol ADMINISTRATOR o
+        SUPER_ADMINISTRATOR y segundo factor administrativo verificado.
+        productId, lifecycleStatus y printRunMode son calculados por Catalog.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+            examples:
+              limitedWeapon:
+                summary: Arma de tiraje limitado
+                value:
+                  sku: espada-de-fuego
+                  name: Espada de Fuego
+                  imageUrl: https://assets.example.test/catalog/espada-de-fuego.webp
+                  description: Espada de dos manos con daño de fuego.
+                  type: ARMA
+                  attributes:
+                    schemaVersion: '1'
+                    values:
+                      kind: ARMA
+                      compatibilityScope: ALL_HEROES
+                      effects:
+                        - kind: DAMAGE
+                          target: OPPONENT
+                          magnitude:
+                            mode: DICE
+                            count: 2
+                            sides: 6
+                  printRun: 150
+                  creditsPrice: 40
+                  premium: false
+      responses:
+        '201':
+          description: Producto creado y disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+              examples:
+                created:
+                  value:
+                    productId: 3f6af5b5-5f43-4dd8-93cb-e8e73355ae42
+                    sku: espada-de-fuego
+                    name: Espada de Fuego
+                    imageUrl: https://assets.example.test/catalog/espada-de-fuego.webp
+                    description: Espada de dos manos con daño de fuego.
+                    type: ARMA
+                    attributes:
+                      schemaVersion: '1'
+                      values:
+                        kind: ARMA
+                        compatibilityScope: ALL_HEROES
+                        effects:
+                          - kind: DAMAGE
+                            target: OPPONENT
+                            magnitude:
+                              mode: DICE
+                              count: 2
+                              sides: 6
+                            stackable: false
+                    printRun: 150
+                    printRunMode: LIMITED
+                    lifecycleStatus: ACTIVE
+                    creditsPrice: 40
+                    premium: false
+                    realMoneyPrice: null
+                    createdAt: '2026-08-30T20:30:00.000Z'
+                    updatedAt: '2026-08-30T20:30:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Testimonio emitido por el proveedor aprobado. El backend valida firma,
+        vigencia, rol administrativo y evidencia del segundo factor conforme al
+        contrato de identidad vigente.
+
+  schemas:
+    CreateProductRequest:
+      oneOf:
+        - $ref: '#/components/schemas/StandardProductRequest'
+        - $ref: '#/components/schemas/PremiumProductRequest'
+      description: |
+        Unión exclusiva: premium=false no admite precio real; premium=true lo
+        exige con importe mayor que cero.
+
+    StandardProductRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - imageUrl
+        - description
+        - type
+        - attributes
+        - printRun
+        - creditsPrice
+        - premium
+      properties:
+        sku:
+          type: string
+          pattern: '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'
+          deprecated: true
+          description: |
+            Alias comercial opcional durante la compatibilidad. Si se omite,
+            Catalog genera uno. Nunca es la identidad canónica.
+          examples:
+            - espada-de-fuego
+        name:
+          type: string
+          minLength: 3
+          maxLength: 80
+          examples:
+            - Espada de Fuego
+        imageUrl:
+          type: string
+          format: uri
+          minLength: 1
+          description: |
+            Referencia al recurso; Catalog no recibe el binario. Ownership y
+            almacenamiento permanecen bloqueados por EN-027.3.
+        description:
+          type: string
+          minLength: 1
+          description: Descripción detallada del producto.
+        type:
+          $ref: '#/components/schemas/ProductType'
+        attributes:
+          $ref: '#/components/schemas/ProductAttributes'
+        printRun:
+          $ref: '#/components/schemas/PrintRun'
+        creditsPrice:
+          type: integer
+          minimum: 0
+          description: Precio entero en créditos; cero es válido.
+          examples:
+            - 40
+        premium:
+          type: boolean
+          const: false
+        realMoneyPrice:
+          type: 'null'
+          description: Puede omitirse; si se envía debe ser null.
+
+    PremiumProductRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - imageUrl
+        - description
+        - type
+        - attributes
+        - printRun
+        - creditsPrice
+        - premium
+        - realMoneyPrice
+      properties:
+        sku:
+          type: string
+          pattern: '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'
+          deprecated: true
+          description: |
+            Alias comercial opcional durante la compatibilidad. Si se omite,
+            Catalog genera uno. Nunca es la identidad canónica.
+          examples:
+            - corona-master-eterno
+        name:
+          type: string
+          minLength: 3
+          maxLength: 80
+          examples:
+            - Corona del Máster Eterno
+        imageUrl:
+          type: string
+          format: uri
+          minLength: 1
+          description: |
+            Referencia al recurso; Catalog no recibe el binario. Ownership y
+            almacenamiento permanecen bloqueados por EN-027.3.
+        description:
+          type: string
+          minLength: 1
+          description: Descripción detallada del producto.
+        type:
+          $ref: '#/components/schemas/ProductType'
+        attributes:
+          $ref: '#/components/schemas/ProductAttributes'
+        printRun:
+          $ref: '#/components/schemas/PrintRun'
+        creditsPrice:
+          type: integer
+          minimum: 0
+          description: Precio entero en créditos; cero es válido.
+          examples:
+            - 0
+        premium:
+          type: boolean
+          const: true
+        realMoneyPrice:
+          $ref: '#/components/schemas/RealMoneyPrice'
+
+    Product:
+      type: object
+      additionalProperties: false
+      required:
+        - productId
+        - sku
+        - name
+        - imageUrl
+        - description
+        - type
+        - attributes
+        - printRun
+        - printRunMode
+        - lifecycleStatus
+        - creditsPrice
+        - premium
+        - realMoneyPrice
+        - createdAt
+        - updatedAt
+      properties:
+        productId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Identidad canónica generada por Catalog.
+        sku:
+          type: string
+          pattern: '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'
+          readOnly: true
+          deprecated: true
+          description: Alias temporal de compatibilidad.
+        name:
+          type: string
+          minLength: 3
+          maxLength: 80
+        imageUrl:
+          type: string
+          format: uri
+        description:
+          type: string
+          minLength: 1
+        type:
+          $ref: '#/components/schemas/ProductType'
+        attributes:
+          $ref: '#/components/schemas/ProductAttributes'
+        printRun:
+          $ref: '#/components/schemas/PrintRun'
+        printRunMode:
+          $ref: '#/components/schemas/PrintRunMode'
+        lifecycleStatus:
+          $ref: '#/components/schemas/LifecycleStatus'
+        creditsPrice:
+          type: integer
+          minimum: 0
+        premium:
+          type: boolean
+        realMoneyPrice:
+          oneOf:
+            - $ref: '#/components/schemas/RealMoneyPrice'
+            - type: 'null'
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    ProductType:
+      type: string
+      enum:
+        - HEROE
+        - HABILIDAD
+        - ARMA
+        - ARMADURA
+        - ITEM
+        - EPICA
+
+    ProductAttributes:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - values
+      description: |
+        Sobre versionado aprobado mediante PO-ATTR-01. values.kind debe ser
+        igual al Product.type de la raíz; Catalog rechaza cualquier diferencia.
+      properties:
+        schemaVersion:
+          type: string
+          const: '1'
+        values:
+          oneOf:
+            - $ref: '#/components/schemas/HeroAttributes'
+            - $ref: '#/components/schemas/AbilityAttributes'
+            - $ref: '#/components/schemas/WeaponAttributes'
+            - $ref: '#/components/schemas/ArmorAttributes'
+            - $ref: '#/components/schemas/ItemAttributes'
+            - $ref: '#/components/schemas/EpicAttributes'
+          discriminator:
+            propertyName: kind
+            mapping:
+              HEROE: '#/components/schemas/HeroAttributes'
+              HABILIDAD: '#/components/schemas/AbilityAttributes'
+              ARMA: '#/components/schemas/WeaponAttributes'
+              ARMADURA: '#/components/schemas/ArmorAttributes'
+              ITEM: '#/components/schemas/ItemAttributes'
+              EPICA: '#/components/schemas/EpicAttributes'
+
+    HeroAttributes:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - heroSubtype
+        - basePower
+        - baseHealth
+        - baseDefense
+        - abilities
+      properties:
+        kind:
+          type: string
+          const: HEROE
+        heroSubtype:
+          $ref: '#/components/schemas/HeroSubtypeRef'
+        basePower:
+          type: integer
+          minimum: 0
+        baseHealth:
+          type: integer
+          minimum: 1
+        baseDefense:
+          type: integer
+          minimum: 0
+        baseAttack:
+          $ref: '#/components/schemas/BaseCombatValue'
+        baseDamage:
+          $ref: '#/components/schemas/BaseCombatValue'
+        baseHealing:
+          $ref: '#/components/schemas/BaseCombatValue'
+        abilities:
+          type: array
+          minItems: 3
+          maxItems: 3
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/ProductIdRef'
+      oneOf:
+        - title: Héroe ofensivo
+          required:
+            - baseAttack
+            - baseDamage
+          properties:
+            baseAttack:
+              $ref: '#/components/schemas/BaseCombatValue'
+            baseDamage:
+              $ref: '#/components/schemas/BaseCombatValue'
+            baseHealing: false
+        - title: Héroe sanador
+          required:
+            - baseHealing
+          properties:
+            baseAttack: false
+            baseDamage: false
+            baseHealing:
+              $ref: '#/components/schemas/BaseCombatValue'
+      description: |
+        Catalog valida que la rama ofensiva o sanadora corresponda al subtipo
+        vigente y que las tres referencias pertenezcan a productos HABILIDAD.
+
+    AbilityAttributes:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - compatibleHeroSubtypes
+        - powerCostMode
+        - chargeTurns
+        - effects
+      properties:
+        kind:
+          type: string
+          const: HABILIDAD
+        compatibleHeroSubtypes:
+          $ref: '#/components/schemas/SelectedHeroSubtypes'
+        powerCostMode:
+          type: string
+          enum:
+            - FIXED
+            - ALL_AVAILABLE
+        powerCost:
+          type: integer
+          minimum: 1
+        chargeTurns:
+          type: integer
+          const: 1
+          readOnly: true
+          description: Calculado por Catalog; no se recibe en la solicitud.
+        effects:
+          $ref: '#/components/schemas/Effects'
+      oneOf:
+        - title: Coste fijo
+          required:
+            - powerCostMode
+            - powerCost
+          properties:
+            powerCostMode:
+              const: FIXED
+            powerCost:
+              type: integer
+              minimum: 1
+        - title: Todo el poder disponible
+          required:
+            - powerCostMode
+          properties:
+            powerCostMode:
+              const: ALL_AVAILABLE
+            powerCost: false
+
+    WeaponAttributes:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - compatibilityScope
+        - effects
+      properties:
+        kind:
+          type: string
+          const: ARMA
+        compatibilityScope:
+          $ref: '#/components/schemas/CompatibilityScope'
+        compatibleHeroSubtypes:
+          $ref: '#/components/schemas/SelectedHeroSubtypes'
+        effects:
+          $ref: '#/components/schemas/Effects'
+        setCode:
+          $ref: '#/components/schemas/SetCode'
+      allOf:
+        - $ref: '#/components/schemas/CompatibilityRule'
+
+    ArmorAttributes:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - compatibilityScope
+        - slot
+        - effects
+      properties:
+        kind:
+          type: string
+          const: ARMADURA
+        compatibilityScope:
+          $ref: '#/components/schemas/CompatibilityScope'
+        compatibleHeroSubtypes:
+          $ref: '#/components/schemas/SelectedHeroSubtypes'
+        slot:
+          type: string
+          enum:
+            - HEAD
+            - CHEST
+            - GLOVES
+            - BRACERS
+            - PANTS
+            - SHOES
+        effects:
+          $ref: '#/components/schemas/Effects'
+        setCode:
+          $ref: '#/components/schemas/SetCode'
+      allOf:
+        - $ref: '#/components/schemas/CompatibilityRule'
+
+    ItemAttributes:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - compatibilityScope
+        - effects
+      properties:
+        kind:
+          type: string
+          const: ITEM
+        compatibilityScope:
+          $ref: '#/components/schemas/CompatibilityScope'
+        compatibleHeroSubtypes:
+          $ref: '#/components/schemas/SelectedHeroSubtypes'
+        effects:
+          $ref: '#/components/schemas/Effects'
+      allOf:
+        - $ref: '#/components/schemas/CompatibilityRule'
+
+    EpicAttributes:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - compatibleHeroSubtype
+        - specificEffect
+      properties:
+        kind:
+          type: string
+          const: EPICA
+        compatibleHeroSubtype:
+          $ref: '#/components/schemas/HeroSubtypeRef'
+        generalEffect:
+          $ref: '#/components/schemas/Effect'
+        specificEffect:
+          $ref: '#/components/schemas/Effect'
+        powerCost:
+          type: integer
+          const: 0
+          readOnly: true
+        cooldownTurns:
+          type: integer
+          const: 2
+          readOnly: true
+
+    ProductIdRef:
+      type: string
+      format: uuid
+      description: Referencia canónica a otro producto.
+
+    HeroSubtypeRef:
+      type: string
+      minLength: 1
+      maxLength: 64
+      pattern: '^[A-Z][A-Z0-9_]*$'
+      examples:
+        - GUERRERO_TANQUE
+        - CHAMAN
+      x-functional-registry-status: approved
+      x-functional-registry: ./catalog/hero-subtypes-v1.yaml
+      description: |
+        Referencia a un código vigente de hero-subtypes-v1.yaml. No es un enum
+        de OpenAPI porque el Product Owner puede ampliar el registro mediante
+        una nueva versión funcional. Catalog valida existencia y rama.
+
+    SelectedHeroSubtypes:
+      type: array
+      minItems: 1
+      uniqueItems: true
+      items:
+        $ref: '#/components/schemas/HeroSubtypeRef'
+
+    CompatibilityScope:
+      type: string
+      enum:
+        - ALL_HEROES
+        - SELECTED_SUBTYPES
+
+    CompatibilityRule:
+      oneOf:
+        - title: Compatible con todos los héroes
+          required:
+            - compatibilityScope
+          properties:
+            compatibilityScope:
+              const: ALL_HEROES
+            compatibleHeroSubtypes: false
+        - title: Compatible con subtipos seleccionados
+          required:
+            - compatibilityScope
+            - compatibleHeroSubtypes
+          properties:
+            compatibilityScope:
+              const: SELECTED_SUBTYPES
+            compatibleHeroSubtypes:
+              $ref: '#/components/schemas/SelectedHeroSubtypes'
+
+    SetCode:
+      type: string
+      minLength: 1
+      maxLength: 64
+      pattern: '^[A-Z][A-Z0-9_]*$'
+
+    BaseCombatValue:
+      oneOf:
+        - $ref: '#/components/schemas/FixedMagnitude'
+        - $ref: '#/components/schemas/DiceMagnitude'
+      discriminator:
+        propertyName: mode
+        mapping:
+          FIXED: '#/components/schemas/FixedMagnitude'
+          DICE: '#/components/schemas/DiceMagnitude'
+
+    Effects:
+      type: array
+      minItems: 1
+      items:
+        $ref: '#/components/schemas/Effect'
+
+    Effect:
+      oneOf:
+        - $ref: '#/components/schemas/StatisticModifierEffect'
+        - $ref: '#/components/schemas/DamageEffect'
+        - $ref: '#/components/schemas/HealingEffect'
+        - $ref: '#/components/schemas/ImmunityEffect'
+        - $ref: '#/components/schemas/ReflectDamageEffect'
+        - $ref: '#/components/schemas/ReviveEffect'
+        - $ref: '#/components/schemas/TemporaryStatusEffect'
+      discriminator:
+        propertyName: kind
+        mapping:
+          STAT_MODIFIER: '#/components/schemas/StatisticModifierEffect'
+          DAMAGE: '#/components/schemas/DamageEffect'
+          HEALING: '#/components/schemas/HealingEffect'
+          IMMUNITY: '#/components/schemas/ImmunityEffect'
+          REFLECT_DAMAGE: '#/components/schemas/ReflectDamageEffect'
+          REVIVE: '#/components/schemas/ReviveEffect'
+          TEMPORARY_STATUS: '#/components/schemas/TemporaryStatusEffect'
+
+    EffectBase:
+      type: object
+      description: |
+        La condición de activación es opcional. Su ausencia representa
+        aplicación directa; schemaVersion 1 no define una condición ALWAYS.
+      required:
+        - target
+        - stackable
+      properties:
+        target:
+          $ref: '#/components/schemas/EffectTarget'
+        durationTurns:
+          type: integer
+          minimum: 1
+          description: Ausente para un efecto inmediato.
+        activationCondition:
+          $ref: '#/components/schemas/ActivationCondition'
+        stackable:
+          type: boolean
+          const: false
+          readOnly: true
+          description: Calculado por Catalog; schemaVersion 1 no admite acumulación.
+
+    StatisticModifierEffect:
+      allOf:
+        - $ref: '#/components/schemas/EffectBase'
+        - type: object
+          required:
+            - kind
+            - statistic
+            - operation
+            - magnitude
+          properties:
+            kind:
+              type: string
+              const: STAT_MODIFIER
+            statistic:
+              $ref: '#/components/schemas/Statistic'
+            operation:
+              $ref: '#/components/schemas/EffectOperation'
+            magnitude:
+              $ref: '#/components/schemas/Magnitude'
+      unevaluatedProperties: false
+
+    DamageEffect:
+      allOf:
+        - $ref: '#/components/schemas/EffectBase'
+        - type: object
+          required:
+            - kind
+            - magnitude
+          properties:
+            kind:
+              type: string
+              const: DAMAGE
+            magnitude:
+              $ref: '#/components/schemas/Magnitude'
+      unevaluatedProperties: false
+
+    HealingEffect:
+      allOf:
+        - $ref: '#/components/schemas/EffectBase'
+        - type: object
+          required:
+            - kind
+            - magnitude
+          properties:
+            kind:
+              type: string
+              const: HEALING
+            magnitude:
+              $ref: '#/components/schemas/Magnitude'
+      unevaluatedProperties: false
+
+    ImmunityEffect:
+      allOf:
+        - $ref: '#/components/schemas/EffectBase'
+        - type: object
+          required:
+            - kind
+            - immunityCode
+          properties:
+            kind:
+              type: string
+              const: IMMUNITY
+            immunityCode:
+              $ref: '#/components/schemas/EffectCode'
+      unevaluatedProperties: false
+
+    ReflectDamageEffect:
+      allOf:
+        - $ref: '#/components/schemas/EffectBase'
+        - type: object
+          required:
+            - kind
+            - magnitude
+          properties:
+            kind:
+              type: string
+              const: REFLECT_DAMAGE
+            magnitude:
+              $ref: '#/components/schemas/PercentageMagnitude'
+      unevaluatedProperties: false
+
+    ReviveEffect:
+      allOf:
+        - $ref: '#/components/schemas/EffectBase'
+        - type: object
+          required:
+            - kind
+            - magnitude
+          properties:
+            kind:
+              type: string
+              const: REVIVE
+            magnitude:
+              oneOf:
+                - $ref: '#/components/schemas/FixedMagnitude'
+                - $ref: '#/components/schemas/PercentageMagnitude'
+      unevaluatedProperties: false
+
+    TemporaryStatusEffect:
+      allOf:
+        - $ref: '#/components/schemas/EffectBase'
+        - type: object
+          required:
+            - kind
+            - statusCode
+            - durationTurns
+          properties:
+            kind:
+              type: string
+              const: TEMPORARY_STATUS
+            statusCode:
+              $ref: '#/components/schemas/EffectCode'
+      unevaluatedProperties: false
+
+    EffectCode:
+      type: string
+      minLength: 1
+      maxLength: 64
+      pattern: '^[A-Z][A-Z0-9_]*$'
+
+    EffectTarget:
+      type: string
+      enum:
+        - SELF
+        - ALLY
+        - ALLIED_GROUP
+        - OPPONENT
+        - ENEMY_GROUP
+
+    Statistic:
+      type: string
+      enum:
+        - POWER
+        - HEALTH
+        - DEFENSE
+        - ATTACK
+        - DAMAGE
+        - HEALING
+        - CRITICAL_CHANCE
+
+    EffectOperation:
+      type: string
+      enum:
+        - INCREASE
+        - DECREASE
+        - MULTIPLY
+        - SET
+        - BLOCK
+        - RESTORE
+
+    Magnitude:
+      oneOf:
+        - $ref: '#/components/schemas/FixedMagnitude'
+        - $ref: '#/components/schemas/PercentageMagnitude'
+        - $ref: '#/components/schemas/DiceMagnitude'
+      discriminator:
+        propertyName: mode
+        mapping:
+          FIXED: '#/components/schemas/FixedMagnitude'
+          PERCENTAGE: '#/components/schemas/PercentageMagnitude'
+          DICE: '#/components/schemas/DiceMagnitude'
+
+    FixedMagnitude:
+      type: object
+      additionalProperties: false
+      required:
+        - mode
+        - amount
+      properties:
+        mode:
+          type: string
+          const: FIXED
+        amount:
+          type: integer
+          minimum: 1
+
+    PercentageMagnitude:
+      type: object
+      additionalProperties: false
+      required:
+        - mode
+        - basisPoints
+      properties:
+        mode:
+          type: string
+          const: PERCENTAGE
+        basisPoints:
+          type: integer
+          minimum: 1
+          maximum: 10000
+          description: 100 puntos básicos equivalen a 1 %.
+
+    DiceMagnitude:
+      type: object
+      additionalProperties: false
+      required:
+        - mode
+        - count
+        - sides
+      properties:
+        mode:
+          type: string
+          const: DICE
+        count:
+          type: integer
+          minimum: 1
+        sides:
+          type: integer
+          minimum: 2
+
+
+    ActivationCondition:
+      oneOf:
+        - $ref: '#/components/schemas/EveryNTurnsCondition'
+        - $ref: '#/components/schemas/StatComparisonCondition'
+        - $ref: '#/components/schemas/LinkedAllyDeathCondition'
+        - $ref: '#/components/schemas/PreviousTurnDamageReceivedCondition'
+      discriminator:
+        propertyName: kind
+        mapping:
+          EVERY_N_TURNS: '#/components/schemas/EveryNTurnsCondition'
+          STAT_COMPARISON: '#/components/schemas/StatComparisonCondition'
+          ON_LINKED_ALLY_DEATH: '#/components/schemas/LinkedAllyDeathCondition'
+          PREVIOUS_TURN_DAMAGE_RECEIVED: '#/components/schemas/PreviousTurnDamageReceivedCondition'
+
+    EveryNTurnsCondition:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - intervalTurns
+      properties:
+        kind:
+          type: string
+          const: EVERY_N_TURNS
+        intervalTurns:
+          type: integer
+          minimum: 1
+
+    StatComparisonCondition:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - leftOperand
+        - operator
+        - rightOperand
+      properties:
+        kind:
+          type: string
+          const: STAT_COMPARISON
+        leftOperand:
+          $ref: '#/components/schemas/ConditionOperand'
+        operator:
+          $ref: '#/components/schemas/ComparisonOperator'
+        rightOperand:
+          $ref: '#/components/schemas/ConditionOperand'
+      description: |
+        Permite expresar la condición documentada: ataque del oponente menor
+        que defensa propia. V1 solo autoriza el operador LT.
+
+    ConditionOperand:
+      type: object
+      additionalProperties: false
+      required:
+        - subject
+        - statistic
+      properties:
+        subject:
+          type: string
+          enum:
+            - SELF
+            - OPPONENT
+        statistic:
+          $ref: '#/components/schemas/Statistic'
+
+    ComparisonOperator:
+      type: string
+      enum:
+        - LT
+      description: Operador relacional aprobado para schemaVersion 1.
+
+    LinkedAllyDeathCondition:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+      properties:
+        kind:
+          type: string
+          const: ON_LINKED_ALLY_DEATH
+      description: |
+        Se activa cuando fallece el aliado vinculado durante la ejecución. La
+        asociación concreta pertenece al estado de juego, no al producto.
+
+    PreviousTurnDamageReceivedCondition:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+      properties:
+        kind:
+          type: string
+          const: PREVIOUS_TURN_DAMAGE_RECEIVED
+      description: |
+        Se activa cuando el portador recibió daño del oponente en el turno
+        inmediatamente anterior.
+
+    PrintRun:
+      description: -1 significa infinito; cualquier entero mayor o igual a 1 es finito.
+      oneOf:
+        - type: integer
+          const: -1
+        - type: integer
+          minimum: 1
+
+    PrintRunMode:
+      type: string
+      readOnly: true
+      enum:
+        - UNIQUE
+        - LIMITED
+        - INFINITE
+
+    LifecycleStatus:
+      type: string
+      readOnly: true
+      enum:
+        - ACTIVE
+        - SUSPENDED
+
+    RealMoneyPrice:
+      type: object
+      additionalProperties: false
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          description: Importe en la unidad mínima de la moneda.
+        currency:
+          type: string
+          enum:
+            - COP
+            - USD
+            - EUR
+
+    ApiError:
+      type: object
+      additionalProperties: false
+      required:
+        - statusCode
+        - message
+        - error
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string
+        code:
+          type: string
+          description: Código estable opcional para clientes.
+
+  responses:
+    BadRequest:
+      description: JSON, tipo o campos no declarados inválidos
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 400
+            message: El cuerpo contiene campos no declarados.
+            error: Bad Request
+            code: CATALOG_REQUEST_INVALID
+    Unauthorized:
+      description: Testimonio ausente, inválido o vencido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 401
+            message: Se requiere autenticación válida.
+            error: Unauthorized
+            code: AUTH_TOKEN_INVALID
+    Forbidden:
+      description: Rol no autorizado o segundo factor administrativo ausente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 403
+            message: No tiene permisos para gestionar el catálogo.
+            error: Forbidden
+            code: CATALOG_MANAGEMENT_FORBIDDEN
+    Conflict:
+      description: Nombre + tipo activo o SKU ya existente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 409
+            message: Ya existe un producto activo de este tipo con el mismo nombre.
+            error: Conflict
+            code: CATALOG_PRODUCT_ALREADY_EXISTS
+    UnprocessableEntity:
+      description: Regla de negocio incumplida por datos sintácticamente válidos
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 422
+            message: El tiraje debe ser un entero positivo o -1 para tiraje infinito.
+            error: Unprocessable Entity
+            code: CATALOG_PRINT_RUN_INVALID

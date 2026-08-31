@@ -87,6 +87,7 @@ jobs:
           docs/diagrams/sequence-login-2fa.puml
           docs/diagrams/sequence-checkout.puml
           docs/diagrams/sequence-notification.puml
+          docs/diagrams/catalog-product-contract-compatibility.puml
           docs/adr/ADR-001-repository-strategy.md
           docs/adr/ADR-002-backend-stack.md
           docs/adr/ADR-003-frontend-stack.md
@@ -99,11 +100,13 @@ jobs:
           docs/adr/ADR-010-reverse-proxy.md
           docs/adr/ADR-011-deployment-topology.md
           docs/adr/ADR-012-orm-odm.md
+          docs/adr/ADR-013-canonical-product-contract.md
           infra/README.md
           infra/envs/prod/terraform.tfvars.example
           docs/costs/assumptions.md
           docs/costs/sprint-demo-estimate.md
           docs/contracts/service-catalog.md
+          docs/contracts/catalog-product-v1.openapi.yaml
           docs/contracts/event-catalog.md
           docs/governance/rulesets/main-protection.template.json
           compose/compose.example.yml
@@ -159,7 +162,7 @@ jobs:
             node -e "JSON.parse(require('fs').readFileSync('$file','utf8'))" || exit 1
             echo "JSON valido: $file"
           done
-          for file in $(find compose .github -name '*.yml' -o -name '*.yaml'); do
+          for file in $(find docs compose .github -name '*.yml' -o -name '*.yaml'); do
             node -e "
               const fs = require('fs')
               const text = fs.readFileSync('$file', 'utf8')
@@ -170,6 +173,16 @@ jobs:
             " || exit 1
             echo "YAML sin tabulaciones: $file"
           done
+
+      - name: Validar el contrato OpenAPI de Catalog
+        run: npx --yes @redocly/cli@2.49.0 lint docs/contracts/catalog-product-v1.openapi.yaml --format stylish
+
+      - name: Validar el diagrama de compatibilidad de Producto
+        run: |
+          docker run --rm \
+            -v "$PWD/docs/diagrams:/data:ro" \
+            ghcr.io/plantuml/plantuml:1.2026.6 \
+            -checkonly /data/catalog-product-contract-compatibility.puml
 
       - name: Verificar que ADR-008 y ADR-011 acompanan al codigo de infraestructura
         run: |
