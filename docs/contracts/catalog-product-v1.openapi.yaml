@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Nexus Battles VI - Catalog Product API
-  version: 1.0.0-draft.3
+  version: 1.0.0-draft.4
   license:
     name: Licensing pending project governance
     url: https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure#licencia
@@ -12,10 +12,11 @@ info:
     generado por Catalog deberá compararse con este archivo durante la
     implementación.
 
-    Las matrices base de PO-ATTR-01 fueron aprobadas por el Product Owner el
-    30 de agosto de 2026. La revisión posterior del Tech Lead reabrió #286
-    para completar el catálogo inicial de heroSubtype y el catálogo funcional
-    de condiciones de activación y operadores. Ninguno se fija en este borrador.
+    PO-ATTR-01 fue completada y aprobada por el Product Owner el 30 de agosto
+    de 2026. El registro inicial contiene ocho heroSubtype y excluye MASTER.
+    schemaVersion 1 admite únicamente EVERY_N_TURNS, STAT_COMPARISON con LT,
+    ON_LINKED_ALLY_DEATH y PREVIOUS_TURN_DAMAGE_RECEIVED. La ausencia de
+    activationCondition representa aplicación directa y no se define ALWAYS.
     attributes.values es una unión cerrada para los seis tipos y rechaza
     propiedades desconocidas. imageUrl reserva la referencia requerida por
     HU-33, pero su almacenamiento depende de EN-027.3.
@@ -588,11 +589,15 @@ components:
       minLength: 1
       maxLength: 64
       pattern: '^[A-Z][A-Z0-9_]*$'
-      x-functional-registry-status: pending
+      examples:
+        - GUERRERO_TANQUE
+        - CHAMAN
+      x-functional-registry-status: approved
+      x-functional-registry: ./catalog/hero-subtypes-v1.yaml
       description: |
-        Código cuya existencia se validará contra el registro funcional que
-        debe aprobarse y ubicarse en Management #286. No es un enum técnico y
-        este borrador no presupone ningún código válido.
+        Referencia a un código vigente de hero-subtypes-v1.yaml. No es un enum
+        de OpenAPI porque el Product Owner puede ampliar el registro mediante
+        una nueva versión funcional. Catalog valida existencia y rama.
 
     SelectedHeroSubtypes:
       type: array
@@ -671,8 +676,8 @@ components:
     EffectBase:
       type: object
       description: |
-        schemaVersion 1 no recibe condiciones de activación hasta que el
-        Product Owner apruebe su catálogo y operadores en Management #286.
+        La condición de activación es opcional. Su ausencia representa
+        aplicación directa; schemaVersion 1 no define una condición ALWAYS.
       required:
         - target
         - stackable
@@ -683,6 +688,8 @@ components:
           type: integer
           minimum: 1
           description: Ausente para un efecto inmediato.
+        activationCondition:
+          $ref: '#/components/schemas/ActivationCondition'
         stackable:
           type: boolean
           const: false
@@ -898,6 +905,104 @@ components:
         sides:
           type: integer
           minimum: 2
+
+
+    ActivationCondition:
+      oneOf:
+        - $ref: '#/components/schemas/EveryNTurnsCondition'
+        - $ref: '#/components/schemas/StatComparisonCondition'
+        - $ref: '#/components/schemas/LinkedAllyDeathCondition'
+        - $ref: '#/components/schemas/PreviousTurnDamageReceivedCondition'
+      discriminator:
+        propertyName: kind
+        mapping:
+          EVERY_N_TURNS: '#/components/schemas/EveryNTurnsCondition'
+          STAT_COMPARISON: '#/components/schemas/StatComparisonCondition'
+          ON_LINKED_ALLY_DEATH: '#/components/schemas/LinkedAllyDeathCondition'
+          PREVIOUS_TURN_DAMAGE_RECEIVED: '#/components/schemas/PreviousTurnDamageReceivedCondition'
+
+    EveryNTurnsCondition:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - intervalTurns
+      properties:
+        kind:
+          type: string
+          const: EVERY_N_TURNS
+        intervalTurns:
+          type: integer
+          minimum: 1
+
+    StatComparisonCondition:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - leftOperand
+        - operator
+        - rightOperand
+      properties:
+        kind:
+          type: string
+          const: STAT_COMPARISON
+        leftOperand:
+          $ref: '#/components/schemas/ConditionOperand'
+        operator:
+          $ref: '#/components/schemas/ComparisonOperator'
+        rightOperand:
+          $ref: '#/components/schemas/ConditionOperand'
+      description: |
+        Permite expresar la condición documentada: ataque del oponente menor
+        que defensa propia. V1 solo autoriza el operador LT.
+
+    ConditionOperand:
+      type: object
+      additionalProperties: false
+      required:
+        - subject
+        - statistic
+      properties:
+        subject:
+          type: string
+          enum:
+            - SELF
+            - OPPONENT
+        statistic:
+          $ref: '#/components/schemas/Statistic'
+
+    ComparisonOperator:
+      type: string
+      enum:
+        - LT
+      description: Operador relacional aprobado para schemaVersion 1.
+
+    LinkedAllyDeathCondition:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+      properties:
+        kind:
+          type: string
+          const: ON_LINKED_ALLY_DEATH
+      description: |
+        Se activa cuando fallece el aliado vinculado durante la ejecución. La
+        asociación concreta pertenece al estado de juego, no al producto.
+
+    PreviousTurnDamageReceivedCondition:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+      properties:
+        kind:
+          type: string
+          const: PREVIOUS_TURN_DAMAGE_RECEIVED
+      description: |
+        Se activa cuando el portador recibió daño del oponente en el turno
+        inmediatamente anterior.
 
     PrintRun:
       description: -1 significa infinito; cualquier entero mayor o igual a 1 es finito.
