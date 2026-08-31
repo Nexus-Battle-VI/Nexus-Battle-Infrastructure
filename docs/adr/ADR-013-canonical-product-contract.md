@@ -1,7 +1,8 @@
 # ADR-013 — Contrato canónico de Producto y compatibilidad de API
 
-- **Estado:** **Proposed** — pendiente de aprobación del Tech Lead en [EN-027.1](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/281)
+- **Estado:** **Accepted** — aceptación final comunicada y registrada en [EN-027.1](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/281#issuecomment-5481069173)
 - **Fecha:** 2026-08-30
+- **Fecha de aceptación:** 2026-08-31
 - **Decide:** Arquitectura, con validación funcional del Product Owner donde se indica
 - **Relacionado:** [HU-33](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/41), [EN-027](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/280), [ADR-005](ADR-005-data-strategy.md), [ADR-012](ADR-012-orm-odm.md)
 
@@ -251,8 +252,8 @@ apruebe EN-027.3.
 
 El contrato objetivo está en
 [`catalog-product-v1.openapi.yaml`](../contracts/catalog-product-v1.openapi.yaml).
-Su estado es `Proposed`: documenta el destino aprobado para implementación, no
-una ruta ya desplegada.
+Su estado es `Accepted`: constituye la línea base aprobada para implementación,
+pero no afirma que la ruta ya esté desplegada.
 
 El flujo entre la superficie heredada, el adaptador y el núcleo canónico se
 representa en
@@ -378,21 +379,18 @@ No hay fase de backfill: la colección de productos desplegada está vacía.
 
 ## Evidencia y aceptación
 
-La decisión funcional requerida ya está satisfecha en #286: registro inicial
-de `heroSubtype`, ubicación normativa y condiciones/operador de V1. Para pasar
-este ADR a `Accepted` todavía se requiere:
-
-- aprobación registrada del Tech Lead en #281;
-- evidencia de la aprobación del Product Owner registrada en #280 y #281;
-- OpenAPI válido y ejemplos de `201`, `403`, `409` y `422`;
-- revisión de Catalog y al menos un consumidor;
-- diagrama de compatibilidad renderizado;
-- confirmación de que el contrato objetivo no se presenta como desplegado.
+- [x] PO-ATTR-01 completada y #286 cerrada con subtipos, condiciones y operador V1.
+- [x] Aprobación del Product Owner registrada en #280 y #286.
+- [x] Aceptación final del Tech Lead registrada en [#281](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/281#issuecomment-5481069173).
+- [x] OpenAPI `1.0.0` válido con ejemplos de `201`, `403`, `409` y `422`.
+- [x] Revisión técnica de Catalog y Commerce registrada en Infrastructure PR #48.
+- [x] Diagrama de compatibilidad validado por CI.
+- [x] El contrato se declara aceptado para implementación y no se presenta como ruta desplegada.
 
 ## Reversión
 
-Antes de implementar, revertir consiste en retirar el contrato propuesto sin
-afectar runtime. Durante la adopción, la ruta heredada permanece disponible y
+Antes de implementar, revertir la decisión requiere un ADR que la sustituya; no
+existe todavía runtime canónico que revertir. Durante la adopción, la ruta heredada permanece disponible y
 la nueva se despliega de forma aditiva. Si falla una prueba de consumidor, se
 deshabilita la ruta/versionado nuevo, se conserva el contrato heredado y no se
 retira ningún alias ni índice.
