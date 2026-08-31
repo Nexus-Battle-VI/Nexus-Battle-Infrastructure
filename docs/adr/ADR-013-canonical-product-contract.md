@@ -28,14 +28,18 @@ La revisión técnica de EN-027 aprobó estas decisiones antes de este ADR:
 7. entregar HU-33 en dos carriles;
 8. omitir backfill: la colección desplegada `catalog.products` está vacía.
 
-El Product Owner aprobó además las matrices base de
+El Product Owner aprobó las matrices y completó la decisión funcional
 [`PO-ATTR-01`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286)
 el 30 de agosto de 2026. La decisión corrigió la referencia equivocada de
-HU-33 a HU-12 #21 y definió semántica y ownership para los seis tipos. La
-revisión posterior del Tech Lead reabrió #286: todavía deben aprobarse y
-ubicarse el catálogo inicial de `heroSubtype` y el catálogo de condiciones de
-activación y operadores. Este ADR decide únicamente la representación técnica
-de lo funcionalmente aprobado y no inventa esos catálogos pendientes.
+HU-33 a HU-12 #21, definió semántica y ownership para los seis tipos, aprobó
+ocho códigos iniciales de `heroSubtype` y cerró el catálogo mínimo de
+condiciones de activación de schemaVersion 1.
+
+La fuente normativa de la decisión funcional permanece en Management #286.
+Su proyección versionada y legible por máquina para los subtipos se mantiene en
+[`hero-subtypes-v1.yaml`](../contracts/catalog/hero-subtypes-v1.yaml). Este ADR
+decide la representación técnica sin convertir el registro ampliable en un enum
+permanente.
 
 ### Evidencia de consumidores actuales
 
@@ -145,7 +149,7 @@ presencia accidental de campos. Catalog rechaza la solicitud si
 ausentes y los objetos vacíos se rechazan. Una nueva propiedad o variante exige
 una nueva versión de esquema o un cambio compatible explícitamente revisado.
 
-#### Decisión funcional base y pendientes: [PO-ATTR-01](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286)
+#### Decisión funcional aprobada: [PO-ATTR-01](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286)
 
 La versión `1` materializa la matriz aprobada así:
 
@@ -158,22 +162,45 @@ La versión `1` materializa la matriz aprobada así:
 | `ITEM` | misma compatibilidad; uno o más efectos |
 | `EPICA` | exactamente un subtipo compatible; efecto general opcional y efecto específico obligatorio; coste cero y recarga de dos turnos |
 
-Los subtipos de héroe se representan como referencias de texto y no como un
-enum técnico congelado, porque el PO autorizó su ampliación. #286 todavía no
-define la ubicación ni los códigos iniciales del registro funcional. Hasta que
-el PO los apruebe, el OpenAPI solo limita la forma sintáctica del código, no usa
-ejemplos de subtipos ni permite afirmar que Catalog puede validar existencia.
-Una vez resuelto el registro, Catalog realizará esa validación mediante un
-puerto. Las habilidades se referencian por `productId` y deben existir con
-`type=HABILIDAD`.
+Los subtipos se representan como referencias de texto al registro funcional
+versionado y no como un enum congelado en OpenAPI, porque el PO autorizó su
+ampliación. El registro inicial contiene:
+
+| Código | Denominación | Rama |
+| --- | --- | --- |
+| `GUERRERO_TANQUE` | Guerrero Tanque | `OFFENSIVE` |
+| `GUERRERO_ARMAS` | Guerrero Armas | `OFFENSIVE` |
+| `MAGO_FUEGO` | Mago Fuego | `OFFENSIVE` |
+| `MAGO_HIELO` | Mago Hielo | `OFFENSIVE` |
+| `PICARO_VENENO` | Pícaro Veneno | `OFFENSIVE` |
+| `PICARO_MACHETE` | Pícaro Machete | `OFFENSIVE` |
+| `CHAMAN` | Chamán | `HEALING` |
+| `MEDICO` | Médico | `HEALING` |
+
+`MASTER` queda excluido: el documento funcional lo define como enemigo de
+misión que entrega una habilidad épica, no como subtipo de héroe. Catalog
+validará la existencia y la rama mediante un puerto respaldado por la versión
+vigente del registro. Las habilidades se referencian por `productId` y deben
+existir con `type=HABILIDAD`.
 
 Los efectos son una unión discriminada y estructurada. Expresan tipo, objetivo,
-magnitud y duración. Aunque PO-ATTR-01 contempla una condición de activación
-opcional, no aprobó su catálogo ni sus operadores; por ello el borrador V1 no
-acepta `activationCondition` hasta resolver #286. La versión `1` no permite
-acumulación; habilitarla exige una regla funcional posterior y evolución
-contractual. No se persiste narrativa ejecutable ni `Record<string, unknown>`
-sin validación.
+magnitud, duración y una condición opcional. La ausencia de
+`activationCondition` significa aplicación directa; schemaVersion 1 no define
+`ALWAYS`. El catálogo mínimo aprobado es:
+
+| Condición | Parámetros | Evidencia funcional |
+| --- | --- | --- |
+| `EVERY_N_TURNS` | `intervalTurns >= 1` | Veneno Lacerante aplica cada dos turnos |
+| `STAT_COMPARISON` | operandos estadísticos y operador `LT` | ataque del oponente menor que defensa propia |
+| `ON_LINKED_ALLY_DEATH` | sin parámetros de catálogo | Reanimador 3000 se activa al morir el aliado vinculado |
+| `PREVIOUS_TURN_DAMAGE_RECEIVED` | sin parámetros | retorno del daño recibido en el turno anterior |
+
+Solo `LT` está aprobado como operador relacional en esta versión. Duraciones,
+compatibilidad por subtipo y reglas generales de resolución de combate no se
+modelan como condiciones. La versión `1` no permite acumulación; habilitarla o
+agregar condiciones u operadores exige una decisión funcional y evolución
+contractual. No se persiste narrativa ejecutable ni
+`Record<string, unknown>` sin validación.
 
 Los valores fijos de V1 son derivados por Catalog y no se exigen al cliente:
 `chargeTurns=1` para HABILIDAD, `stackable=false` para efectos y
@@ -341,11 +368,10 @@ No hay fase de backfill: la colección de productos desplegada está vacía.
 
 ## Evidencia y aceptación
 
-Para pasar este ADR a `Accepted` se requiere:
+La decisión funcional requerida ya está satisfecha en #286: registro inicial
+de `heroSubtype`, ubicación normativa y condiciones/operador de V1. Para pasar
+este ADR a `Accepted` todavía se requiere:
 
-- catálogo inicial y ubicación normativa de `heroSubtype` aprobados en #286;
-- catálogo de condiciones de activación y operadores aprobado en #286, o
-  exclusión funcional explícita de V1;
 - aprobación registrada del Tech Lead en #281;
 - evidencia de la aprobación del Product Owner registrada en #280 y #281;
 - OpenAPI válido y ejemplos de `201`, `403`, `409` y `422`;
