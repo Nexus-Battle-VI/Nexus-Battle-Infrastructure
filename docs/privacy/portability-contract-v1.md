@@ -7,7 +7,7 @@ marcha.
 
 ## Regla general
 
-> Ningún dato sale de un exportación por el solo hecho de existir
+> Ningún dato sale de una exportación por el solo hecho de existir
 > técnicamente. Sale porque la [Política v0.3](privacy-policy-v0.3.md) o el
 > SRS lo exigen como contenido mínimo, o porque una decisión funcional
 > explícita lo añadió.
@@ -92,7 +92,7 @@ bounded context que agregue datos para la exportación. **No** debe aceptar un
 | Formato | Contenido mínimo exigido | Notas |
 | --- | --- | --- |
 | JSON | Datos personales definidos para el Portal (identidad, roles, evidencia de consentimiento, y lo demás que la matriz marque exportable) | Formato estructurado, Política §9 |
-| XML | Igual contenido que JSON, forma alternativa | Política §9 exige explícitamente ambos formatos estructurados |
+| XML | Igual contenido que JSON, forma alternativa | Formato estructurado alternativo, Política §9 ("JSON o XML") |
 | PDF | Debe contemplar **inventario, estadísticas, comentarios e historial de transacciones** como mínimo (Política §9) | "Reporte completo" — no se limita a esas cuatro categorías si la matriz marca más contenido exportable, pero esas cuatro son obligatorias |
 
 ## Lo que este contrato NO decide

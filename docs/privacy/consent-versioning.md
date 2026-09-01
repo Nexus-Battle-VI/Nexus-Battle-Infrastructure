@@ -14,7 +14,7 @@ gap para que HU-43/HU-45 o una Task futura lo resuelvan.
 Tres elementos mínimos, explícitos en el texto:
 
 1. **Titular/cuenta** — a quién pertenece la aceptación.
-2. **Versión de la Política presentada** — cuál version del documento vio y
+2. **Versión de la Política presentada** — qué versión del documento vio y
    aceptó.
 3. **Fecha y hora de la aceptación** — cuándo ocurrió la manifestación.
 
