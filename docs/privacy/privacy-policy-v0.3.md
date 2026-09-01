@@ -1,7 +1,7 @@
 # Política de Privacidad y Tratamiento de Datos Personales — v0.3
 
 - **Producto:** THE NEXUS BATTLES VI — RETURN OF THE WARRIORS
-- **Organización responsable:** CLOUDNEX ("LA COMPAÑÍA")
+- **Organización responsable:** CLOUDNEX ("LA COMPAÑÍA") — ver observación de nombre abajo
 - **Versión:** 0.3
 - **Fecha del documento fuente:** 2026-08-24
 - **Estado:** Review Candidate / Pending Internal Approval — vigente para revisión, aprobación e incorporación al repositorio. **No es la versión publicada como aplicable a usuarios**; esa publicación ocurre después del proceso interno de aprobación (Sección 19 del documento fuente).
@@ -11,11 +11,18 @@
 
 El documento fuente v0.3 escribe el nombre de la organización responsable como
 **"CLOUD NEXT"** en el cuerpo del texto (Secciones 1 y 13). Quien solicitó este
-trabajo documental confirmó que el nombre correcto es **CLOUDNEX**, y que
-"Cloud Next" es un error del documento fuente. Esta proyección usa **CLOUDNEX**
-en todo el texto. El DOCX original no fue modificado ni se versiona aquí; quien
-custodie el documento fuente original debe corregir esa denominación antes de
-la aprobación formal, para que ambas versiones no queden desalineadas.
+trabajo documental confirmó directamente, en dos ocasiones durante esta
+sesión, que el nombre correcto es **CLOUDNEX** y que "Cloud Next" es un error
+del documento fuente. Esta proyección usa **CLOUDNEX** en todo el texto.
+
+Esta corrección se basa en la instrucción directa de quien encargó el
+trabajo, no en un documento formal (correo, acta o versión aprobada del
+DOCX) que la sustente de forma independiente — se deja constancia explícita
+de esa procedencia para que quien revise este PR pueda decidir si requiere
+evidencia adicional antes de la aprobación formal de la Política. El DOCX
+original no fue modificado ni se versiona aquí; quien custodie el documento
+fuente original debería corregir esa denominación antes de la aprobación
+formal, para que ambas versiones no queden desalineadas.
 
 ---
 

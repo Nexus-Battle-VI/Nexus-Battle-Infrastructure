@@ -42,7 +42,7 @@ puntos de forma distinta.
 
 ## Decisión propuesta
 
-### 1. Ownership de la evidencia de consentimiento
+### 1. Ownership y evidencia mínima de consentimiento versionado
 
 La evidencia de consentimiento versionado (titular, versión de Política,
 fecha/hora) es propiedad de **Account**, no de un servicio de privacidad
@@ -51,10 +51,37 @@ context dueño de la cuenta ([data-ownership.md](../architecture/data-ownership.
 crear un servicio nuevo solo para custodiar un dato adicional de la misma
 cuenta duplicaría ownership sin necesidad.
 
-La forma concreta (tabla nueva append-only, columna adicional, evento de
-dominio) **no se fija aquí** — es una decisión de implementación de la Task
-que resuelva el gap descrito en
-[consent-versioning.md](../privacy/consent-versioning.md).
+Esta decisión distingue explícitamente dos cosas que la primera versión de
+este ADR no separaba con claridad:
+
+**REQUISITO (fijado en este ADR, `Proposed`):** cada aceptación registrada
+debe permitir identificar, como mínimo:
+
+- la cuenta/titular que aceptó;
+- la versión de la Política que aceptó;
+- la fecha y hora en que se produjo la aceptación, generada por el backend
+  en el momento de procesar la solicitud — **nunca un valor de fecha/hora
+  enviado por Web**, por la misma razón que `subject` no es un parámetro que
+  el cliente controle (Decisión 3).
+
+**DECISIÓN DE DISEÑO (NO se fija en este ADR):** la forma física concreta —
+tabla nueva, columna adicional, evento de dominio append-only — queda para
+la implementación de la Task que resuelva el gap descrito en
+[consent-versioning.md](../privacy/consent-versioning.md). En particular,
+este ADR **no afirma** que la solución deba ser "dos columnas nuevas en
+`accounts`": esa es una posibilidad entre varias, no la decisión tomada aquí.
+
+Una restricción sí se fija como parte del requisito, no del diseño: **la
+evidencia debe permitir conservar historial**, no solo el estado de la
+última aceptación. Si la Política cambia a una versión futura (v0.4, v0.5,
+...) y un titular ya había aceptado v0.3, esa aceptación anterior no debe
+quedar destruida ni sobrescrita — debe seguir siendo posible responder "qué
+versión aceptó este titular y cuándo" para cualquier versión históricamente
+aceptada, no solo la vigente. Un único campo mutable que se sobrescribe en
+cada aceptación (equivalente al `terms_accepted` boolean actual, solo que
+con versión y fecha) no cumpliría este requisito por sí solo si no conserva
+el historial; queda para el diseño de la Task decidir la forma concreta que
+lo satisfaga (tabla append-only, log de eventos, u otra).
 
 ### 2. Separación entre datos del titular y datos internos
 
@@ -113,34 +140,93 @@ bounded contexts** — quién invoca a quién, en qué orden, con qué manejo de
 fallo parcial — y esa decisión no requiere esperar a que exista un transporte
 de mensajería. Se propone:
 
-**Orquestación síncrona coordinada, con registro de progreso por contexto.**
+**Proceso de eliminación durable, coordinado por Account mediante llamadas
+síncronas por contexto — no una petición HTTP mantenida abierta hasta que
+todo termine.**
+
+La petición inicial del titular y el proceso de negocio completo son cosas
+distintas. HU-43 admite hasta 30 días de plazo; ninguna petición HTTP puede
+ni debe permanecer abierta ese tiempo. El flujo conceptual es:
 
 ```text
-Account (o un coordinador dedicado dentro de Account) recibe la solicitud,
-verifica identidad, emite confirmación de RECEPCIÓN, y:
+Titular -> solicita eliminación
+Account -> verifica identidad (subject verificado, Decisión 3)
+Account -> registra la solicitud (estado: recibida)
+Account -> responde al titular: confirmación de RECEPCIÓN (la petición
+           HTTP termina aquí)
 
-  1. invoca el endpoint de eliminación de cada bounded context relevante
-     (Inventory, Community, Commerce, y los que se incorporen) por su API,
-     nunca por acceso directo a su almacén — mismo patrón síncrono ya usado
-     por Commerce -> Catalog para precio;
-  2. cada bounded context expone su propio endpoint de "eliminar/anonimizar
-     datos del titular" (por subject), aplicando su propia fila de la
-     matriz de tratamiento;
-  3. Account registra el progreso por contexto (pendiente/completado/
-     fallido) para poder reintentar sin perder la ventana de 30 días, y
-     emite la confirmación de CIERRE solo cuando todos los contextos
-     relevantes confirman;
-  4. un contexto que falla se reintenta dentro del plazo; agotar el plazo
-     sin éxito se escala fuera del alcance de este ADR.
+--- a partir de aquí, proceso durable, fuera de cualquier petición HTTP ---
+
+Account (coordinador) -> por cada bounded context relevante:
+    invoca su endpoint de eliminación/anonimización (por subject),
+    mismo patrón síncrono ya usado por Commerce -> Catalog para precio;
+    registra el resultado (completado / fallido) de forma durable,
+    no en memoria del proceso que hizo la llamada.
+
+Account (coordinador) -> reintenta, dentro del plazo de 30 días, cualquier
+    contexto que haya fallado o no respondido, sin perder el progreso ya
+    registrado de los contextos que sí confirmaron.
+
+Cuando todos los contextos relevantes confirman -> Account cierra la
+    solicitud y dispara la notificación final de CIERRE.
 ```
+
+Las llamadas individuales entre Account y cada bounded context **pueden ser
+HTTP síncronas** (no se necesita mensajería asíncrona para ellas — mismo
+razonamiento que la Decisión 4 de HU-45). Lo que **no** puede ser síncrono es
+el proceso de negocio completo: la orquestación debe sobrevivir a que
+Account se reinicie, a que un contexto esté caído durante días, y a que el
+titular cierre la pestaña justo después de recibir la confirmación de
+recepción.
+
+**Propiedades que el proceso durable debe cumplir** (requisito de esta
+decisión; el mecanismo concreto — cola interna, tabla de estado con un job
+periódico, u otro — es una decisión de implementación de HU-43, no de este
+ADR):
+
+- **Idempotencia:** invocar dos veces el endpoint de eliminación de un mismo
+  contexto para el mismo titular no debe producir un error ni un efecto
+  distinto de invocarlo una vez — necesario porque el coordinador puede
+  reintentar tras un fallo sin saber con certeza si el intento anterior
+  llegó a aplicarse.
+- **Progreso durable:** el estado "qué contexto ya confirmó, cuál falta,
+  cuál falló" se persiste, no vive solo en la memoria de un proceso.
+- **Reintentos:** un fallo transitorio de un contexto no cancela la
+  solicitud completa; se reintenta dentro del plazo.
+- **Estados parciales:** la solicitud puede estar "parcialmente completada"
+  de forma estable y consultable, no solo "pendiente" o "cerrada".
+- **Timeout/fallo de un contexto:** si un contexto no responde ni tras
+  reintentos dentro del plazo, la solicitud no se cierra silenciosamente
+  como exitosa — queda registrada como incompleta; qué acción exacta se
+  toma al agotar el plazo (escalar, notificar, extender) es una decisión de
+  implementación de HU-43, no de este ADR.
+- **Reanudación segura:** si Account se reinicia o despliega una nueva
+  versión mientras hay solicitudes en curso, el proceso debe poder continuar
+  desde el progreso ya registrado, sin reiniciar contextos que ya
+  confirmaron ni perder la ventana de 30 días.
+- **Plazo máximo de 30 días:** fijado por la Política §10, no por este ADR.
+- **No se elimina información expresamente retenida:** un contexto que
+  aplica una excepción de retención (auditoría, obligación financiera —
+  ver [hu-43-account-deletion-design.md](../privacy/hu-43-account-deletion-design.md#excepciones-de-retención))
+  responde "aplicado, con excepción" y el coordinador lo trata como
+  confirmación válida, no como fallo pendiente de reintento.
+
+No hace falta SQS (ni ningún transporte de ADR-006) únicamente para esta HU:
+las propiedades de arriba se logran con progreso durable + reintento,
+independientemente de si las llamadas entre servicios son HTTP síncronas o
+eventos asíncronos. Esta decisión **no implementa** el mecanismo — solo fija
+que debe existir y qué propiedades debe cumplir; la implementación concreta
+queda para HU-43.
 
 **Por qué no se necesita una saga con compensación tipo checkout:** el
 checkout reserva un recurso escaso (unidades de inventario) con riesgo real
 de sobreventa si dos procesos compiten — por eso ADR-006 lo marca
 "asíncrono con saga". La eliminación no compite por ningún recurso escaso:
 no hay nada que "reservar" ni una condición de carrera que una compensación
-deba deshacer. Una orquestación síncrona con reintento simple es suficiente
-y evita construir infraestructura de mensajería solo para esto.
+deba deshacer. Un proceso durable con progreso persistido y reintento
+(descrito arriba) resuelve el mismo problema de fiabilidad que resolvería
+una saga, sin necesitar compensación (no hay nada que deshacer, solo
+reintentar) ni construir infraestructura de mensajería nueva solo para esto.
 
 Esta decisión es del mismo tipo que la síntesis de agregación de HU-45
 (Decisión 4): composición de APIs síncronas entre bounded contexts, sin
@@ -176,14 +262,16 @@ tablas o colecciones privadas de otro.
 
 ### Lo que cuesta
 
-- La orquestación síncrona de HU-43 (Decisión 5) es más simple que una saga,
-  pero también más frágil ante fallos parciales largos: un contexto caído
-  varios días exige reintento manual dentro de la ventana de 30 días, en
-  lugar de una cola con reintento automático. Se acepta ese costo porque no
-  hay condición de carrera que compensar, a diferencia del checkout.
+- El proceso durable de HU-43 (Decisión 5) sigue siendo más simple que una
+  saga con compensación, pero exige que Account implemente progreso durable,
+  idempotencia y reintento — no es tan trivial como una llamada síncrona
+  encadenada. Se acepta ese costo porque no hay condición de carrera que
+  compensar, a diferencia del checkout, y porque de todas formas se
+  necesitaría persistir el estado de la solicitud para poder responder al
+  titular durante la ventana de 30 días.
 - La evidencia de consentimiento sigue sin tabla ni migración: este ADR fija
-  ownership (Account) pero no resuelve el gap, que requiere una Task
-  separada.
+  ownership, requisito mínimo de evidencia y necesidad de historial
+  (Decisión 1), pero no resuelve el gap — requiere una Task separada.
 
 ### Lo que permanece bloqueado
 
@@ -195,9 +283,10 @@ tablas o colecciones privadas de otro.
   cumplir la matriz ya documentada aquí.
 - La forma física de la evidencia de consentimiento versionado.
 - Si EN-011 exige, en sus criterios de aceptación reales (Management #197),
-  comportamiento runtime — política publicada y accesible, consentimiento
-  efectivamente registrado y consultable — este PR, siendo puramente
-  documental, no lo satisface. Ver
+  comportamiento runtime — política publicada y accesible (CA-01),
+  consentimiento efectivamente registrado y consultable (CA-02) — este PR,
+  siendo puramente documental, no lo satisface. EN-011 **no debe cerrarse
+  con este PR** por esa razón. Ver
   [en-011-closure-readiness.md](../privacy/en-011-closure-readiness.md).
 
 ## Alternativas consideradas
@@ -208,21 +297,30 @@ tablas o colecciones privadas de otro.
 | Bloquear también HU-45 hasta que ADR-006 se acepte | Descartada: la portabilidad es una agregación de lectura, no requiere transacción distribuida ni compensación; el patrón síncrono ya existe y está probado (`Commerce -> Catalog`) |
 | Dejar que cada implementador de HU-45 decida caso por caso qué es exportable | Descartada: produciría criterios distintos por bounded context y el riesgo de exponer un secreto (hash de respuesta de seguridad, token) por omisión, no por decisión |
 | Fijar el owner de la evidencia de consentimiento en un servicio nuevo en vez de Account | Descartada: Account ya posee `terms_accepted`; separar la evidencia de consentimiento de la cuenta que consintió duplica ownership sin beneficio visible |
-| Esperar a que ADR-006 se acepte e implemente antes de decidir la orquestación de HU-43 | Descartada: ADR-006 no define el derecho al olvido en su alcance; esperar una decisión de mensajería ajena a este problema retrasaría HU-43 sin necesidad, cuando una orquestación síncrona con reintento ya es suficiente porque no hay condición de carrera que compensar |
-| Orquestación asíncrona con saga y compensación para HU-43, igual que el checkout | Descartada por ahora: el checkout necesita saga porque compite por un recurso escaso (unidades de inventario); la eliminación no compite por nada, así que la complejidad de una saga con compensación no se justifica todavía. Puede reconsiderarse si el volumen de solicitudes de eliminación lo exige |
+| Esperar a que ADR-006 se acepte e implemente antes de decidir la orquestación de HU-43 | Descartada: ADR-006 no define el derecho al olvido en su alcance; esperar una decisión de mensajería ajena a este problema retrasaría HU-43 sin necesidad. HU-43 requiere resolver la estrategia de orquestación entre bounded contexts; ADR-006 es una referencia arquitectónica relacionada, pero su estado `Proposed` no constituye por sí solo una dependencia funcional de HU-43 |
+| Orquestación asíncrona con saga y compensación para HU-43, igual que el checkout, usando el transporte de ADR-006 | Descartada por ahora: el checkout necesita saga porque compite por un recurso escaso (unidades de inventario) con riesgo real de sobreventa; la eliminación no compite por nada, así que la complejidad de una saga con compensación y de construir el transporte asíncrono de ADR-006 no se justifica todavía. Puede reconsiderarse si el volumen de solicitudes de eliminación lo exige |
+| Que la petición HTTP inicial de eliminación permanezca abierta hasta que todos los bounded contexts confirmen | Descartada: HU-43 admite hasta 30 días de plazo; ninguna petición HTTP puede ni debe mantenerse abierta ese tiempo. El titular recibe confirmación de RECEPCIÓN de inmediato; el proceso de eliminación sigue de forma durable, fuera de esa petición (Decisión 5) |
+| Que cada bounded context de HU-45/HU-43 sea consultado o modificado por acceso directo a su base de datos en vez de por su API | Descartada: viola directamente `data-ownership.md` ("un servicio que necesita más que el identificador pregunta por la API"); acoplaría el esquema interno de cada servicio a un agregador/orquestador externo y rompería el aislamiento ya verificado entre bases (Postgres/Mongo por servicio) |
 
 ## Evidencia y aceptación
 
 - [ ] Revisión del Tech Lead.
 - [ ] Confirmación de que la estrategia síncrona de agregación para HU-45 es
       aceptable para el volumen de datos esperado.
-- [ ] Confirmación de que la orquestación síncrona con registro de progreso
-      (Decisión 5) es aceptable para HU-43, o revisión de una alternativa
-      basada en eventos si el Tech Lead prefiere no depender de reintento
-      manual.
-- [ ] Confirmación de si los criterios de aceptación reales de EN-011
-      (Management #197) exigen comportamiento runtime — ver
-      [en-011-closure-readiness.md](../privacy/en-011-closure-readiness.md).
+- [ ] Confirmación de que el proceso de eliminación durable con progreso
+      persistido, idempotencia y reintento (Decisión 5) es aceptable para
+      HU-43, o revisión de una alternativa basada en eventos si el Tech Lead
+      prefiere que el transporte entre contextos sea asíncrono.
+- [ ] Confirmación del owner funcional/técnico y del requisito mínimo de
+      evidencia de consentimiento versionado (Decisión 1) por parte de quien
+      vaya a implementar la Task de Account.
+- [x] Confirmación de que los CA reales de EN-011 (Management #197) exigen
+      comportamiento runtime: CA-01 (política publicada y accesible) y CA-02
+      (consentimiento explícito y trazable, no solo un estado visual de
+      frontend) — ver [en-011-closure-readiness.md](../privacy/en-011-closure-readiness.md).
+      **Conclusión: EN-011 no debe cerrarse con este PR**; CA-03/CA-04/CA-05
+      quedan cubiertos a nivel documental/arquitectónico, CA-01/CA-02
+      requieren implementación runtime fuera del alcance de esta rama.
 
 Este ADR permanece en `Proposed` hasta que exista esa revisión y quede
 registrada, siguiendo la misma regla que el resto de los ADR de este

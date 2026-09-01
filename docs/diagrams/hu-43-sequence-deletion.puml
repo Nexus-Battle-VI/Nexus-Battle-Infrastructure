@@ -17,21 +17,27 @@ participant "Commerce" as commerce
 participant "Notifications" as notify
 
 note over orchestrator
-  Orquestación SÍNCRONA por API,
-  con registro de progreso por
-  contexto — ADR-014 Decisión 5.
+  Proceso DURABLE, coordinado por
+  Account con llamadas síncronas
+  por contexto — ADR-014 Decisión 5.
   No depende de ADR-006: ese ADR
   no define el derecho al olvido
-  en su alcance.
+  en su alcance. La petición HTTP
+  del titular NO permanece abierta
+  durante los 30 días de plazo.
 end note
 
 user -> web : solicita eliminar cuenta
 web -> account : POST /accounts/deletion\n(JWT verificado)
 account -> account : subject verificado\n-> findBySubject -> Account
+account -> account : registrar solicitud\n(progreso durable, no en memoria)
 account --> web : confirmación de RECEPCIÓN
 web --> user : "solicitud recibida"
 
-account -> orchestrator : iniciar orquestación\n(subject, plazo máx. 30 días)
+== la petición HTTP del titular termina aquí ==
+== lo siguiente ocurre de forma durable, fuera de esa petición ==
+
+account -> orchestrator : iniciar proceso durable\n(subject, plazo máx. 30 días,\nllamadas idempotentes)
 
 par por cada bounded context, según la matriz de tratamiento
   orchestrator -> inventory : eliminar inventario del titular
@@ -54,7 +60,7 @@ note over orchestrator
   Política §11) desde el primer día.
 end note
 
-orchestrator -> orchestrator : registrar progreso por contexto\n(reintento dentro del plazo si algo falla)
+orchestrator -> orchestrator : persistir progreso por contexto\n(reintento idempotente dentro del\nplazo si algo falla o no responde;\nreanudable si Account se reinicia)
 
 orchestrator -> account : eliminar datos de cuenta\n(salvo evidencia de consentimiento,\nver consent-versioning.md)
 account --> orchestrator : ok

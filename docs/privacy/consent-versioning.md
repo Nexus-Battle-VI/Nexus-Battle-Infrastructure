@@ -71,27 +71,29 @@ verificable si se cuestiona el consentimiento después.
    HU-43 sobre el resto de la cuenta — ver la excepción de retención
    propuesta en [HU-43](hu-43-account-deletion-design.md#excepciones-de-retención).
 
-## Decisión arquitectónica (NO se fija en este documento)
+## Decisión arquitectónica (fijada en ADR-014, `Proposed`)
 
-Cómo se persiste la evidencia — una tabla nueva en Account
-(`account_consents`, por ejemplo), un evento de dominio append-only, o algún
-otro mecanismo — es una decisión arquitectónica pendiente. Se propone como
-candidato a [ADR-014](../adr/ADR-014-privacy-data-governance.md) (estado
-`Proposed`, no `Accepted`), porque implica:
+[ADR-014, Decisión 1](../adr/ADR-014-privacy-data-governance.md#1-ownership-y-evidencia-mínima-de-consentimiento-versionado)
+ya fija, como `Proposed` (no `Accepted`):
 
-- ownership de la evidencia de consentimiento (¿la posee Account, como dueño
-  de la cuenta, o un contexto transversal de privacidad?);
-- si es mutable (un booleano que se sobrescribe) o append-only (un historial
-  de aceptaciones, relevante si la Política cambia varias veces);
-- si la versión de Política se referencia por string libre (`"0.3"`) o por un
-  catálogo versionado que el propio repositorio de Infrastructure publique.
+- **Ownership:** la evidencia de consentimiento la posee **Account**, no un
+  contexto transversal de privacidad nuevo — mismo razonamiento que
+  `data-ownership.md`: Account ya posee `terms_accepted` y es dueño de la
+  cuenta.
+- **Requisito mínimo de evidencia:** cuenta/titular, versión de la Política
+  aceptada, y fecha/hora de aceptación generada por el backend (nunca un
+  valor enviado por Web).
+- **Debe conservar historial:** una aceptación de una versión anterior
+  (v0.3) no puede quedar destruida ni sobrescrita cuando el titular acepte
+  una versión futura (v0.4, ...) — necesario porque [HU-43](hu-43-account-deletion-design.md#excepciones-de-retención)
+  puede necesitar conservar esa evidencia incluso tras eliminar el resto de
+  la cuenta.
 
-**Recomendación no vinculante para esa decisión futura:** dado que
-`data-ownership.md` establece que cada bounded context posee su almacén en
-exclusiva y que Account ya posee `terms_accepted`, el candidato más coherente
-con la arquitectura actual es que Account también posea la evidencia de
-consentimiento versionado, en lugar de crear un servicio nuevo solo para
-esto. Esto es una recomendación para el ADR, no una decisión tomada aquí.
+Lo que ADR-014 **no fija** — y sigue siendo una decisión de implementación
+pendiente de la Task que resuelva este gap — es la forma física concreta:
+una tabla nueva en Account (`account_consents`, por ejemplo, append-only), un
+evento de dominio, o algún otro mecanismo que satisfaga el requisito de
+historial de arriba. ADR-014 fija el requisito, no el diseño de tabla.
 
 ## Qué queda fuera de esta rama
 

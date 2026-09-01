@@ -23,13 +23,14 @@ Verificación de identidad
        v
 Solicitud de eliminación
   (el sistema emite confirmación de RECEPCIÓN, Política §10;
-   no es la confirmación de cierre todavía)
+   no es la confirmación de cierre todavía — la petición HTTP
+   termina aquí, el proceso sigue de forma durable)
        |
        v
-Orquestación por bounded contexts
-  (síncrona, coordinada por Account, con registro de
-   progreso por contexto — ver "Estrategia de orquestación"
-   más abajo. NO depende de ADR-006)
+Proceso de eliminación durable
+  (coordinado por Account, llamadas síncronas por contexto,
+   progreso persistido, idempotente, con reintento — ver
+   "Estrategia de orquestación" más abajo. NO depende de ADR-006)
        |
        v
 Por cada bounded context, según la matriz de tratamiento:
@@ -98,21 +99,35 @@ Player/Inventory en checkout) y **no define el derecho al olvido**. Que
 ADR-006 no esté aceptado no implica que HU-43 esté bloqueada.
 
 [ADR-014](../adr/ADR-014-privacy-data-governance.md) (Decisión 5) propone la
-estrategia concreta: **orquestación síncrona coordinada por Account, con
-registro de progreso por contexto**, sin necesitar el transporte asíncrono
-de ADR-006. Resumen:
+estrategia concreta: **proceso de eliminación durable, coordinado por
+Account mediante llamadas síncronas por contexto** — no una petición HTTP
+mantenida abierta hasta que todo el proceso termine —, sin necesitar el
+transporte asíncrono de ADR-006. Resumen:
 
-1. Account invoca el endpoint de eliminación de cada bounded context por su
-   API (mismo patrón síncrono que `Commerce -> Catalog` para precio).
-2. Cada contexto aplica su propia fila de la matriz de tratamiento y
-   responde éxito/fallo.
-3. Account registra el progreso por contexto y reintenta dentro del plazo de
-   30 días; emite la confirmación de cierre solo cuando todos confirman.
+1. Account verifica identidad, registra la solicitud y responde de
+   inmediato al titular con la confirmación de RECEPCIÓN. La petición HTTP
+   del titular termina ahí.
+2. A partir de ese punto, de forma durable y fuera de esa petición, Account
+   invoca el endpoint de eliminación de cada bounded context por su API
+   (mismo patrón síncrono que `Commerce -> Catalog` para precio), de forma
+   **idempotente** (reintentar una llamada no debe producir un efecto
+   distinto de aplicarla una vez).
+3. Cada contexto aplica su propia fila de la matriz de tratamiento y
+   responde éxito, fallo, o "aplicado con excepción de retención".
+4. Account persiste el progreso por contexto (no en memoria), reintenta los
+   fallos transitorios dentro del plazo de 30 días, y solo cuando todos los
+   contextos relevantes confirman (o registran su excepción de retención)
+   emite la confirmación de cierre y dispara la notificación final.
+5. Si Account se reinicia o despliega una nueva versión con solicitudes en
+   curso, el proceso debe poder reanudarse desde el progreso ya persistido.
 
 Esto es posible porque, a diferencia del checkout, la eliminación no compite
 por ningún recurso escaso — no hay condición de carrera que una saga con
-compensación deba resolver. El detalle completo de esta decisión, incluidas
-las alternativas descartadas, está en
+compensación deba resolver; el problema de fiabilidad se resuelve con
+progreso durable e idempotencia, no con compensación. El detalle completo de
+esta decisión, incluidas las propiedades exigidas (idempotencia, progreso
+durable, reintentos, estados parciales, timeout, reanudación segura) y las
+alternativas descartadas, está en
 [ADR-014](../adr/ADR-014-privacy-data-governance.md#5-estrategia-de-orquestación-para-el-derecho-al-olvido-hu-43-coordinación-síncrona-por-api-sin-esperar-a-adr-006).
 
 ## Verificación de identidad
