@@ -24,11 +24,14 @@ $developSha = git rev-parse origin/develop
 if ($mainSha -ne 'be0d70f04c604adf304b6dd6f07fd1898b972332') { throw 'main changed; re-audit required' }
 if ($developSha -ne 'c20c2ef214c6aa775df07eccd858b88b2cdd6e54') { throw 'develop changed; re-audit required' }
 if ((git merge-base origin/main origin/develop) -ne $developSha) { throw 'develop is not an ancestor of main' }
-$run = gh run list -R Nexus-Battle-VI/Nexus-Battle-Catalog --commit $mainSha --workflow CI --limit 1 --json status,conclusion | ConvertFrom-Json
+$run = gh run list -R Nexus-Battle-VI/Nexus-Battle-Catalog --commit $mainSha --workflow CI --limit 1 --json databaseId,status,conclusion | ConvertFrom-Json
 if ($run.Count -ne 1 -or $run[0].status -ne 'completed' -or $run[0].conclusion -ne 'success') { throw 'main CI is not successful' }
+$runId = $run[0].databaseId
+$publish = gh run view -R Nexus-Battle-VI/Nexus-Battle-Catalog $runId --json jobs --jq '.jobs[] | select(.name == "Publicar imagen en GHCR") | .conclusion'
+if ($publish -ne 'success') { throw 'GHCR publication did not succeed for the audited main SHA' }
 ```
 
-Expected: exit 0; HU-33 main CI is successful.
+Expected: exit 0; HU-33 main CI and its existing `Publicar imagen en GHCR` job are successful for the exact audited SHA. These commands only inspect the existing run; they do not trigger a new workflow.
 
 ### Task 2: Archive and mirror `develop`
 
