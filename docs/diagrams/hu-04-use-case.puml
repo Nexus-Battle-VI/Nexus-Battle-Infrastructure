@@ -1,0 +1,48 @@
+@startuml hu-04-use-case
+!theme plain
+title HU-04 — Caso de uso de recuperación de contraseña
+
+skinparam defaultFontName sans-serif
+left to right direction
+
+actor "Usuario registrado" as user
+
+rectangle "Account / Identity" {
+  usecase "Identificar cuenta\npor correo" as identify
+  usecase "Validar preguntas\nde seguridad" as answers
+  usecase "Emitir y enviar\ncódigo de un solo uso" as issue
+  usecase "Validar código\nde recuperación" as code
+  usecase "Establecer\nnueva contraseña" as reset
+  usecase "Rechazar avance\nno autorizado" as deny
+}
+
+rectangle "Notifications (HU-55)" {
+  usecase "Enviar correo\ncon plantilla" as notify
+}
+
+user --> identify
+user --> answers
+user --> code
+user --> reset
+
+identify ..> issue : <<include>>\nsolo si preguntas validas
+answers ..> issue : <<include>>
+issue ..> notify : <<include>>
+reset ..> notify : <<include>>\nconfirmacion
+
+note right of identify
+  Devuelve el mismo catalogo de preguntas
+  exista o no la cuenta: no enumera correos.
+end note
+
+note right of deny
+  Respuestas invalidas, codigo invalido,
+  codigo reutilizado o etapa saltada:
+  mismo rechazo generico.
+end note
+
+answers ..> deny : <<extend>>\nrespuestas invalidas
+code ..> deny : <<extend>>\ncodigo invalido o consumido
+reset ..> deny : <<extend>>\netapa no superada
+
+@enduml

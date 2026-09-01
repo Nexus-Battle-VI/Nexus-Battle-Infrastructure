@@ -23,7 +23,8 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [microservices.md](docs/architecture/microservices.md) | Deployables, superficie y estructura interna |
 | [data-ownership.md](docs/architecture/data-ownership.md) | Qué posee cada servicio y cómo se cruza la frontera |
 | [integration.md](docs/architecture/integration.md) | Comunicación entre contextos |
-| [security.md](docs/architecture/security.md) | Seguridad y el blocker de identidad |
+| [security.md](docs/architecture/security.md) | Seguridad, identidad y RBAC desplegados |
+| [hu-39-role-management.md](docs/architecture/hu-39-role-management.md) | Diseño, matriz RBAC y contratos conceptuales de HU-39 |
 | [observability.md](docs/architecture/observability.md) | Registro, sondas y qué no se mide todavía |
 | [testing.md](docs/architecture/testing.md) | Estrategia de pruebas y cobertura real |
 | [developer-workflow.md](docs/architecture/developer-workflow.md) | Flujo de trabajo, CI y OIDC futuro |
@@ -46,12 +47,19 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [008](docs/adr/ADR-008-iac.md) | Infraestructura como código | Proposed |
 | [009](docs/adr/ADR-009-observability.md) | Observabilidad | Proposed |
 | [010](docs/adr/ADR-010-reverse-proxy.md) | Proxy inverso y entrada | Proposed |
+| [011](docs/adr/ADR-011-deployment-topology.md) | Topología de despliegue | Accepted |
+| [012](docs/adr/ADR-012-orm-odm.md) | Selección de ORM y ODM | Accepted |
+| [013](docs/adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Accepted |
 
-**Todos están en `Proposed`.** Ninguna decisión pasa a `Accepted` sin evidencia de aprobación registrada.
+El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
+`Accepted` con evidencia de aprobación registrada.
 
 ### Diagramas
 
-Siete diagramas PlantUML en [docs/diagrams](docs/diagrams). Los de despliegue **separan visualmente demo y objetivo** para que no se confundan.
+Doce diagramas PlantUML en [docs/diagrams](docs/diagrams), incluidos los cuatro
+editables de HU-39 y el contrato canónico de Producto. Los de despliegue
+**separan visualmente demo y objetivo** para que no se confundan; el de Producto
+distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 
 ### Costes y contratos
 
@@ -60,6 +68,7 @@ Siete diagramas PlantUML en [docs/diagrams](docs/diagrams). Los de despliegue **
 | [assumptions.md](docs/costs/assumptions.md) | Supuestos de la estimación. **Leer antes que las cifras** |
 | [sprint-demo-estimate.md](docs/costs/sprint-demo-estimate.md) | Estimación y requisitos previos al despliegue |
 | [service-catalog.md](docs/contracts/service-catalog.md) | Superficie HTTP de cada servicio |
+| [catalog-product-v1.openapi.yaml](docs/contracts/catalog-product-v1.openapi.yaml) | Contrato objetivo `Proposed` para HU-33; todavía no desplegado |
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
 
 ### Gobierno
@@ -74,12 +83,11 @@ Siete diagramas PlantUML en [docs/diagrams](docs/diagrams). Los de despliegue **
 | Aspecto | Estado |
 | --- | --- |
 | Repositorios con CI verde | 8 de 8 |
-| Pruebas totales | 602 |
-| Cobertura mínima exigida | 80 %, superada en todos |
-| Control de acceso | **Ausente** — ver [ADR-004](docs/adr/ADR-004-identity-directory.md) |
-| Persistencia real | **Ausente** — ver [ADR-005](docs/adr/ADR-005-data-strategy.md) |
+| Pruebas y cobertura | Se registran por entrega y repositorio; HU-39 enlaza sus ejecuciones en [evidencia](docs/evidence/HU-39-asignacion-de-roles.md) |
+| Control de acceso | **Activo**: Cognito, JWT y RBAC; ver [ADR-004](docs/adr/ADR-004-identity-directory.md) |
+| Persistencia real | **Activa**: PostgreSQL y MongoDB; ver [ADR-005](docs/adr/ADR-005-data-strategy.md) |
 | Comunicación entre servicios | **Ausente** — ver [ADR-006](docs/adr/ADR-006-messaging.md) |
-| Infraestructura AWS | **No provisionada** — coste incurrido: USD 0 |
+| Infraestructura AWS | **Provisionada** con Terraform para la demo |
 
 ## Limitaciones del estado actual
 
@@ -90,26 +98,26 @@ Se enumeran juntas porque quien lea esta documentación necesita conocerlas ante
 3. **Cinco de las seis pantallas de Web** son marcadores declarados. Catalog es la única real.
 4. **La arquitectura de demo no cumple los RNF** y tiene un punto único de fallo.
 5. **Sin licencia asignada.**
-6. **Segundo factor administrativo elegido, pero sin cuenta inscrita.** El 2026-08-29 se confirmó TOTP. El pool ya lo tiene activo; falta inscribir el autenticador de la primera cuenta y solo después concederle el rol.
-7. **El sistema está expuesto.** Desde el 2026-08-29 `https://nexus.simuladorupbbga.app` sirve desde internet con certificado real. No existe todavía ninguna cuenta en `ADMINISTRATOR` ni `SUPER_ADMINISTRATOR`, así que el control pasa por ausencia. **No se concede uno de esos roles antes de verificar TOTP.**
+6. **Ventana de testimonios retirados.** El cierre global revoca las sesiones de
+   Cognito, pero un access token ya emitido puede conservar sus claims hasta
+   `exp`, como máximo 15 minutos.
+7. **Aceptación humana de HU-39 en curso.** El despliegue, la automatización y
+   el único rol raíz están comprobados; falta completar y registrar el ciclo
+   real de asignación, acceso y retirada.
 
-### Inscripción segura del primer factor administrativo
+### Proceso normal de TOTP y gestión de roles
 
-La identidad debe existir, estar confirmada y seguir siendo `PLAYER` mientras se
-inscribe el factor. La contraseña y el código se introducen directamente en una
-terminal local; nunca se pasan como argumentos ni se copian a un chat:
+La persona inscribe TOTP desde **Mi Cuenta → Seguridad** mientras conserva
+`PLAYER`. Después, el Super Administrador la busca y gestiona su rol desde
+`/admin/roles`. La interfaz deshabilita la elevación a `ADMINISTRATOR` hasta que
+el factor esté confirmado y Account aplica la misma precondición con un 409.
 
-```powershell
-python scripts/inscribir_totp_administrativo.py --username usuario@dominio.example
-python scripts/verificar-segundo-factor-administrativo.py
-```
-
-El primer guion autentica al propio usuario, muestra una sola vez la clave que
-debe introducir en su aplicación autenticadora, verifica el código y marca TOTP
-como preferido. No crea usuarios ni asigna roles. El segundo comprueba el pool;
-la elevación a `ADMINISTRATOR` ocurre únicamente después de que TOTP aparezca
-confirmado. Así no existe una ventana en la que una cuenta administrativa pueda
-entrar con sola contraseña.
+La operación ordinaria no exige ejecutar un guion: Web invoca Account, que
+actualiza PostgreSQL y refleja los grupos en Cognito. Los guiones conservados
+son controles de auditoría o aceptación, no puertas laterales para asignar
+roles. La elevación a `ADMINISTRATOR` ocurre únicamente después de que TOTP
+aparezca confirmado, así no existe una ventana administrativa con sola
+contraseña.
 
 ### Tres limitaciones que esta lista declaraba y ya no son ciertas
 

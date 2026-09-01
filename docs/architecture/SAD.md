@@ -2,7 +2,7 @@
 
 - **Versión:** 0.1.0 (Sprint 1 — Foundation)
 - **Fecha:** 2026-08-21
-- **Estado:** Propuesto. Todas las decisiones están en `Proposed` salvo evidencia de aprobación.
+- **Estado:** Evolutivo. Cada ADR declara su estado y evidencia de aprobación.
 
 ## 1. Propósito y alcance
 
@@ -19,7 +19,7 @@ Nexus Battles VI es un producto único desarrollado por tres Teams — Alfa, Bet
 | Restricción | Origen | Efecto |
 | --- | --- | --- |
 | Techo de **USD 100/mes** en la demo | Presupuesto | Excluye persistencia gestionada, balanceadores y NAT |
-| **Sin proveedor de identidad autorizado** | Gobierno pendiente | No hay control de acceso en ningún servicio |
+| **Identidad delegada** | ADR-004 | Cognito emite JWT; Account posee roles y los refleja en grupos |
 | RNF objetivo: 100 000 concurrentes, 99,95 % | Requisitos | **Incompatible** con el techo de coste: obliga a documentar dos arquitecturas |
 | Management es fuente única de Issues | Gobierno | Los repositorios de código no tienen Issues ni Projects |
 | Requisito de Directorio Activo | Requisitos | No se cumple por coste. Ver [ADR-004](../adr/ADR-004-identity-directory.md) |
@@ -126,9 +126,11 @@ Dos arquitecturas explícitamente separadas:
 
 Ver [security.md](security.md).
 
-El punto central: **no existe control de acceso en ningún servicio**, porque no hay proveedor de identidad autorizado. Se decidió **no añadir comprobaciones de rol sin identidad verificable**, porque eso sería seguridad aparente. Ver [ADR-004](../adr/ADR-004-identity-directory.md).
-
-**Ningún servicio debe desplegarse en un entorno accesible desde internet sin resolver ese blocker.**
+Los cinco servicios verifican JWT emitidos por Cognito. Account conserva la
+fuente de verdad de roles y refleja los grupos; solo el Super Administrador
+gestiona `MODERATOR` y `ADMINISTRATOR`. La elevación administrativa exige TOTP
+confirmado. Ver [ADR-004](../adr/ADR-004-identity-directory.md) y
+[el diseño de HU-39](hu-39-role-management.md).
 
 ## 12. Observabilidad
 
@@ -162,8 +164,11 @@ Se enumeran juntas porque quien lea este documento necesita conocerlas antes de 
 3. **Cinco de las seis pantallas de Web** son marcadores declarados.
 4. **La arquitectura de demo no cumple los RNF** y tiene un punto único de fallo.
 5. **Sin licencia asignada** (`Licensing pending project governance`).
-6. **Segundo factor de los roles administrativos, abierto.** Exige SES, no aprobado.
-7. **No expuesto a internet.** `public_ingress_cidrs` vacío; y la única URL de retorno registrada en Cognito es la de desarrollo local, así que exponerlo son dos cambios acoplados, no uno.
+6. **Ventana de access tokens retirados.** Un JWT anterior puede conservar sus
+   claims hasta `exp`, máximo 15 minutos, aunque Cognito cierre las sesiones.
+7. **Aceptación humana de HU-39 en curso.** La entrega técnica está desplegada;
+   el ciclo real de TOTP, asignación, Catalog y retirada se conserva como
+   evidencia pendiente de completar.
 
 Ninguna es un descuido. Cada una tiene su motivo registrado y su condición de desbloqueo.
 
@@ -189,3 +194,6 @@ Se dejan tachadas en lugar de borrarlas: quien haya leído una versión anterior
 | [008](../adr/ADR-008-iac.md) | Infraestructura como código | Proposed |
 | [009](../adr/ADR-009-observability.md) | Observabilidad | Proposed |
 | [010](../adr/ADR-010-reverse-proxy.md) | Proxy inverso y entrada | Proposed |
+| [011](../adr/ADR-011-deployment-topology.md) | Topología de despliegue | Accepted |
+| [012](../adr/ADR-012-orm-odm.md) | Selección de ORM y ODM | Accepted |
+| [013](../adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Proposed |

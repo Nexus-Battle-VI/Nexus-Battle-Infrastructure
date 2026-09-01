@@ -1,0 +1,74 @@
+@startuml hu-39-domain-rbac
+!theme plain
+title HU-39 — Fragmento conceptual del dominio RBAC
+
+skinparam defaultFontName sans-serif
+skinparam classAttributeIconSize 0
+
+class Cuenta {
+  id
+  subject
+  estado
+  roles
+  --
+  concederRol()
+  retirarRol()
+  rolVigente()
+}
+
+enum Rol {
+  PLAYER
+  MODERATOR
+  ADMINISTRATOR
+  SUPER_ADMINISTRATOR
+}
+
+class PoliticaDeRoles {
+  puedeGestionar(actor)
+  esRetirable(rol)
+  precedencia(roles)
+}
+
+class AsignacionRol {
+  actor
+  destino
+  rolSolicitado
+  operacion
+}
+
+class MatrizPermisos <<definition>> {
+  crearJugador
+  modificarPerfilPropio
+  publicarComentario
+  eliminarComentarioPropio
+  moderarComentario
+  emitirAdvertencia
+  suspenderUsuario
+  banearUsuario
+  crearAdminOModerador
+  gestionarProductos
+}
+
+class EstadoSegundoFactor <<external fact>> {
+  TOTP confirmado
+}
+
+Cuenta "1" o-- "1..*" Rol : conserva PLAYER
+Cuenta ..> PoliticaDeRoles : aplica
+AsignacionRol --> Cuenta : actor y destino
+AsignacionRol --> Rol : solicita
+PoliticaDeRoles ..> MatrizPermisos : interpreta
+AsignacionRol ..> EstadoSegundoFactor : exige para ADMINISTRATOR
+
+note right of Cuenta
+  El perfil presenta un único rol vigente
+  por precedencia. La persistencia conserva
+  PLAYER como base no retirable.
+end note
+
+note bottom of MatrizPermisos
+  Definición funcional única de RF-39.
+  No son permisos individuales por usuario.
+end note
+
+@enduml
