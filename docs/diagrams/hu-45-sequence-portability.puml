@@ -1,0 +1,50 @@
+@startuml hu-45-sequence-portability
+!theme plain
+title HU-45 — Portal de privacidad y portabilidad (diseño de alto nivel, no implementado)
+
+skinparam defaultFontName sans-serif
+skinparam sequence {
+  LifeLineBorderColor #999999
+}
+
+actor "Titular" as user
+participant "Web" as web
+participant "Account\n(verificación de\nidentidad)" as account
+participant "Agregador de\nportabilidad\n(ubicación PENDIENTE)" as aggregator
+participant "Player/Inventory" as inventory
+participant "Community" as community
+participant "Commerce" as commerce
+participant "Generador\nJSON/XML/PDF" as generator
+
+note over aggregator
+  Lectura síncrona, mismo patrón que
+  Commerce -> Catalog (precio).
+  NO depende de ADR-006.
+end note
+
+user -> web : solicita exportar mis datos
+web -> account : GET /accounts/me/export\n(JWT verificado)
+account -> account : subject verificado\n-> findBySubject -> Account
+account -> aggregator : agregar(subject)
+
+par por cada bounded context, solo lectura, filtrado por subject
+  aggregator -> inventory : inventario del titular
+  inventory --> aggregator : ítems (subject = ownerId)
+else
+  aggregator -> community : comentarios del titular
+  community --> aggregator : posts (subject = author_id)\n-- excluye posts de otros autores --
+else
+  aggregator -> commerce : transacciones del titular
+  commerce --> aggregator : pedidos (subject = customer_id)
+end
+
+aggregator -> aggregator : excluir INTERNO/SECRETO\n(ver portability-contract-v1.md):\ntokens, hashes, claims internos,\ndatos de terceros
+
+aggregator -> generator : construir JSON / XML / PDF\n(PDF exige: inventario, estadísticas,\ncomentarios, historial de transacciones)
+generator --> aggregator : archivo generado
+
+aggregator --> account : archivo
+account --> web : descarga
+web --> user : archivo JSON/XML/PDF\n(solo datos propios)
+
+@enduml

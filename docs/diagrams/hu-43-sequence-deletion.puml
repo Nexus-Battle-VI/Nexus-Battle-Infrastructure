@@ -1,0 +1,56 @@
+@startuml hu-43-sequence-deletion
+!theme plain
+title HU-43 — Eliminación de cuenta y datos asociados (diseño de alto nivel, no implementado)
+
+skinparam defaultFontName sans-serif
+skinparam sequence {
+  LifeLineBorderColor #999999
+}
+
+actor "Titular" as user
+participant "Web" as web
+participant "Account\n(verificación de\nidentidad)" as account
+participant "Orquestador\nde eliminación\n(PENDIENTE — ADR-006)" as orchestrator
+participant "Player/Inventory" as inventory
+participant "Community" as community
+participant "Commerce" as commerce
+participant "Auditoría\n(owner sin asignar)" as audit
+participant "Notifications" as notify
+
+note over orchestrator
+  Bloqueado por ADR-006 (Proposed):
+  no existe transporte entre
+  bounded contexts todavía.
+end note
+
+user -> web : solicita eliminar cuenta
+web -> account : POST /accounts/deletion\n(JWT verificado)
+account -> account : subject verificado\n-> findBySubject -> Account
+account --> web : confirmación de RECEPCIÓN
+web --> user : "solicitud recibida"
+
+account -> orchestrator : iniciar orquestación\n(subject, plazo máx. 30 días)
+
+par por cada bounded context, según la matriz de tratamiento
+  orchestrator -> inventory : eliminar inventario del titular
+  inventory --> orchestrator : ok
+else
+  orchestrator -> community : eliminar/anonimizar\ncomentarios propios
+  community --> orchestrator : ok
+else
+  orchestrator -> commerce : anonimizar pedidos\n(retener por obligación aplicable)
+  commerce --> orchestrator : ok, con excepción de retención
+else
+  orchestrator -> audit : NO eliminar — excepción\nde retención (mínimo 5 años)
+  audit --> orchestrator : conservado, inmutable
+end
+
+orchestrator -> account : eliminar datos de cuenta\n(salvo evidencia de consentimiento,\nver consent-versioning.md)
+account --> orchestrator : ok
+
+orchestrator -> notify : solicitar notificación de cierre
+notify --> orchestrator : ok
+
+orchestrator --> user : confirmación de CIERRE\n(dentro del plazo de 30 días)
+
+@enduml

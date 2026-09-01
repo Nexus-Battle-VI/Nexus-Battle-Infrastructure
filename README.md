@@ -50,6 +50,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [011](docs/adr/ADR-011-deployment-topology.md) | Topología de despliegue | Accepted |
 | [012](docs/adr/ADR-012-orm-odm.md) | Selección de ORM y ODM | Accepted |
 | [013](docs/adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Accepted |
+| [014](docs/adr/ADR-014-privacy-data-governance.md) | Gobierno de privacidad y tratamiento de datos | Proposed |
 
 El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 `Accepted` con evidencia de aprobación registrada.
@@ -77,6 +78,7 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | --- | --- |
 | [rulesets](docs/governance/rulesets/) | Plantilla de `main-protection` y checks reales por repositorio |
 | [compose](compose/) | Composición de referencia del sistema completo |
+| [privacy](docs/privacy/) | Gobierno de privacidad y tratamiento de datos (EN-011): política v0.3, matriz de tratamiento, contrato de portabilidad, consentimiento y diseño de alto nivel de HU-43/HU-45. **Documental — sin implementación runtime todavía** |
 
 ## Estado del sistema — resumen
 
