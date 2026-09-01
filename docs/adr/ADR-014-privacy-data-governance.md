@@ -20,10 +20,14 @@ sustente:
    — ver el gap completo en [consent-versioning.md](../privacy/consent-versioning.md).
 2. HU-43 (eliminación) necesita coordinar Account, Player/Inventory,
    Community, Commerce y owners todavía sin asignar (auditoría, sanciones),
-   pero **no existe comunicación entre bounded contexts** —
-   [ADR-006](ADR-006-messaging.md) sigue `Proposed` y la saga de checkout,
-   un caso más simple, está declarada `No implementado`
-   ([integration.md](../architecture/integration.md)).
+   y no existe todavía una decisión de **cómo** se coordinan — ningún ADR
+   define hoy una estrategia de orquestación entre bounded contexts para
+   este caso. [ADR-006](ADR-006-messaging.md) sigue `Proposed`, pero su
+   alcance cubre tres integraciones distintas (Notifications, precio de
+   Catalog, reserva de Commerce/Inventory en checkout) y **no menciona el
+   derecho al olvido**; no es una dependencia funcional de HU-43 por sí
+   solo, aunque conviene resolver la estrategia de orquestación antes de
+   implementar la eliminación multi-contexto.
 3. HU-45 (portabilidad) necesita agregar lectura de varios bounded contexts
    en un solo reporte por titular, respetando que ningún servicio consulte
    directamente el almacén de otro ([data-ownership.md](../architecture/data-ownership.md)).
@@ -94,23 +98,59 @@ queda para la implementación de HU-45, con esta restricción: **ningún
 agregador consulta la base de datos de otro servicio directamente**, en
 línea con la regla ya vigente de `data-ownership.md`.
 
-### 5. Estrategia de orquestación para el derecho al olvido (HU-43): bloqueada por ADR-006
+### 5. Estrategia de orquestación para el derecho al olvido (HU-43): coordinación síncrona por API, sin esperar a ADR-006
 
-A diferencia de la portabilidad, la eliminación **sí depende** de que
-[ADR-006](ADR-006-messaging.md) se acepte y se implemente un transporte
-entre bounded contexts. Razón: eliminar o anonimizar datos en varios
-servicios de forma coordinada, con posibilidad de fallo parcial y
-excepciones de retención por categoría, es exactamente el tipo de proceso de
-larga duración con compensaciones que ADR-006 ya identificó para la saga de
-checkout (`Commerce -> Player/Inventory`, "asíncrono con saga", **no
-implementado**).
+[ADR-006](ADR-006-messaging.md) fija el alcance de mensajería para tres
+integraciones concretas: Account/Commerce → Notifications, Commerce → Catalog
+y Commerce → Player/Inventory (reserva de checkout). **No menciona el
+derecho al olvido y no lo define como dependiente de su transporte.** Tratar
+"ADR-006 sigue Proposed" como un bloqueo de HU-43 sería una inferencia no
+sustentada por ese ADR ni por la Política — la primera versión de este
+documento cometió exactamente ese error, y se corrige aquí.
 
-Este ADR no reabre ni sustituye ADR-006. Registra la dependencia
-explícitamente: **HU-43 no puede implementar eliminación multi-contexto
-hasta que ADR-006 tenga transporte aceptado e implementado.** Mientras
-tanto, HU-43 puede avanzar en la eliminación dentro de un único bounded
-context (Account) y en el flujo de verificación/confirmación, sin
-coordinación entre servicios.
+Lo que realmente falta para HU-43 es una **decisión de orquestación entre
+bounded contexts** — quién invoca a quién, en qué orden, con qué manejo de
+fallo parcial — y esa decisión no requiere esperar a que exista un transporte
+de mensajería. Se propone:
+
+**Orquestación síncrona coordinada, con registro de progreso por contexto.**
+
+```text
+Account (o un coordinador dedicado dentro de Account) recibe la solicitud,
+verifica identidad, emite confirmación de RECEPCIÓN, y:
+
+  1. invoca el endpoint de eliminación de cada bounded context relevante
+     (Inventory, Community, Commerce, y los que se incorporen) por su API,
+     nunca por acceso directo a su almacén — mismo patrón síncrono ya usado
+     por Commerce -> Catalog para precio;
+  2. cada bounded context expone su propio endpoint de "eliminar/anonimizar
+     datos del titular" (por subject), aplicando su propia fila de la
+     matriz de tratamiento;
+  3. Account registra el progreso por contexto (pendiente/completado/
+     fallido) para poder reintentar sin perder la ventana de 30 días, y
+     emite la confirmación de CIERRE solo cuando todos los contextos
+     relevantes confirman;
+  4. un contexto que falla se reintenta dentro del plazo; agotar el plazo
+     sin éxito se escala fuera del alcance de este ADR.
+```
+
+**Por qué no se necesita una saga con compensación tipo checkout:** el
+checkout reserva un recurso escaso (unidades de inventario) con riesgo real
+de sobreventa si dos procesos compiten — por eso ADR-006 lo marca
+"asíncrono con saga". La eliminación no compite por ningún recurso escaso:
+no hay nada que "reservar" ni una condición de carrera que una compensación
+deba deshacer. Una orquestación síncrona con reintento simple es suficiente
+y evita construir infraestructura de mensajería solo para esto.
+
+Esta decisión es del mismo tipo que la síntesis de agregación de HU-45
+(Decisión 4): composición de APIs síncronas entre bounded contexts, sin
+depender de ADR-006. La diferencia con HU-45 es de dirección (escritura
+coordinada con confirmación de cierre, no solo lectura), no de transporte.
+
+**Lo que sí sigue pendiente y no se fija en este ADR:** el endpoint HTTP
+concreto de cada contexto, el formato del registro de progreso, y qué pasa
+si el plazo de 30 días se agota sin que todos los contextos confirmen —
+quedan para la implementación de HU-43.
 
 ### 6. No se centraliza en una "base de privacidad"
 
@@ -129,27 +169,36 @@ tablas o colecciones privadas de otro.
   de exportación antes de empezar a implementar.
 - La frontera exportable/no-portable queda fijada una sola vez, en lugar de
   decidirse de forma distinta por cada endpoint que HU-45 vaya agregando.
-- La dependencia real de HU-43 con ADR-006 queda explícita y trazable, en
-  vez de descubrirse a mitad de implementación.
-- HU-45 puede empezar a implementarse sin esperar a ADR-006, porque su
-  agregación es de lectura síncrona.
+- HU-43 tiene una estrategia de orquestación concreta (Decisión 5) sin
+  esperar a ADR-006, en vez de quedar indefinida hasta que exista mensajería.
+- HU-45 puede empezar a implementarse ya, porque su agregación es de lectura
+  síncrona sobre APIs existentes.
 
 ### Lo que cuesta
 
-- HU-43 queda formalmente bloqueada hasta que ADR-006 avance — no es un
-  costo que este ADR introduce, es uno que ya existía y que este documento
-  hace visible en vez de dejarlo implícito.
+- La orquestación síncrona de HU-43 (Decisión 5) es más simple que una saga,
+  pero también más frágil ante fallos parciales largos: un contexto caído
+  varios días exige reintento manual dentro de la ventana de 30 días, en
+  lugar de una cola con reintento automático. Se acepta ese costo porque no
+  hay condición de carrera que compensar, a diferencia del checkout.
 - La evidencia de consentimiento sigue sin tabla ni migración: este ADR fija
   ownership (Account) pero no resuelve el gap, que requiere una Task
   separada.
 
 ### Lo que permanece bloqueado
 
-- La implementación de la eliminación multi-contexto (HU-43), por ADR-006.
-- El owner de datos de héroes/estadísticas/progreso, y de
-  auditoría/sanciones — no existen en ningún servicio desplegado; ver
-  [data-treatment-matrix-v0.3.md](../privacy/data-treatment-matrix-v0.3.md).
+- La disponibilidad real de fuentes de datos para HU-45: héroes/estadísticas/
+  progreso, y auditoría/sanciones, no existen en ningún servicio desplegado
+  — ver [data-treatment-matrix-v0.3.md](../privacy/data-treatment-matrix-v0.3.md).
+  Es una dependencia de HU-45 sobre datos inexistentes, no un bloqueo de
+  EN-011 ni de este ADR: cuando esos bounded contexts se implementen, deberán
+  cumplir la matriz ya documentada aquí.
 - La forma física de la evidencia de consentimiento versionado.
+- Si EN-011 exige, en sus criterios de aceptación reales (Management #197),
+  comportamiento runtime — política publicada y accesible, consentimiento
+  efectivamente registrado y consultable — este PR, siendo puramente
+  documental, no lo satisface. Ver
+  [en-011-closure-readiness.md](../privacy/en-011-closure-readiness.md).
 
 ## Alternativas consideradas
 
@@ -159,14 +208,21 @@ tablas o colecciones privadas de otro.
 | Bloquear también HU-45 hasta que ADR-006 se acepte | Descartada: la portabilidad es una agregación de lectura, no requiere transacción distribuida ni compensación; el patrón síncrono ya existe y está probado (`Commerce -> Catalog`) |
 | Dejar que cada implementador de HU-45 decida caso por caso qué es exportable | Descartada: produciría criterios distintos por bounded context y el riesgo de exponer un secreto (hash de respuesta de seguridad, token) por omisión, no por decisión |
 | Fijar el owner de la evidencia de consentimiento en un servicio nuevo en vez de Account | Descartada: Account ya posee `terms_accepted`; separar la evidencia de consentimiento de la cuenta que consintió duplica ownership sin beneficio visible |
+| Esperar a que ADR-006 se acepte e implemente antes de decidir la orquestación de HU-43 | Descartada: ADR-006 no define el derecho al olvido en su alcance; esperar una decisión de mensajería ajena a este problema retrasaría HU-43 sin necesidad, cuando una orquestación síncrona con reintento ya es suficiente porque no hay condición de carrera que compensar |
+| Orquestación asíncrona con saga y compensación para HU-43, igual que el checkout | Descartada por ahora: el checkout necesita saga porque compite por un recurso escaso (unidades de inventario); la eliminación no compite por nada, así que la complejidad de una saga con compensación no se justifica todavía. Puede reconsiderarse si el volumen de solicitudes de eliminación lo exige |
 
 ## Evidencia y aceptación
 
 - [ ] Revisión del Tech Lead.
 - [ ] Confirmación de que la estrategia síncrona de agregación para HU-45 es
       aceptable para el volumen de datos esperado.
-- [ ] Decisión explícita sobre si HU-43 se acota a un solo bounded context
-      (Account) como primera entrega, mientras ADR-006 avanza.
+- [ ] Confirmación de que la orquestación síncrona con registro de progreso
+      (Decisión 5) es aceptable para HU-43, o revisión de una alternativa
+      basada en eventos si el Tech Lead prefiere no depender de reintento
+      manual.
+- [ ] Confirmación de si los criterios de aceptación reales de EN-011
+      (Management #197) exigen comportamiento runtime — ver
+      [en-011-closure-readiness.md](../privacy/en-011-closure-readiness.md).
 
 Este ADR permanece en `Proposed` hasta que exista esa revisión y quede
 registrada, siguiendo la misma regla que el resto de los ADR de este

@@ -27,8 +27,9 @@ Solicitud de eliminación
        |
        v
 Orquestación por bounded contexts
-  (mecanismo de transporte: PENDIENTE — depende de ADR-006,
-   ver "Bloqueo real" más abajo)
+  (síncrona, coordinada por Account, con registro de
+   progreso por contexto — ver "Estrategia de orquestación"
+   más abajo. NO depende de ADR-006)
        |
        v
 Por cada bounded context, según la matriz de tratamiento:
@@ -78,32 +79,41 @@ repositorio, y afirmar un número aquí sería inventar un requisito.
 
 Como documenta la matriz, "sanciones definitivas" y "auditoría
 administrativa" no tienen implementación ni owner de bounded context
-verificado en código al momento de este PR. HU-43 no puede aplicar estas
-excepciones sobre datos que no existen; su implementación real depende de
-que esas piezas se construyan primero, o de que el alcance de HU-43 se acote
-explícitamente a lo que sí existe (cuenta, inventario, comentarios,
-transacciones).
+verificado en código al momento de este PR. **Esto no bloquea HU-43 ni
+EN-011**: si esas categorías no existen físicamente en ningún servicio, HU-43
+simplemente no tiene hoy datos de ese tipo que eliminar — no hay nada que
+excepcionar todavía. La regla de retención (Política §10 PARÁGRAFO, §11)
+queda documentada en la [matriz](data-treatment-matrix-v0.3.md) para cuando
+ese bounded context se implemente: en ese momento deberá cumplirla desde el
+primer día, no añadirla después.
 
-## Bloqueo real: no existe orquestación entre bounded contexts
+## Estrategia de orquestación entre bounded contexts
 
-[ADR-006](../adr/ADR-006-messaging.md) sigue en estado `Proposed`. Verificado
-en [integration.md](../architecture/integration.md): *"Los servicios no se
-comunican entre sí todavía"*, y la saga de checkout (un caso más simple que
-la eliminación, porque involucra menos contextos) está explícitamente
-declarada como *"No implementado"*.
+**No existe hoy una decisión de cómo Account coordina la eliminación en
+Player/Inventory, Community y Commerce — esa es la pieza que falta, no un
+transporte de mensajería.** [ADR-006](../adr/ADR-006-messaging.md) sigue
+`Proposed`, pero su alcance cubre tres integraciones concretas
+(Account/Commerce → Notifications, Commerce → Catalog, Commerce →
+Player/Inventory en checkout) y **no define el derecho al olvido**. Que
+ADR-006 no esté aceptado no implica que HU-43 esté bloqueada.
 
-**HU-43 necesita coordinar como mínimo:** Account, Player/Inventory,
-Community, Commerce, y cualquier owner futuro de auditoría/sanciones. Ninguno
-de esos servicios tiene hoy un mecanismo de comunicación entre sí más allá de
-puertos con implementación local (`InMemoryMessageQueue`,
-`LocalCatalogPricing`, etc.).
+[ADR-014](../adr/ADR-014-privacy-data-governance.md) (Decisión 5) propone la
+estrategia concreta: **orquestación síncrona coordinada por Account, con
+registro de progreso por contexto**, sin necesitar el transporte asíncrono
+de ADR-006. Resumen:
 
-**Consecuencia para el alcance de HU-43:** su implementación real depende de
-que ADR-006 se acepte y se implemente el transporte (SQS es el candidato, ver
-ADR-006). Hasta entonces, HU-43 puede avanzar en: verificación de identidad,
-recepción de solicitud, confirmación, y la eliminación **dentro** de Account
-(un solo bounded context, sin coordinación). La eliminación **entre**
-contextos queda bloqueada por la misma razón que la saga de checkout.
+1. Account invoca el endpoint de eliminación de cada bounded context por su
+   API (mismo patrón síncrono que `Commerce -> Catalog` para precio).
+2. Cada contexto aplica su propia fila de la matriz de tratamiento y
+   responde éxito/fallo.
+3. Account registra el progreso por contexto y reintenta dentro del plazo de
+   30 días; emite la confirmación de cierre solo cuando todos confirman.
+
+Esto es posible porque, a diferencia del checkout, la eliminación no compite
+por ningún recurso escaso — no hay condición de carrera que una saga con
+compensación deba resolver. El detalle completo de esta decisión, incluidas
+las alternativas descartadas, está en
+[ADR-014](../adr/ADR-014-privacy-data-governance.md#5-estrategia-de-orquestación-para-el-derecho-al-olvido-hu-43-coordinación-síncrona-por-api-sin-esperar-a-adr-006).
 
 ## Verificación de identidad
 
@@ -114,12 +124,14 @@ No se introduce un mecanismo nuevo de verificación para HU-43.
 
 ## Qué NO define este documento
 
-- el orquestador o saga concreta (SQS, Step Functions, u otro) — depende de
-  ADR-006;
-- el endpoint HTTP de solicitud de eliminación;
+- el endpoint HTTP concreto de solicitud de eliminación, ni el de cada
+  bounded context;
+- el formato exacto del registro de progreso por contexto;
 - el mecanismo exacto de "confirmación de recepción" vs. "confirmación de
   cierre" (¿correo vía Notifications? ¿estado consultable en el portal?);
-- compensaciones si un bounded context falla a mitad de la eliminación.
+- qué ocurre si el plazo de 30 días se agota sin que todos los contextos
+  confirmen.
 
-Estas decisiones pertenecen a la implementación de HU-43, después de que
-ADR-006 desbloquee el transporte entre contextos.
+Estas decisiones pertenecen a la implementación de HU-43, sobre la
+estrategia de orquestación ya fijada en
+[ADR-014](../adr/ADR-014-privacy-data-governance.md).

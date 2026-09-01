@@ -74,23 +74,29 @@ comentarios de otros autores solo porque comparten hilo — debe filtrar por
 `author_id`/`customer_id`/equivalente igual al `subject` verificado del
 titular, en cada contexto que agregue.
 
-## Bloqueo real: agregación entre bounded contexts
+## No depende de ADR-006: agregación de solo lectura entre bounded contexts
 
-Igual que HU-43, HU-45 necesita reunir datos de **varios** bounded contexts
-(Account, Player/Inventory, Community, Commerce, y los pendientes de owner
-—héroes/estadísticas, auditoría—) para producir un solo reporte por titular.
-[ADR-006](../adr/ADR-006-messaging.md) sigue `Proposed`; no existe transporte
-entre servicios todavía ([integration.md](../architecture/integration.md)).
+HU-45 necesita reunir datos de **varios** bounded contexts (Account,
+Player/Inventory, Community, Commerce) para producir un solo reporte por
+titular, pero eso **no requiere el transporte asíncrono de
+[ADR-006](../adr/ADR-006-messaging.md)** (que sigue `Proposed` y no cubre
+este caso en su alcance). Es una operación de **lectura**: puede resolverse
+con llamadas síncronas de solo lectura desde un agregador hacia cada
+servicio, mismo patrón ya implementado y probado para
+`Commerce -> Catalog` (`ProductPricingPort.priceOf`, ver
+[integration.md](../architecture/integration.md)). El modelo de ownership
+actual ya establece esta forma de cruzar la frontera: un servicio que
+necesita algo de otro **pregunta por su API**, nunca entra directamente a su
+base ([data-ownership.md](../architecture/data-ownership.md)).
 
-A diferencia de HU-43 (que puede requerir consistencia transaccional para
-garantizar que un dato no sobrevive donde no debería), la agregación de
-lectura para exportar es más tolerante: **puede resolverse con llamadas
-síncronas de solo lectura** desde un agregador hacia cada servicio (patrón ya
-usado por `Commerce -> Catalog` para precio, ver
-[integration.md](../architecture/integration.md)), sin depender
-necesariamente de que ADR-006 (mensajería asíncrona) esté resuelto primero.
-Esa es una vía de desbloqueo distinta a la de HU-43 y debe evaluarse en el
-ADR correspondiente.
+**La condición real que falta para completar HU-45 al 100% es la
+disponibilidad de las fuentes de datos que exige la Política §9.**
+Inventory, Community y Commerce ya tienen ownership claro para inventario,
+comentarios y transacciones respectivamente. Estadísticas/progreso de
+héroes **no** tienen owner asignado en el mapa actual — ver la
+[matriz de tratamiento](data-treatment-matrix-v0.3.md). Es una dependencia
+de HU-45 sobre datos que todavía no existen, no un bloqueo de EN-011 ni de
+ADR-006.
 
 ## Qué NO define este documento
 
