@@ -121,3 +121,17 @@ variable "stable_public_ip" {
   type        = bool
   default     = false
 }
+
+/**
+ * Direccion remitente unica autorizada para enviar por SES desde este nodo.
+ *
+ * Acota la politica: SES compara este valor con el `From` de cada envio, asi
+ * que el permiso no alcanza a otras identidades verificadas de la cuenta. Debe
+ * pertenecer a un dominio o direccion ya verificada en SES, o el envio se
+ * rechaza con `MailFromDomainNotVerifiedException`.
+ */
+variable "ses_from_address" {
+  description = "Direccion From autorizada para el correo transaccional (debe estar verificada en SES)."
+  type        = string
+  default     = "no-reply@simuladorupbbga.app"
+}
