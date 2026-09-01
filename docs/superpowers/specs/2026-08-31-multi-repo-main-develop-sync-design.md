@@ -53,7 +53,7 @@ No se fusionará toda la historia divergente a ciegas. La auditoría demostró:
 - Por tanto, la diferencia funcional nueva de `develop` después del último punto equivalente es HU-05.4 en `338f6c1`.
 - `main` añade después HU-04 en `16e1299`, que debe conservarse.
 
-Se creará una rama de integración desde `main` y se aplicará únicamente el cambio de HU-05.4. Los 18 conflictos detectados se resolverán semánticamente: mantener el flujo de recuperación de HU-04 y combinarlo con Mi Cuenta de HU-05.4. Cada archivo conflictivo se contrastará con sus pruebas de ambas ramas; no se elegirá globalmente `ours` ni `theirs`.
+Se creará una rama de integración desde `main` y se aplicará únicamente el cambio de HU-05.4. Los 18 conflictos detectados pertenecen al merge histórico completo que se descartó; la simulación de tres vías del cambio único sobre HU-04 termina sin conflictos. Si una nueva prevalidación deja de aplicar limpiamente, se detendrá la ejecución para reauditar en lugar de elegir globalmente `ours` o `theirs`.
 
 La rama resultante deberá superar formato, lint, tipos, build, suite completa y construcción Docker antes del PR hacia `main`. Tras el merge y la publicación GHCR, se respaldará y reflejará `develop` al SHA final de `main`.
 
