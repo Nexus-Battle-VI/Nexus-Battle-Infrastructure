@@ -129,6 +129,50 @@ data "aws_iam_policy_document" "cognito_admin_auth" {
 
     resources = [var.cognito_user_pool_arn]
   }
+
+  /**
+   * Envio de correo transaccional por SES, firmado con el rol de instancia.
+   *
+   * POR QUE ESTO Y NO CREDENCIALES SMTP
+   *
+   * SES ofrece tambien un endpoint SMTP, y el adaptador existente habria
+   * servido apuntandolo alli. Ese camino exige un usuario de IAM con
+   * contrasena SMTP de larga vida: UN SECRETO MAS que guardar, rotar y no
+   * filtrar. Con el rol de instancia no existe ningun secreto que se pueda
+   * filtrar, y en este proyecto eso pesa: el estado de Terraform guarda
+   * `user_data` entero y sin cifrar.
+   *
+   * `SendEmail` basta para el correo transaccional del producto. NO se concede
+   * `SendRawEmail` -no se construyen mensajes MIME a mano- ni ninguna accion de
+   * gestion (`CreateEmailIdentity`, `DeleteEmailIdentity`, `PutAccountDetails`):
+   * las identidades y el acceso de produccion los gobierna quien opera la
+   * cuenta, no un contenedor.
+   *
+   * Aplica el mismo blocker de topologia que el bloque anterior: cualquier
+   * contenedor del nodo `app` puede invocarlo, no solo Notifications.
+   */
+  statement {
+    sid    = "NotificationsTransactionalEmail"
+    effect = "Allow"
+
+    actions = ["ses:SendEmail"]
+
+    # Cualquier identidad de la cuenta en esta region. Acotarlo al ARN de una
+    # identidad concreta obligaria a reaplicar Terraform cada vez que cambie el
+    # remitente, y el permiso ya esta limitado a la accion minima.
+    resources = ["*"]
+
+    /**
+     * El remitente queda acotado AQUI, no por el recurso: SES compara esta
+     * condicion con la direccion `From`. Sin ella, cualquier contenedor del
+     * nodo podria enviar desde cualquier identidad verificada de la cuenta.
+     */
+    condition {
+      test     = "StringEquals"
+      variable = "ses:FromAddress"
+      values   = [var.ses_from_address]
+    }
+  }
 }
 
 resource "aws_iam_role_policy" "cognito_admin_auth" {
