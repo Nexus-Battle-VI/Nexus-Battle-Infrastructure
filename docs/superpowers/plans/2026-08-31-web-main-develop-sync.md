@@ -4,7 +4,7 @@
 
 **Goal:** Apply only Web HU-05.4 on top of the current HU-04 `main`, validate the combined application, publish its GHCR image, and mirror `develop` to the final `main` SHA.
 
-**Architecture:** The historical branch merge reports 18 artificial conflicts because Git cannot recognize prior squash-equivalent trees. Create an integration branch from `main` and cherry-pick the single unique HU-05.4 commit; an exact three-way simulation using its real parent completed without conflicts and preserves HU-04.
+**Architecture:** The historical branch merge reports 19 artificial conflicts because Git cannot recognize prior squash-equivalent trees. Create an integration branch from `main` and cherry-pick the single unique HU-05.4 commit; an exact three-way simulation using its real parent completed without conflicts and preserves HU-04.
 
 **Tech Stack:** React, TypeScript, Vite, Node.js 24.14.0, npm, Vitest, Docker, Git, GitHub Actions, PowerShell
 
@@ -81,7 +81,7 @@ npm run format:check
 npm run lint
 npm run typecheck
 npm run build
-npm test -- --runInBand
+npm test
 docker build --tag nexus-battle-web:hu05-main-validation .
 ```
 
@@ -103,7 +103,7 @@ Expected: remote integration branch created.
 - [ ] **Step 1: Create the PR**
 
 ```powershell
-gh pr create -R Nexus-Battle-VI/Nexus-Battle-Web --base main --head integration/hu-05-4-a-main --title "feat(web): integrar HU-05.4 en main sin perder HU-04" --body "## Resumen`n- Aplica únicamente HU-05.4 sobre el main que ya contiene HU-04.`n- Evita los 18 conflictos históricos demostrando equivalencia de los árboles previos.`n- Conserva recuperación de contraseña y añade Mi Cuenta responsive.`n`n## Validación`n- formato, lint, tipos, build y suite completa`n- construcción Docker local`n`nDespués del merge, develop se reflejará al SHA final de main."
+gh pr create -R Nexus-Battle-VI/Nexus-Battle-Web --base main --head integration/hu-05-4-a-main --title "feat(web): integrar HU-05.4 en main sin perder HU-04" --body "## Resumen`n- Aplica únicamente HU-05.4 sobre el main que ya contiene HU-04.`n- Evita los 19 conflictos históricos demostrando equivalencia de los árboles previos.`n- Conserva recuperación de contraseña y añade Mi Cuenta responsive.`n`n## Validación`n- formato, lint, tipos, build y suite completa`n- construcción Docker local`n`nDespués del merge, develop se reflejará al SHA final de main."
 ```
 
 Expected: a PR URL targeting `main`.
