@@ -21,6 +21,7 @@ end note
 
 package "DECIDIDO — ADR-015 (no desplegado)" #FFF8E1 {
   [CreateCanonicalProduct] as usecase
+  cloud "Asset de imagen\nownership por decidir en #283" as image
   database "MongoDB 8\nreplica set de 1 miembro" as replica
   collections "products\nversión optimista" as products
   collections "audit_log\ninsert-only" as audit
@@ -28,6 +29,7 @@ package "DECIDIDO — ADR-015 (no desplegado)" #FFF8E1 {
   [Dispatcher futuro] as dispatcher
   queue "Transporte por decidir\nen EN-027.4" as transport
 
+  usecase ..> image : coordinación externa\nfuera de la transacción
   usecase --> replica : begin transaction
   replica --> products : insert/update
   replica --> audit : insert
@@ -37,6 +39,12 @@ package "DECIDIDO — ADR-015 (no desplegado)" #FFF8E1 {
   dispatcher --> outbox : claim atómico
   dispatcher ..> transport : at-least-once
 }
+
+note right of image
+  ADR-015 no garantiza atomicidad
+  con el almacenamiento externo.
+  #283 define orden y compensación.
+end note
 
 note bottom of replica
   Un miembro habilita transacciones,
