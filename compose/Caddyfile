@@ -24,6 +24,16 @@
 		reverse_proxy catalog:3003
 	}
 
+	# Contrato canonico de Catalog (ADR-013, HU-33). Es una ruta DISTINTA de
+	# `/api/products*`, no un prefijo suyo, asi que sin esta entrada caia en el
+	# comodin de mas abajo y la respondia Web: el navegador recibia el
+	# `index.html` de la aplicacion con estado 200 en lugar del producto, que
+	# es el peor sintoma posible -no parece un error de enrutado, parece que el
+	# servicio devuelve basura-.
+	handle /api/v1/catalog* {
+		reverse_proxy catalog:3003
+	}
+
 	handle /api/threads* {
 		reverse_proxy community:3004
 	}
