@@ -85,6 +85,12 @@ services:
       AUTHENTICATION_DRIVER: ${AUTHENTICATION_DRIVER:-fake}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Con esta variable definida, Account cambia `LoggingNotificationRequester`
+      # por `HttpNotificationRequester`. Sin ella la solicitud se registra y se
+      # descarta, que es lo que impedia que el codigo de HU-04 saliera nunca del
+      # servicio. Nombre de servicio de compose, red interna, sin TLS: no sale
+      # del nodo.
+      NOTIFICATIONS_INGEST_URL: http://notifications:3002/notifications
     # El avatar es obligatorio en el registro (HU-01), asi que sin un lugar
     # donde escribirlo NINGUNA cuenta puede crearse: el caso de uso guarda el
     # avatar antes que nada y respondia 500. La imagen ya trae el directorio
@@ -179,17 +185,48 @@ services:
     mem_limit: 128m
     pids_limit: 128
     environment:
-      NODE_ENV: development
+      # `production` NO es cosmetico aqui, es un cierre de seguridad.
+      #
+      # El servidor de sondas inyecta `POST /dev/enqueue` UNICAMENTE cuando
+      # NODE_ENV es `development`, y ese endpoint no valida el cuerpo ni pide
+      # credencial: publica en la cola lo que reciba. Con `development` estuvo
+      # activo en produccion — comprobado inyectando un mensaje que se entrego.
+      # Era inofensivo mientras el correo moria en Mailpit dentro del nodo; con
+      # SES pasaria a permitir enviar correo firmado como el dominio verificado
+      # a quien alcance la red interna. Por eso se cierra EN EL MISMO cambio que
+      # activa SES, nunca despues.
+      NODE_ENV: production
       HEALTH_PORT: 3001
       LOG_LEVEL: info
-      EMAIL_DRIVER: smtp
-      SMTP_HOST: mailpit
-      SMTP_PORT: 1025
-      EMAIL_FROM: no-reply@nexus-battles.local
+      # Ingesta HTTP del tramo Account -> Notifications (ADR-006).
+      #
+      # El puerto NO se publica al anfitrion: solo lo alcanza la red interna de
+      # compose, que es desde donde llama Account. Sin esto, Account elegia
+      # `LoggingNotificationRequester` y el codigo de recuperacion de HU-04
+      # moria en su log.
+      INGEST_ENABLED: 'true'
+      INGEST_PORT: 3002
+      EMAIL_DRIVER: ses
+      # OBLIGATORIO con `ses`: sin region, `loadConfig` lanza y el worker NO
+      # arranca. Es intencionado —un worker mal configurado no debe aparentar
+      # salud— pero deja el contenedor caido si se olvida.
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      # Debe coincidir EXACTAMENTE con `ses_from_address` de la politica IAM del
+      # nodo: la condicion `ses:FromAddress` compara la direccion literal, y si
+      # no coincide IAM deniega. Ademas debe estar verificada en SES, o el envio
+      # falla con MailFromDomainNotVerifiedException, que el adaptador clasifica
+      # —con razon— como NO reintentable: el correo se pierde sin reintento.
+      EMAIL_FROM: no-reply@simuladorupbbga.app
       # El adaptador SQS depende de ADR-006.
       QUEUE_DRIVER: memory
-    depends_on:
-      - mailpit
+    # Ya no depende de Mailpit: el envio sale por la API de SES. Mailpit se
+    # mantiene en el compose a proposito, para que revertir a
+    # `EMAIL_DRIVER: smtp` sea un cambio de una linea si SES da problemas.
+    #
+    # SANDBOX DE SES: mientras la cuenta no tenga acceso de produccion, solo se
+    # entrega a direcciones VERIFICADAS. A cualquier otra, SES responde
+    # MessageRejected y el correo se descarta sin reintento. Probar HU-04 con
+    # una direccion verificada.
     restart: unless-stopped
 
   # ---------------------------------------------------------------------
