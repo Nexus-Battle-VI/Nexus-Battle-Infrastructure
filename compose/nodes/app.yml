@@ -91,6 +91,11 @@ services:
       # servicio. Nombre de servicio de compose, red interna, sin TLS: no sale
       # del nodo.
       NOTIFICATIONS_INGEST_URL: http://notifications:3002/notifications
+      # Contrato interno de evidencia de segundo factor. Vacio NO deja la ruta
+      # abierta: el guard interno responde 503 en lugar de dejar pasar, para que
+      # un despliegue incompleto no se convierta en un endpoint sin proteger.
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog
     # El avatar es obligatorio en el registro (HU-01), asi que sin un lugar
     # donde escribirlo NINGUNA cuenta puede crearse: el caso de uso guarda el
     # avatar antes que nada y respondia 500. La imagen ya trae el directorio
@@ -139,6 +144,15 @@ services:
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Catalog consulta a Account si el testimonio presentado acredita segundo
+      # factor antes de permitir una mutacion administrativa. Nombre de servicio
+      # de compose, red interna: no sale del nodo.
+      #
+      # Sin secreto, las mutaciones administrativas fallan CERRADAS con 503. No
+      # quedan abiertas: es justo lo que este contrato viene a impedir.
+      ACCOUNT_INTERNAL_URL: http://account:3000
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      INTERNAL_SERVICE_NAME: catalog
     depends_on:
       catalog-migrate:
         condition: service_completed_successfully

@@ -49,6 +49,32 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "internal_service_auth_secret" {
+  description = <<-DESC
+    Secreto compartido del contrato interno entre servicios.
+
+    Lo usan Account y Catalog para firmar y verificar las consultas de evidencia
+    de segundo factor con HMAC-SHA256. Ambos deben recibir EL MISMO valor: si
+    difieren, Catalog no podra comprobar la evidencia y las mutaciones
+    administrativas fallaran CERRADAS con 503, que es el comportamiento correcto
+    pero deja el catalogo inadministrable.
+
+    Vacio por defecto, igual que `db_password`. Con el vacio, el contrato interno
+    de Account responde 503 y Catalog rechaza las mutaciones administrativas: un
+    despliegue incompleto NO deja el endpoint interno abierto.
+
+    PENDIENTE OPERACIONAL, y conviene no perderlo de vista: este valor sigue el
+    mismo camino que `db_password` -entra en `user_data`, que el estado de
+    Terraform guarda entero y sin cifrar-. Es la limitacion ya aceptada para la
+    contrasena de las bases, no una nueva, pero aqui vuelve a aplicar. Un origen
+    de credenciales en tiempo de ejecucion la resolveria para las dos; mientras
+    no exista, este secreto hereda esa exposicion.
+  DESC
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "arrancar_stack" {
   description = "Si el arranque de cada nodo termina levantando su composicion."
   type        = bool
