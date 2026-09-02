@@ -131,6 +131,45 @@ data "aws_iam_policy_document" "cognito_admin_auth" {
   }
 
   /**
+   * Restablecimiento de contrasena de HU-04 (`AdminSetUserPassword`).
+   *
+   * Sin este permiso el paso 4 de la recuperacion falla SIEMPRE. Se comprobo en
+   * produccion el 2026-09-02: el correo llegaba, el codigo se validaba, y al
+   * fijar la contrasena nueva la respuesta era 503. La simulacion de politica lo
+   * confirmo -`implicitDeny`- mientras `AdminInitiateAuth` y `AdminGetUser`
+   * salian `allowed`, que es lo que descarta un problema general del rol.
+   *
+   * VA EN SENTENCIA APARTE, y no dentro de `AccountRoleReflection`, porque no
+   * tiene nada que ver con reflejar roles: pertenece al flujo de recuperacion.
+   * Mezclarlas haria que el comentario de aquella dejara de describir lo que
+   * concede.
+   *
+   * ES LA ACCION MAS PODEROSA QUE SE CONCEDE A ESTE ROL. Fija la contrasena de
+   * cualquier identidad del pool con `Permanent: true`, asi que quien pueda
+   * invocarla puede tomar cualquier cuenta, incluidas las administrativas. Se
+   * concede porque HU-04 no se puede implementar sin ella -el flujo lo dirige
+   * el servidor tras validar preguntas y codigo, no la pantalla del proveedor-,
+   * y se acota al ARN de este unico pool.
+   *
+   * El blocker de topologia ya descrito aplica y aqui pesa mas que en el resto:
+   * CUALQUIER contenedor del nodo `app` obtiene estas credenciales, no solo
+   * Account. Es una limitacion aceptada de ADR-011, no un descuido, pero
+   * conviene releerla si algun dia se anade al nodo un contenedor de terceros.
+   *
+   * NO se concede `AdminSetUserMFAPreference`: la inscripcion del segundo
+   * factor la hace la propia persona con su testimonio, y poder cambiarla desde
+   * el servidor permitiria retirarle el factor a una cuenta administrativa.
+   */
+  statement {
+    sid    = "AccountPasswordRecovery"
+    effect = "Allow"
+
+    actions = ["cognito-idp:AdminSetUserPassword"]
+
+    resources = [var.cognito_user_pool_arn]
+  }
+
+  /**
    * Envio de correo transaccional por SES, firmado con el rol de instancia.
    *
    * POR QUE ESTO Y NO CREDENCIALES SMTP
