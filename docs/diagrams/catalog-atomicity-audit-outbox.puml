@@ -19,7 +19,7 @@ note right of mongo_now
   multidocumento.
 end note
 
-package "PROPUESTO — ADR-015 (no desplegado)" #FFF8E1 {
+package "DECIDIDO — ADR-015 (no desplegado)" #FFF8E1 {
   [CreateCanonicalProduct] as usecase
   database "MongoDB 8\nreplica set de 1 miembro" as replica
   collections "products\nversión optimista" as products
