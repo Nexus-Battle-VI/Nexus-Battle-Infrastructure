@@ -1,7 +1,8 @@
 # ADR-015 — Atomicidad de Producto, auditoría y outbox en MongoDB
 
-- **Estado:** **Proposed** — requiere aceptación del Tech Lead en Management #282
+- **Estado:** **Accepted** — aprobación del Tech Lead comunicada al equipo y registrada en [Management #282](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/282#issuecomment-5515270934)
 - **Fecha:** 2026-09-02
+- **Fecha de aceptación:** 2026-09-02
 - **Decide:** Arquitectura
 - **Relacionado:** [HU-33](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/41), [EN-027](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/280), [EN-027.2](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/282), [ADR-005](ADR-005-data-strategy.md), [ADR-006](ADR-006-messaging.md), [ADR-007](ADR-007-aws-cost-optimized-platform.md), [ADR-011](ADR-011-deployment-topology.md), [ADR-013](ADR-013-canonical-product-contract.md)
 
@@ -35,7 +36,7 @@ productiva dentro de EN-027.2.
 - rollback sin pérdida deliberada de datos;
 - no compartir la base privada de Catalog con otro servicio.
 
-## Decisión propuesta
+## Decisión
 
 ### 1. Replica set de un miembro para la demo
 
@@ -100,7 +101,7 @@ entrega será at-least-once y los consumidores deberán ser idempotentes. Un fal
 después de enviar y antes de marcar `DISPATCHED` puede producir una repetición y
 no se presentará como exactly-once.
 
-Estados mínimos propuestos: `PENDING | IN_FLIGHT | DISPATCHED | DEAD`. Los
+Estados mínimos del almacenamiento: `PENDING | IN_FLIGHT | DISPATCHED | DEAD`. Los
 eventos `PENDING`, `IN_FLIGHT` vencidos y `DEAD` no tienen TTL. Los entregados
 podrán purgarse después de 30 días mediante `purgeAt`, una vez que #284 apruebe
 la ventana operativa. El evento funcional permanece trazable en `audit_log`.
@@ -211,16 +212,15 @@ como estimación de producción.
 El flujo propuesto y el estado actual están separados visualmente en
 [`catalog-atomicity-audit-outbox.puml`](../diagrams/catalog-atomicity-audit-outbox.puml).
 
-## Condiciones para pasar a Accepted
+## Evidencia de aceptación y trabajo posterior
 
-- aprobación registrada del Tech Lead en Management #282;
-- PoC reproducida en CI y en el motor local;
-- aceptación explícita de la limitación de un solo miembro;
-- confirmación del límite de oplog y la estrategia de keyfile;
-- aceptación de la retención propuesta o sustitución por plazos aprobados;
-- creación de Tasks separadas para configuración del replica set, escritura
-  transaccional, auditoría y outbox;
-- ningún `terraform apply` ni cambio productivo como parte de este ADR.
+- [x] Aprobación del Tech Lead registrada en [Management #282](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/282#issuecomment-5515270934).
+- [x] PoC reproducida en CI #149 y en el motor local.
+- [x] Aceptada explícitamente la limitación de un solo miembro.
+- [x] Aprobados el oplog de 128 MiB, la estrategia de keyfile y los gates operativos.
+- [x] Aprobadas la auditoría sin TTL y la retención de 30 días para outbox entregado.
+- [x] Creadas las Tasks posteriores: [EN-027.5 #289](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/289), [EN-027.6 #290](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/290), [EN-027.7 #291](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/291) y [EN-027.8 #292](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/292).
+- [x] EN-027.2 no ejecutó `terraform apply` ni modificó infraestructura productiva.
 
 ## Consecuencias
 
