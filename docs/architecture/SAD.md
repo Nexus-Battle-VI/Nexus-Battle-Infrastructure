@@ -132,6 +132,12 @@ gestiona `MODERATOR` y `ADMINISTRATOR`. La elevación administrativa exige TOTP
 confirmado. Ver [ADR-004](../adr/ADR-004-identity-directory.md) y
 [el diseño de HU-39](hu-39-role-management.md).
 
+**Privacidad y tratamiento de datos:** el gobierno documental de EN-011 —
+política versionada, matriz de tratamiento, contrato de portabilidad,
+consentimiento y diseño de alto nivel de HU-43/HU-45 — vive en
+[docs/privacy](../privacy/) y [ADR-014](../adr/ADR-014-privacy-data-governance.md)
+(`Proposed`). Sin implementación runtime todavía.
+
 ## 12. Observabilidad
 
 Ver [observability.md](observability.md) y [ADR-009](../adr/ADR-009-observability.md).
@@ -197,3 +203,4 @@ Se dejan tachadas en lugar de borrarlas: quien haya leído una versión anterior
 | [011](../adr/ADR-011-deployment-topology.md) | Topología de despliegue | Accepted |
 | [012](../adr/ADR-012-orm-odm.md) | Selección de ORM y ODM | Accepted |
 | [013](../adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Proposed |
+| [014](../adr/ADR-014-privacy-data-governance.md) | Gobierno de privacidad y tratamiento de datos | Proposed |

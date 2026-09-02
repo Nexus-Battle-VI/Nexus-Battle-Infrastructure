@@ -108,6 +108,18 @@ Cada contenedor declara ahora `mem_limit` y `pids_limit`. El efecto es concreto:
 
 Suma de techos: 1 712 MiB, más unos 300 MiB de sistema y Docker. **No cabe en una instancia de 2 GiB** con margen razonable, y es el argumento técnico para dimensionar la instancia, por encima de cualquier preferencia.
 
+## Circulación autorizada para privacidad (EN-011)
+
+La [matriz de tratamiento de datos](../privacy/data-treatment-matrix-v0.3.md)
+extiende esta tabla con la dimensión de privacidad: finalidad declarada,
+consultabilidad, exportabilidad y eliminabilidad por categoría de dato,
+respetando la misma regla de esta página — ningún bounded context expone su
+almacén directamente a otro. HU-43 (eliminación) y HU-45 (portabilidad)
+**coordinan servicios por su API**, igual que ya lo hace
+`Commerce -> Catalog` para el precio; no se introduce una base de datos que
+centralice información personal de varios contextos. Ver
+[ADR-014](../adr/ADR-014-privacy-data-governance.md) (`Proposed`).
+
 ## Lo que falta
 
 La elección de ORM u ODM queda **deliberadamente abierta** ([ADR-005](../adr/ADR-005-data-strategy.md)). De ella dependen el esquema, las migraciones y los índices.
