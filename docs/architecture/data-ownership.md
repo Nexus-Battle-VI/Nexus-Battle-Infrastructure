@@ -34,6 +34,23 @@ Cuando se adopte el contrato:
 - ningún consumidor almacenará el documento de Product ni accederá a MongoDB
   de Catalog.
 
+### Recursos visuales de Producto — propuesta EN-027.3
+
+[ADR-016](../adr/ADR-016-product-asset-storage.md) (`Proposed`) asigna a
+**Catalog** la semántica y el ciclo de vida del asset: intención, validación,
+asociación, referencia estable, reemplazo, conservación y autorización.
+Infrastructure operaría un bucket S3 privado y sus controles, pero no decidiría
+reglas de Producto. Web transferiría y mostraría; Player/Inventory conservaría
+`productId`, no una copia del binario ni una URL S3 firmada.
+
+Catalog persistiría `assetId` y una clave opaca en su propio almacén. El objeto
+binario residiría en S3 mediante un puerto del contexto; ningún consumidor
+accedería al bucket como fuente de datos de Producto. Una `imageUrl` canónica
+sería estable y resolvería temporalmente el contenido sin persistir firmas.
+
+Esta asignación todavía no describe una capacidad desplegada. Depende de la
+aceptación de ADR-016 y de Tasks posteriores de IaC y Catalog.
+
 ## Cómo se cruza la frontera
 
 Las referencias externas son **identificadores opacos**. Un servicio que necesita más que el identificador **pregunta por la API**:
