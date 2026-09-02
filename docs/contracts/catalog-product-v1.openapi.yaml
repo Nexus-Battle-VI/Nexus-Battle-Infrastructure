@@ -41,7 +41,9 @@ paths:
       summary: Crea y deja disponible un producto canónico
       description: |
         Requiere testimonio JWT vigente, rol ADMINISTRATOR o
-        SUPER_ADMINISTRATOR y segundo factor administrativo verificado.
+        SUPER_ADMINISTRATOR y TOTP mediante aplicación autenticadora. Catalog
+        comprueba en Account la evidencia ligada a subject + jti +
+        method=AUTHENTICATOR_APP antes de ejecutar cualquier escritura.
         productId, lifecycleStatus y printRunMode son calculados por Catalog.
       security:
         - bearerAuth: []
@@ -122,6 +124,8 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
 components:
   securitySchemes:
@@ -1087,7 +1091,7 @@ components:
             error: Unauthorized
             code: AUTH_TOKEN_INVALID
     Forbidden:
-      description: Rol no autorizado o segundo factor administrativo ausente
+      description: Rol no autorizado o evidencia AUTHENTICATOR_APP ausente, vencida o de otro método
       content:
         application/json:
           schema:
@@ -1119,3 +1123,14 @@ components:
             message: El tiraje debe ser un entero positivo o -1 para tiraje infinito.
             error: Unprocessable Entity
             code: CATALOG_PRINT_RUN_INVALID
+    ServiceUnavailable:
+      description: No fue posible comprobar la evidencia MFA con Account; la operación no se ejecutó
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 503
+            message: No se pudo comprobar el segundo factor en este momento.
+            error: Service Unavailable
+            code: MFA_EVIDENCE_UNAVAILABLE

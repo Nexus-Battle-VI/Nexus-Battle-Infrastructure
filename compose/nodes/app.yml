@@ -153,6 +153,7 @@ services:
       ACCOUNT_INTERNAL_URL: http://account:3000
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
       INTERNAL_SERVICE_NAME: catalog
+      INTERNAL_TIMEOUT_MS: ${INTERNAL_TIMEOUT_MS:-2000}
     depends_on:
       catalog-migrate:
         condition: service_completed_successfully

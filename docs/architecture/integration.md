@@ -9,6 +9,7 @@ Una integración es **síncrona** cuando quien llama no puede continuar sin la r
 | Integración | Modo | Estado |
 | --- | --- | --- |
 | Commerce → Catalog (precio) | Síncrono | Puerto definido, adaptador con catálogo local |
+| Catalog → Account (evidencia MFA) | Síncrono interno | Account integrado; promoción de Catalog en PR #27 y cierre funcional en Management #136 |
 | Account → Notifications | Asíncrono | Puerto definido, adaptador de registro |
 | Commerce → Notifications | Asíncrono | Pendiente |
 | Commerce → Player/Inventory (reserva) | Asíncrono con saga | **No implementado** |
@@ -16,6 +17,10 @@ Una integración es **síncrona** cuando quien llama no puede continuar sin la r
 El razonamiento en cada caso:
 
 - **Precio**: no se puede añadir una línea sin conocer el importe. Esperar es la única opción correcta.
+- **Evidencia MFA**: una mutación administrativa no puede continuar si Account
+  no confirma evidencia vigente para `subject + jti + method`. La ausencia o un
+  método diferente responde `403`; la imposibilidad técnica de comprobarla
+  responde `503`. En ambos casos se niega antes de escribir.
 - **Notificación**: una cuenta creada es válida aunque el correo de bienvenida tarde. Bloquear el registro por un correo sería peor que retrasar el correo.
 - **Reserva**: es un proceso de larga duración sin transacción común entre servicios.
 

@@ -5,6 +5,10 @@
 account_id  = "000000000000"
 alert_email = "alertas@ejemplo.invalid"
 
+# Se define en el terraform.tfvars real, que esta ignorado por Git. Debe ser el
+# mismo valor para Account y Catalog. Vacio mantiene el contrato fail-closed.
+internal_service_auth_secret = ""
+
 # Topologia T2 (ADR-011): plano sin estado separado del plano con estado.
 #
 # El criterio no es cuantos microservicios hay, sino que componentes tienen
