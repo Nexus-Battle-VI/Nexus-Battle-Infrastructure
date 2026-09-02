@@ -1,0 +1,103 @@
+@startuml
+title EN-027.3 — Carga, creación, lectura y reemplazo de imagen
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+actor "Administrador" as admin
+participant "Web" as web
+participant "Catalog API" as catalog
+database "S3 privado\nstaging/ + assets/" as s3
+database "MongoDB Catalog\nproducts + audit_log + outbox" as mongo
+participant "Reconciliador\nCatalog" as reconcile
+actor "Jugador" as player
+
+== Carga previa ==
+
+admin -> web : selecciona imagen
+web -> catalog : POST /admin/product-assets/uploads\nJWT + TOTP + metadata + SHA-256
+catalog -> catalog : valida rol, TOTP y política
+catalog --> web : assetId + PUT firmado (<= 10 min)
+web -> s3 : PUT staging/{assetId}\nlongitud + MIME + checksum firmados
+
+alt carga S3 falla
+  s3 --> web : error
+  note over catalog,mongo
+    No inicia la creación.
+    No existe Producto parcial.
+  end note
+else carga completada
+  web -> catalog : POST /product-assets/{assetId}/finalization
+  catalog -> s3 : HEAD/GET staging
+  s3 --> catalog : bytes + metadata
+  catalog -> catalog : checksum + magic bytes + decode\ndimensiones + limpieza de metadata
+  catalog -> s3 : promueve a assets/{assetId}/{sha256}
+  s3 --> catalog : objeto final existente
+  catalog --> web : READY + imageUrl canónica
+end
+
+== Creación canónica ==
+
+web -> catalog : POST /api/v1/catalog/products\nimageUrl canónica
+catalog -> s3 : HEAD objeto final
+
+alt referencia inválida o S3 falla
+  catalog --> web : 422/503
+  note over catalog,mongo
+    No abre la transacción MongoDB.
+  end note
+else asset listo
+  catalog -> mongo : begin transaction
+  catalog -> mongo : product + audit_log + outbox
+  alt falla persistencia interna
+    mongo --> catalog : abort total
+    catalog -> s3 : delete best effort del asset huérfano
+    catalog --> web : error; Producto no creado
+  else commit 3/3
+    mongo --> catalog : commit
+    catalog --> web : 201 Product
+  end
+end
+
+note over s3,mongo
+  No existe transacción distribuida S3 + MongoDB.
+  ADR-015 cubre solo MongoDB.
+  #283 usa precondición y compensación.
+end note
+
+== Reconciliación ==
+
+reconcile -> s3 : lista finales con antigüedad > 24 h
+reconcile -> mongo : consulta referencias vigentes e históricas
+reconcile -> s3 : elimina únicamente no referenciados
+note right of reconcile
+  staging/ expira por lifecycle
+  aunque Catalog no se ejecute.
+end note
+
+== Lectura ==
+
+player -> web : abre catálogo/inventario
+web -> catalog : GET imageUrl canónica
+catalog --> web : 307 hacia GET firmado (<= 5 min)
+web -> s3 : GET firmado
+s3 --> web : imagen
+
+== Reemplazo ==
+
+admin -> web : carga y finaliza asset nuevo
+web -> catalog : solicita reemplazo con asset READY
+catalog -> s3 : confirma objeto nuevo
+catalog -> mongo : transaction update + audit + outbox
+alt falla transacción
+  mongo --> catalog : abort; referencia anterior intacta
+  catalog -> s3 : compensación del asset nuevo
+else commit
+  mongo --> catalog : referencia nueva vigente
+  note over catalog,s3
+    El asset anterior se conserva mientras
+    Producto o HU-37 lo referencien.
+  end note
+end
+
+@enduml
