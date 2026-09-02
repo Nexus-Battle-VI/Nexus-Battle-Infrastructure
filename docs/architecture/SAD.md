@@ -204,3 +204,4 @@ Se dejan tachadas en lugar de borrarlas: quien haya leído una versión anterior
 | [012](../adr/ADR-012-orm-odm.md) | Selección de ORM y ODM | Accepted |
 | [013](../adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Proposed |
 | [014](../adr/ADR-014-privacy-data-governance.md) | Gobierno de privacidad y tratamiento de datos | Proposed |
+| [015](../adr/ADR-015-catalog-atomicity-audit-outbox.md) | Atomicidad de Producto, auditoría y outbox | Proposed |

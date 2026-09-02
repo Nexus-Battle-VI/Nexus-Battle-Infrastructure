@@ -51,14 +51,16 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [012](docs/adr/ADR-012-orm-odm.md) | Selección de ORM y ODM | Accepted |
 | [013](docs/adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Accepted |
 | [014](docs/adr/ADR-014-privacy-data-governance.md) | Gobierno de privacidad y tratamiento de datos | Proposed |
+| [015](docs/adr/ADR-015-catalog-atomicity-audit-outbox.md) | Atomicidad de Producto, auditoría y outbox | Proposed |
 
 El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 `Accepted` con evidencia de aprobación registrada.
 
 ### Diagramas
 
-Doce diagramas PlantUML en [docs/diagrams](docs/diagrams), incluidos los cuatro
-editables de HU-39 y el contrato canónico de Producto. Los de despliegue
+Los diagramas PlantUML están en [docs/diagrams](docs/diagrams), incluidos los cuatro
+editables de HU-39, el contrato canónico de Producto y la propuesta de atomicidad
+de auditoría/outbox. Los de despliegue
 **separan visualmente demo y objetivo** para que no se confundan; el de Producto
 distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 

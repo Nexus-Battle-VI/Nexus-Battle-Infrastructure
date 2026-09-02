@@ -1,0 +1,54 @@
+@startuml
+title EN-027.2 — Atomicidad de Producto, auditoría y outbox
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+package "EXISTE — main" #E8F5E9 {
+  [Catalog API] as catalog_now
+  database "MongoDB 8 standalone\n384 MiB" as mongo_now
+  collections "products\nun insert atómico" as products_now
+
+  catalog_now --> mongo_now : create
+  mongo_now --> products_now
+}
+
+note right of mongo_now
+  Sin replica set.
+  No admite transacciones
+  multidocumento.
+end note
+
+package "PROPUESTO — ADR-015 (no desplegado)" #FFF8E1 {
+  [CreateCanonicalProduct] as usecase
+  database "MongoDB 8\nreplica set de 1 miembro" as replica
+  collections "products\nversión optimista" as products
+  collections "audit_log\ninsert-only" as audit
+  collections "outbox\nPENDING / lease" as outbox
+  [Dispatcher futuro] as dispatcher
+  queue "Transporte por decidir\nen EN-027.4" as transport
+
+  usecase --> replica : begin transaction
+  replica --> products : insert/update
+  replica --> audit : insert
+  replica --> outbox : insert
+  usecase <-- replica : commit o abort total
+
+  dispatcher --> outbox : claim atómico
+  dispatcher ..> transport : at-least-once
+}
+
+note bottom of replica
+  Un miembro habilita transacciones,
+  pero NO agrega alta disponibilidad.
+  Keyfile, backup y prueba de carga
+  son gates de implementación.
+end note
+
+note bottom of transport
+  #284 decide SQS, AsyncAPI,
+  reintentos y DLQ.
+end note
+
+@enduml
+
