@@ -42,7 +42,7 @@ distribuida que S3 y MongoDB no ofrecen.
 | Responsabilidad | Owner |
 | --- | --- |
 | Semántica del asset, referencia estable, asociación con Producto, reemplazo, conservación y autorización | **Catalog** |
-| Validación de rol y evidencia TOTP para carga/finalización administrativa | **Catalog**, reutilizando Account |
+| Validación de rol y consulta de evidencia TOTP por `jti` para carga/finalización administrativa | **Catalog**, consumiendo el contrato interno de Account |
 | Bucket, cifrado, bloqueo público, lifecycle, IAM, presupuesto y alarmas | **Infrastructure** |
 | Transferir el archivo mediante contrato y mostrar la referencia | **Web**, sin reglas de negocio ni credenciales AWS |
 | Resolver Producto por `productId` | **Player / Inventory**; no copia binarios ni URL firmadas |
@@ -92,10 +92,11 @@ inventario.
 ### 4. Flujo de carga
 
 1. Un Administrador o Super Administrador con TOTP solicita una intención.
-2. Catalog genera `assetId`, clave única de `staging/` y una URL firmada de
-   escritura con vigencia máxima de diez minutos.
-3. El navegador carga directamente un único objeto con tamaño, tipo y checksum
-   firmados; no recibe credenciales AWS.
+2. Catalog genera `assetId`, una clave única de `staging/` y un formulario
+   `POST` firmado con vigencia máxima de diez minutos.
+3. El navegador carga directamente un único objeto mediante los campos firmados.
+   La política incluye `content-length-range`, tipo y checksum; el cliente no
+   elige la clave ni recibe credenciales AWS.
 4. Catalog finaliza la intención: comprueba existencia, longitud y SHA-256,
    inspecciona magic bytes, decodifica la imagen y valida dimensiones.
 5. Catalog elimina metadatos no necesarios y produce/promueve un objeto
@@ -105,9 +106,11 @@ inventario.
 7. `POST /api/v1/catalog/products` rechaza referencias externas, expiradas,
    inexistentes, no finalizadas o que no pertenezcan al contrato de assets.
 
-Las URLs firmadas son bearer tokens. Deben limitar método, bucket, clave,
-longitud, checksum, tipo de contenido y antigüedad de firma. No se registran
-completas en logs.
+El formulario y las URLs firmadas son bearer tokens temporales. Deben limitar
+método, bucket, clave, longitud, checksum, tipo de contenido y antigüedad de
+firma. El endpoint de S3 puede ser visible al navegador por tratarse de carga
+directa, pero no se exponen ARN, claves AWS ni credenciales permanentes. Firmas,
+políticas y URLs temporales no se registran completas en logs.
 
 ### 5. Atomicidad y compensación
 
@@ -173,7 +176,26 @@ documentada en ADR-011:
 Esto es mínimo privilegio a nivel de nodo, no aislamiento real por servicio. No
 se presenta de otra forma.
 
-### 9. Coste
+### 9. Threat model básico
+
+| Amenaza | Control exigido |
+| --- | --- |
+| Archivo disfrazado o contenido activo | Lista cerrada de MIME, magic bytes, decodificación real y rechazo de SVG/BMP |
+| Archivo excesivo o bomba de imagen | `content-length-range`, máximo 5 MiB, límites de dimensiones/píxeles y decodificación acotada |
+| Sustitución o corrupción en tránsito | HTTPS, checksum SHA-256 firmado y verificado antes de promover |
+| Escritura en otra clave o reutilización de autorización | Clave generada por Catalog, política POST exacta, expiración <= 10 min y una intención de un solo uso |
+| Acceso público accidental | Bucket privado, Block Public Access, ACL deshabilitadas y URL GET <= 5 min |
+| Elevación administrativa | JWT válido, rol administrativo y evidencia TOTP vigente consultada en Account por `jti` |
+| Fuga por logs | Redacción de firmas, políticas, URL temporal, JWT y cabeceras de autorización |
+| Objeto huérfano o borrado de una versión vigente | Lifecycle de staging, reconciliación conservadora y comprobación de referencias vigentes/históricas |
+| Abuso de costo o almacenamiento | cuotas, métricas, alarmas, límites por archivo y revisión mensual |
+| Acceso lateral desde otro contenedor del nodo | Permisos IAM acotados al bucket/prefijos; riesgo residual aceptado y workload identity como arquitectura objetivo |
+
+El contrato de evidencia TOTP no depende de un claim inexistente en Cognito: para
+cada mutación sensible Catalog consulta la evidencia vigente asociada al `jti`
+del access token según el contrato interno aprobado con Account.
+
+### 10. Coste
 
 La estimación detallada está en
 [product-assets-s3-estimate.md](../costs/product-assets-s3-estimate.md).
@@ -188,7 +210,7 @@ llevarían el total a **USD 1,11/mes**.
 No se asume capa gratuita de almacenamiento. El costo debe medirse y alertarse;
 la transferencia es la variable dominante.
 
-### 10. Observabilidad
+### 11. Observabilidad
 
 Métricas mínimas:
 
