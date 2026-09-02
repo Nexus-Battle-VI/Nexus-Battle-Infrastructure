@@ -87,6 +87,21 @@ Un error aborta la transacción completa. El caso de uso no publica directamente
 en SQS y una confirmación HTTP no espera a Notifications. El `eventId` se genera
 antes de persistir y es único tanto en auditoría como en outbox.
 
+#### Límite de atomicidad respecto de la imagen
+
+Esta transacción cubre exclusivamente la persistencia interna de Catalog en
+MongoDB: `products`, `audit_log` y `outbox`. El archivo de imagen no forma
+parte de la transacción y ADR-015 no afirma atomicidad distribuida con un
+almacenamiento externo.
+
+Antes de confirmar la creación, Catalog debe recibir una referencia de imagen
+válida producida por el flujo que apruebe EN-027.3 #283. Esa decisión definirá
+el orden de carga y creación, el estado temporal del asset y la limpieza o
+compensación necesaria si falla cualquiera de los dos lados. Hasta aceptar e
+implementar #283, la garantía extremo a extremo de HU-33 —que una carga fallida
+no deje un producto parcialmente creado— permanece bloqueada y no se considera
+resuelta por esta transacción.
+
 El `version` del producto empieza en cero y aumenta en cada mutación. Una
 escritura cuyo filtro `{ productId, version }` no encuentre documento se traduce
 en conflicto de concurrencia; no se reintenta ocultando una decisión de dominio.
@@ -221,6 +236,7 @@ El flujo propuesto y el estado actual están separados visualmente en
 - [x] Aprobadas la auditoría sin TTL y la retención de 30 días para outbox entregado.
 - [x] Creadas las Tasks posteriores: [EN-027.5 #289](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/289), [EN-027.6 #290](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/290), [EN-027.7 #291](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/291) y [EN-027.8 #292](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/292).
 - [x] EN-027.2 no ejecutó `terraform apply` ni modificó infraestructura productiva.
+- [x] Se aclaró que la imagen queda fuera de la transacción MongoDB y que su coordinación o compensación pertenece a EN-027.3 #283.
 
 ## Consecuencias
 
