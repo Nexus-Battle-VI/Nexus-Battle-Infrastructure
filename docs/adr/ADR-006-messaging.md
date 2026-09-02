@@ -3,7 +3,7 @@
 - **Estado:** Proposed
 - **Fecha:** 2026-08-21
 - **Decide:** Arquitectura
-- **Relacionado:** [ADR-001](ADR-001-repository-strategy.md), [ADR-007](ADR-007-aws-cost-optimized-platform.md)
+- **Relacionado:** [ADR-001](ADR-001-repository-strategy.md), [ADR-007](ADR-007-aws-cost-optimized-platform.md), [ADR-017](ADR-017-catalog-events-sqs.md)
 
 ## Contexto
 
@@ -39,6 +39,18 @@ Una integración es **síncrona** cuando quien llama **no puede continuar** sin 
 **EventBridge no es obligatorio en Sprint 1.** Aporta enrutado y filtrado que hoy no hacen falta: hay un solo consumidor. Notifications puede consumir SQS directamente.
 
 **Este ADR no adopta SQS todavía**, porque adoptarlo implica provisionar infraestructura AWS y eso requiere aprobación de costes ([ADR-007](ADR-007-aws-cost-optimized-platform.md)).
+
+### Adopción acotada propuesta para eventos de Producto
+
+[ADR-017](ADR-017-catalog-events-sqs.md) propone adoptar SQS Standard
+exclusivamente para `catalog.product.created` desde Catalog hacia
+Notifications. Mientras ADR-017 permanezca en `Proposed`, no existe cola ni
+adaptador productivo.
+
+Esta propuesta no adopta automáticamente SQS para Account, Commerce, la saga de
+checkout ni futuros consumidores. Cada consumidor adicional necesita una cola
+propia y una decisión de fan-out; conectar varios bounded contexts a la misma
+cola SQS haría que compitieran por el mensaje.
 
 ### Qué existe hoy
 
