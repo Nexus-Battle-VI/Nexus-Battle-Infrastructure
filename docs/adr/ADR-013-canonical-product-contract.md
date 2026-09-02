@@ -270,10 +270,19 @@ Reglas de protocolo:
 - `201`: producto creado y disponible;
 - `400`: JSON o forma básica inválida, incluidos campos no declarados;
 - `401`: testimonio ausente o inválido;
-- `403`: rol no autorizado o contexto administrativo sin segundo factor;
+- `403`: rol no autorizado o evidencia vigente de
+  `method=AUTHENTICATOR_APP` ausente, vencida o correspondiente a otro método;
 - `409`: alias SKU ocupado o nombre normalizado + tipo ya activo;
 - `422`: regla de negocio válida sintácticamente pero imposible, como tiraje
-  `-5` o configuración premium incoherente.
+  `-5` o configuración premium incoherente;
+- `503`: no fue posible comprobar la evidencia en Account por timeout,
+  indisponibilidad, configuración ausente, firma rechazada o respuesta
+  incompatible. La operación falla antes de persistir.
+
+Cognito no incorpora en el access token una afirmación que demuestre el método
+MFA completado. Account es la fuente de verdad de esa evidencia y Catalog la
+consulta mediante el contrato interno HMAC aprobado en Management #287. El
+frontend no declara el método ni envía una prueba alternativa.
 
 El OpenAPI mantenido aquí se compara con el documento generado por
 `@nestjs/swagger` durante la implementación. Mientras la ruta no exista en
@@ -382,7 +391,7 @@ No hay fase de backfill: la colección de productos desplegada está vacía.
 - [x] PO-ATTR-01 completada y #286 cerrada con subtipos, condiciones y operador V1.
 - [x] Aprobación del Product Owner registrada en #280 y #286.
 - [x] Aceptación final del Tech Lead registrada en [#281](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/281#issuecomment-5481069173).
-- [x] OpenAPI `1.0.0` válido con ejemplos de `201`, `403`, `409` y `422`.
+- [x] OpenAPI `1.0.0` válido con ejemplos de `201`, `403`, `409`, `422` y `503`.
 - [x] Revisión técnica de Catalog y Commerce registrada en Infrastructure PR #48.
 - [x] Diagrama de compatibilidad validado por CI.
 - [x] El contrato se declara aceptado para implementación y no se presenta como ruta desplegada.

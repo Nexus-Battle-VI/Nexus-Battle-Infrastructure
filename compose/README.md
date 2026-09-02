@@ -61,3 +61,22 @@ Para ejecutar con imagenes locales, se construyen antes en cada repositorio:
 ```bash
 docker build -t ghcr.io/nexus-battle-vi/nexus-battle-account:latest ../../Nexus-Battle-Account
 ```
+
+## Orden de despliegue del contrato interno MFA
+
+Las mutaciones administrativas de Catalog fallan cerradas cuando no pueden
+comprobar en Account una evidencia `AUTHENTICATOR_APP`. Por eso el orden es
+parte del contrato operativo:
+
+1. publicar primero imágenes compatibles de Account y Catalog;
+2. definir `internal_service_auth_secret` en el `terraform.tfvars` real con el
+   mismo valor para ambos servicios;
+3. revisar `terraform plan`, teniendo presente que el cambio de `user_data`
+   reemplaza el nodo de aplicaciones;
+4. ejecutar el `apply` únicamente en una ventana aprobada;
+5. comprobar `201`, `403` y `503` mediante el recorrido integrado.
+
+Este repositorio no incluye el valor del secreto. Si queda vacío o difiere,
+Account no abre el endpoint: responde `503`, y Catalog no ejecuta la escritura.
+Aplicar Infrastructure antes de publicar las imágenes compatibles puede dejar
+el catálogo temporalmente inadministrable, aunque nunca permisivo.
