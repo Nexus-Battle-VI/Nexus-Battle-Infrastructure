@@ -1,0 +1,174 @@
+asyncapi: 3.0.0
+info:
+  title: Nexus Battle Catalog Product Events
+  version: 1.0.0
+  description: >-
+    Contrato propuesto para la entrega at-least-once de
+    catalog.product.created desde Catalog hacia Notifications mediante una
+    cola SQS Standard. No representa infraestructura provisionada.
+defaultContentType: application/json
+servers:
+  awsSqsUsEast1:
+    host: sqs.us-east-1.amazonaws.com
+    protocol: https
+    description: >-
+      Endpoint regional de SQS. El acceso exige HTTPS, Signature Version 4 y
+      un rol IAM; no se usan credenciales estaticas.
+    x-aws-authentication: sigv4-instance-role
+channels:
+  catalogProductCreatedNotifications:
+    address: nexus-battle-{environment}-catalog-product-created-notifications
+    title: Eventos de Producto para Notifications
+    description: >-
+      Cola punto a punto propiedad operativa de Infrastructure. Catalog envia
+      y Notifications recibe. No debe conectarse otro bounded context como
+      consumidor competitivo.
+    servers:
+      - $ref: '#/servers/awsSqsUsEast1'
+    parameters:
+      environment:
+        $ref: '#/components/parameters/environment'
+    messages:
+      catalogProductCreatedV1:
+        $ref: '#/components/messages/catalogProductCreatedV1'
+    x-aws-sqs:
+      bindingVersion: 0.3.0
+      queue:
+        fifoQueue: false
+        receiveMessageWaitTime: 20
+        visibilityTimeout: 60
+        messageRetentionPeriod: 345600
+        maximumMessageSize: 65536
+        serverSideEncryption: SSE-SQS
+      deadLetterQueue:
+        name: nexus-battle-{environment}-catalog-product-created-notifications-dlq
+        messageRetentionPeriod: 1209600
+      redrivePolicy:
+        maxReceiveCount: 5
+operations:
+  sendCatalogProductCreated:
+    action: send
+    title: Publicar creación de Producto
+    summary: Catalog despacha el evento persistido en outbox.
+    channel:
+      $ref: '#/channels/catalogProductCreatedNotifications'
+    messages:
+      - $ref: '#/channels/catalogProductCreatedNotifications/messages/catalogProductCreatedV1'
+    x-owner: Catalog
+  receiveCatalogProductCreated:
+    action: receive
+    title: Consumir creación de Producto
+    summary: Notifications valida, deduplica y procesa el evento.
+    channel:
+      $ref: '#/channels/catalogProductCreatedNotifications'
+    messages:
+      - $ref: '#/channels/catalogProductCreatedNotifications/messages/catalogProductCreatedV1'
+    x-owner: Notifications
+components:
+  parameters:
+    environment:
+      description: Entorno de despliegue.
+      enum:
+        - dev
+        - test
+        - prod
+  messages:
+    catalogProductCreatedV1:
+      name: catalog.product.created
+      title: Producto creado V1
+      summary: Informa que Catalog confirmó un Producto canónico.
+      contentType: application/json
+      correlationId:
+        location: $message.payload#/correlationId
+      payload:
+        type: object
+        additionalProperties: false
+        required:
+          - eventId
+          - eventType
+          - eventVersion
+          - aggregateId
+          - occurredAt
+          - producer
+          - correlationId
+          - data
+        properties:
+          eventId:
+            type: string
+            format: uuid
+            description: Identidad estable de outbox e idempotencia.
+          eventType:
+            type: string
+            const: catalog.product.created
+          eventVersion:
+            type: integer
+            const: 1
+          aggregateId:
+            type: string
+            format: uuid
+            description: Igual al productId canónico.
+          occurredAt:
+            type: string
+            format: date-time
+            description: Instante UTC de creación, no de reintento.
+          producer:
+            type: string
+            const: catalog
+          correlationId:
+            type: string
+            minLength: 1
+            maxLength: 128
+          data:
+            $ref: '#/components/schemas/catalogProductCreatedDataV1'
+      examples:
+        - name: Espada de Fuego creada
+          summary: Ejemplo de ARMA activa.
+          payload:
+            eventId: 2b772782-8814-4c1c-b3ae-a1efca31826d
+            eventType: catalog.product.created
+            eventVersion: 1
+            aggregateId: f4b09d5f-a47d-43aa-98c0-dbe7a6bd35dd
+            occurredAt: '2026-09-02T20:30:00Z'
+            producer: catalog
+            correlationId: req-6d87cfc4
+            data:
+              productId: f4b09d5f-a47d-43aa-98c0-dbe7a6bd35dd
+              name: Espada de Fuego
+              type: ARMA
+              lifecycleStatus: ACTIVE
+              imageUrl: https://api.example.test/api/v1/catalog/product-assets/682a20f4-8375-4951-a345-842946d1de76/content
+  schemas:
+    catalogProductCreatedDataV1:
+      type: object
+      additionalProperties: false
+      required:
+        - productId
+        - name
+        - type
+        - lifecycleStatus
+        - imageUrl
+      properties:
+        productId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 3
+          maxLength: 80
+        type:
+          type: string
+          enum:
+            - HEROE
+            - HABILIDAD
+            - ARMA
+            - ARMADURA
+            - ITEM
+            - EPICA
+        lifecycleStatus:
+          type: string
+          const: ACTIVE
+          description: Todo Producto nace activo; UNIQUE pertenece a printRunMode.
+        imageUrl:
+          type: string
+          format: uri
+          description: Referencia canónica estable; nunca una URL S3 firmada.
