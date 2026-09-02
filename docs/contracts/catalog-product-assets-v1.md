@@ -5,7 +5,7 @@
 - **Consumidor de carga:** Web administrativo.
 - **Almacén:** S3 privado operado por Infrastructure.
 - **Autenticación:** JWT + rol `ADMINISTRATOR|SUPER_ADMINISTRATOR` + evidencia
-  TOTP de aplicación autenticadora para mutaciones.
+  TOTP vigente consultada en Account por el `jti` del access token.
 
 Este contrato complementa `catalog-product-v1.openapi.yaml`. No reemplaza
 `imageUrl`: define cómo se obtiene una referencia canónica antes de crear un
@@ -13,14 +13,17 @@ Producto.
 
 ## Invariantes
 
-- El cliente nunca envía `productId`, claves S3 ni credenciales AWS.
+- El cliente nunca elige `productId` ni la clave S3; reenvía únicamente los
+  campos opacos firmados por Catalog y nunca recibe credenciales AWS permanentes.
 - `assetId` es UUID generado por Catalog.
 - `imageUrl` es una URL estable del mismo origen; nunca es una URL S3 firmada.
 - Una intención solo sirve para una clave, tamaño, MIME y checksum.
 - Las URL firmadas vencen en diez minutos para escritura y cinco para lectura.
 - Las claves finales son inmutables y contienen un hash.
 - Una referencia externa o no finalizada se rechaza.
-- Ninguna respuesta expone bucket, ARN, firma o secreto permanente.
+- La respuesta temporal puede revelar el endpoint S3 requerido para la carga
+  directa; nunca expone ARN, claves AWS ni secretos permanentes. Política, firma
+  y credenciales temporales se tratan como secretos efímeros y no se registran.
 
 ## 1. Crear intención de carga
 
@@ -45,20 +48,28 @@ Respuesta `201 Created`:
 {
   "assetId": "f293ce6b-98e9-41da-99ef-0ad4e3a95120",
   "upload": {
-    "method": "PUT",
-    "url": "<presigned-url-redacted>",
-    "requiredHeaders": {
-      "content-type": "image/webp",
-      "content-length": "245760",
-      "x-amz-checksum-sha256": "ZHVtbXktc2hhMjU2LWVqZW1wbG8="
+    "method": "POST",
+    "url": "https://<bucket-endpoint-redacted>",
+    "fields": {
+      "key": "staging/f293ce6b-98e9-41da-99ef-0ad4e3a95120",
+      "Content-Type": "image/webp",
+      "x-amz-checksum-sha256": "ZHVtbXktc2hhMjU2LWVqZW1wbG8=",
+      "policy": "<redacted>",
+      "x-amz-algorithm": "AWS4-HMAC-SHA256",
+      "x-amz-credential": "<redacted>",
+      "x-amz-date": "20260902T200000Z",
+      "x-amz-signature": "<redacted>"
     },
     "expiresAt": "2026-09-02T20:10:00Z"
   }
 }
 ```
 
-La URL es un bearer token temporal. No debe registrarse ni enviarse a
-observabilidad.
+El formulario firmado es una autorización temporal. Su endpoint puede ser
+visible para permitir la carga directa, pero la política, firma y campos de
+autorización no deben registrarse ni enviarse a observabilidad. La política
+incluye `content-length-range` de 1 byte a 5 MiB y coincidencia exacta de clave,
+MIME y checksum.
 
 Respuestas:
 
@@ -72,17 +83,20 @@ Respuestas:
 
 ## 2. Cargar directamente
 
-```http
-PUT <presigned-url>
-Content-Type: image/webp
-Content-Length: 245760
-x-amz-checksum-sha256: ZHVtbXktc2hhMjU2LWVqZW1wbG8=
+El navegador construye un `multipart/form-data` contra `upload.url`, añade cada
+par de `upload.fields` sin alterarlo y agrega el archivo en el campo `file`.
+S3 rechaza una clave, MIME, checksum o tamaño fuera de la política firmada.
 
-<bytes>
+```text
+POST <upload.url>
+Content-Type: multipart/form-data
+
+<upload.fields>
+file=<bytes>
 ```
 
-El navegador no puede cambiar clave, tamaño, tipo ni checksum sin invalidar la
-firma. La carga no crea un Producto.
+El cliente no fija manualmente `Content-Length`: el navegador calcula el tamaño
+del formulario y S3 aplica `content-length-range`. La carga no crea un Producto.
 
 ## 3. Finalizar y validar
 
