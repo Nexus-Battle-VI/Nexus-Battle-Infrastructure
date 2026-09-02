@@ -15,10 +15,10 @@ actor "Jugador" as player
 == Carga previa ==
 
 admin -> web : selecciona imagen
-web -> catalog : POST /admin/product-assets/uploads\nJWT + TOTP + metadata + SHA-256
+web -> catalog : POST /admin/product-assets/uploads\nJWT + metadata + SHA-256\nCatalog consulta evidencia TOTP por jti
 catalog -> catalog : valida rol, TOTP y política
-catalog --> web : assetId + PUT firmado (<= 10 min)
-web -> s3 : PUT staging/{assetId}\nlongitud + MIME + checksum firmados
+catalog --> web : assetId + POST firmado (<= 10 min)
+web -> s3 : POST multipart a staging/{assetId}\npolicy de tamaño + MIME + checksum
 
 alt carga S3 falla
   s3 --> web : error
