@@ -64,16 +64,16 @@ El alta crea el inventario si no existe: un jugador sin inventario y un inventar
 
 `GET /api/products/:sku` responde `404` para un producto en borrador o archivado. **No es un fallo: es la regla de visibilidad del dominio.**
 
-#### Contrato objetivo HU-33 — `Proposed`
+#### Contrato objetivo HU-33 — `Accepted`
 
-[ADR-013](../adr/ADR-013-canonical-product-contract.md) propone la ruta
+[ADR-013](../adr/ADR-013-canonical-product-contract.md) acepta la ruta
 `POST /api/v1/catalog/products` con `productId` canónico y SKU como alias
 temporal. Su especificación está en
 [catalog-product-v1.openapi.yaml](catalog-product-v1.openapi.yaml).
 
 | Método | Ruta | Códigos | Estado |
 | --- | --- | --- | --- |
-| `POST` | `/api/v1/catalog/products` | `201`, `400`, `401`, `403`, `409`, `422` | **Proposed; no implementado** |
+| `POST` | `/api/v1/catalog/products` | `201`, `400`, `401`, `403`, `409`, `422`, `503` | **Accepted; implementación trazada en Management #136** |
 
 La ruta nueva no sustituye todavía `/api/products`. Durante la transición, la
 superficie heredada se conserva como adaptador hacia los mismos casos de uso
@@ -85,8 +85,8 @@ la imagen dependen de EN-027.3.
 [`PO-ATTR-01`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286)
 fue aprobada por el Product Owner el 30 de agosto de 2026: el OpenAPI define una
 unión cerrada y versionada para los seis tipos, rechaza propiedades desconocidas
-y exige que el discriminador de atributos coincida con `type`. La ruta continúa
-como **Proposed** hasta que ADR-013 sea aceptado y Catalog la implemente.
+y exige que el discriminador de atributos coincida con `type`. ADR-013 está
+aceptado; Catalog conserva la evidencia de implementación y despliegue en #136.
 
 ### Community — `/api/threads`
 
