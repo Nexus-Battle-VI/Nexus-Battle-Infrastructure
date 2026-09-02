@@ -3,7 +3,7 @@
 - **Estado:** **Accepted** el 2026-08-25 — cuenta designada y presupuesto aprobado. **Sigue sin provisionarse ningún recurso**
 - **Fecha:** 2026-08-21, aceptado el 2026-08-25
 - **Decide:** Arquitectura, con aprobación obligatoria de presupuesto
-- **Relacionado:** [ADR-004](ADR-004-identity-directory.md), [ADR-005](ADR-005-data-strategy.md), [ADR-006](ADR-006-messaging.md), [ADR-010](ADR-010-reverse-proxy.md)
+- **Relacionado:** [ADR-004](ADR-004-identity-directory.md), [ADR-005](ADR-005-data-strategy.md), [ADR-006](ADR-006-messaging.md), [ADR-010](ADR-010-reverse-proxy.md), [ADR-016](ADR-016-product-asset-storage.md)
 
 ## Contexto
 
@@ -55,8 +55,20 @@ Internet
 | ECS, Fargate, EKS | Coste y complejidad operativa desproporcionados para seis contenedores en una máquina |
 | ALB, NLB | Coste fijo por hora. Caddy en la propia instancia cumple el papel a coste cero |
 | NAT Gateway | Coste fijo elevado. La instancia va en subred pública con IP elástica |
-| S3, CloudFront | Los estáticos los sirve el propio Caddy. Añadir S3 supondría coste de transferencia sin beneficio a este volumen |
+| S3 + CloudFront para estáticos de Web | Los estáticos los sirve el propio Caddy. Migrarlos no aporta beneficio a este volumen |
 | Managed Microsoft AD | Ver [ADR-004](ADR-004-identity-directory.md) |
+
+### Enmienda propuesta y acotada para recursos dinámicos de Producto
+
+[ADR-016](ADR-016-product-asset-storage.md) propone permitir **un bucket S3
+Standard privado** para recursos visuales dinámicos administrados por Catalog.
+Esta excepción no está vigente mientras ADR-016 permanezca en `Proposed` y no
+autoriza S3 como hosting de Web, CloudFront, buckets adicionales ni un servicio
+de archivos nuevo.
+
+La política IAM desplegada continúa negando S3 fuera del estado de Terraform.
+Su modificación deberá realizarse en una Task de implementación posterior, con
+acciones y prefijos mínimos; EN-027.3 solo decide y documenta.
 
 ### Servicios que sí pueden evaluarse
 
@@ -66,7 +78,7 @@ Internet
 | **API Gateway HTTP API** | *Usage-based*, pero **queda en `Proposed` sin adoptar**: duplicaría la función del proxy inverso sin aportar valor a este volumen. Ver [ADR-010](ADR-010-reverse-proxy.md) |
 | **GHCR** en lugar de ECR | Las imágenes se publican en GitHub Container Registry, incluido en el plan de la organización |
 
-### Imágenes: GHCR, no ECR
+### Imágenes de contenedor: GHCR, no ECR
 
 ECR cobra almacenamiento y transferencia. GHCR está incluido y las imágenes ya se construyen en GitHub Actions. No se introduce ECR mientras GHCR cubra la necesidad.
 
