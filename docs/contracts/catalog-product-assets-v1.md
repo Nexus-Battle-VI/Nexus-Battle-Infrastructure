@@ -122,9 +122,15 @@ Respuesta `200 OK`:
 }
 ```
 
-Catalog verifica checksum, magic bytes, decodificación, dimensiones y elimina
-metadatos no requeridos antes de promover a una clave final inmutable.
-Finalizar dos veces la misma intención devuelve el mismo recurso `READY`.
+Catalog verifica checksum, magic bytes, decodificación, dimensiones y **ausencia
+de animación**, y elimina metadatos no requeridos antes de promover a una clave
+final inmutable. Finalizar dos veces la misma intención devuelve el mismo recurso
+`READY`.
+
+La comprobación de animación mira la estructura del archivo, no el MIME: un WebP
+animado (`VP8X` con el bit `ANIM`, chunks `ANMF`) y un APNG (chunk `acTL`) se
+declaran con los mismos tipos y las mismas firmas que sus equivalentes fijos, así
+que pasarían el resto de validaciones. Un archivo animado devuelve `422`.
 
 | Código | Condición |
 | --- | --- |
@@ -186,9 +192,18 @@ Location: <presigned-get-url-redacted>
 Cache-Control: private, max-age=240
 ```
 
-La firma de lectura vence en máximo cinco minutos. Un asset de Producto
+La firma de lectura vence en máximo cinco minutos. El `max-age` de 240 segundos
+es deliberado: cachea la redirección por menos de lo que dura la firma, de modo
+que el navegador nunca reutiliza una URL ya vencida. Un asset de Producto
 suspendido continúa disponible para quienes puedan consultar la instancia
 adquirida.
+
+**Riesgo residual asumido.** Si el `307` se sigue como navegación de primer nivel,
+la URL firmada queda en el historial del navegador. No hay cabecera que lo
+impida; lo acota el vencimiento de cinco minutos. La fuga por `Referer` sí está
+cubierta, y no por este contrato: el proxy inverso ya aplica
+`Referrer-Policy: strict-origin-when-cross-origin` a todo el sitio (ADR-010), que
+recorta ruta y consulta en cualquier salto entre orígenes.
 
 ## 6. Reemplazo
 

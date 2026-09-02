@@ -121,12 +121,23 @@ No se afirma atomicidad entre S3 y MongoDB.
 - La clave final es inmutable y existe antes del commit MongoDB.
 - La creación confirma internamente Producto, auditoría y outbox conforme a
   ADR-015.
-- Si el commit MongoDB falla después de promover el objeto, Catalog intenta
-  eliminarlo y un reconciliador idempotente elimina assets finales no
-  referenciados con más de 24 horas.
+- Si el commit MongoDB falla **de forma conocida** después de promover el objeto,
+  Catalog intenta eliminarlo, y un reconciliador idempotente elimina además los
+  assets finales no referenciados con más de 24 horas.
+- Si el resultado del commit es **desconocido** —un tiempo de espera agotado, una
+  conexión perdida—, Catalog **no compensa**. Deja el objeto y lo entrega al
+  reconciliador, que comprueba referencias antes de borrar nada.
 - El lifecycle elimina staging abandonado aunque Catalog no vuelva a ejecutarse.
 - El reconciliador nunca elimina una clave referenciada por Producto o por el
   historial de diseño.
+
+**La distinción entre «falló» y «no se sabe» no es una sutileza.** Un tiempo de
+espera agotado no dice que la transacción no ocurriera: puede haberse confirmado
+en el servidor y haberse perdido la respuesta. Compensar ahí borraría la imagen
+de un Producto vigente, y el resultado sería peor que el huérfano que se quería
+evitar: un Producto que existe apuntando a una clave que ya no. Ante la duda, el
+diseño prefiere el huérfano, porque es recuperable y el reconciliador lo resuelve
+comprobando referencias.
 
 Así se evita un Producto parcial. Puede existir temporalmente un objeto huérfano
 recuperable y acotado, que es una consecuencia explícita de no usar una
@@ -139,15 +150,35 @@ transacción distribuida.
 | Uso | `PRIMARY_IMAGE` |
 | MIME | `image/jpeg`, `image/png`, `image/webp` |
 | Tamaño | máximo 5 MiB |
-| Dimensiones | entre 256 y 4096 píxeles por lado; máximo 20 megapíxeles |
+| Dimensiones | entre 256 y 4096 píxeles por lado |
+| Píxeles totales | 20 megapíxeles, como defensa en profundidad |
 | Integridad | SHA-256 obligatorio |
 | Contenido | magic bytes + decodificación; extensión y MIME declarados no bastan |
 | Metadatos | se eliminan EXIF y metadatos no requeridos |
 | SVG/BMP | rechazados; SVG puede contener contenido activo |
-| Animación | fuera de HU-33; HU-37 deberá aprobar formato y límite propios |
+| Animación | rechazada; se detecta inspeccionando la estructura del archivo, no el MIME |
 
 Estos límites son operativos y versionables. Cambiarlos exige actualizar el
 contrato y sus pruebas, no modificar silenciosamente una constante.
+
+**El tope de píxeles no puede dispararse hoy, y conviene decirlo.** Con 4096 px
+por lado el área máxima posible es 4096 × 4096 = 16,8 MP, por debajo del tope.
+El control que realmente ataja una bomba de descompresión es el límite de lado;
+los 20 MP se conservan por si ese límite se relaja en el futuro. Presentarlo como
+la protección principal sería atribuirle un efecto que no tiene.
+
+**«Sin animación» no se puede hacer cumplir con el MIME ni con los magic bytes.**
+Un WebP animado se declara `image/webp` y empieza por `RIFF....WEBP`, igual que
+uno fijo: la animación vive en el chunk `VP8X` con el bit `ANIM` y en los `ANMF`
+que le siguen. Un APNG se sirve como `image/png` y arranca con la firma PNG: lo
+que lo hace animado es el chunk `acTL`. Un archivo así supera la lista cerrada de
+MIME, los magic bytes y la decodificación. Por tanto la finalización debe
+**inspeccionar la estructura** y rechazar `ANIM`/`ANMF` en WebP y `acTL` en PNG,
+con una prueba por formato construida sobre un archivo animado real. Sin esa
+comprobación la regla existe en este documento y no en el sistema.
+
+HU-37 decidirá si admite animación y bajo qué formato y límites; esta decisión no
+se lo concede por omisión.
 
 ### 7. Relación con HU-37
 
@@ -164,8 +195,12 @@ HU-33.
 
 El rol EC2 del nodo `app` es compartido por sus contenedores. Con la topología
 actual no es posible conceder credenciales S3 a Catalog y ocultarlas a los demás
-contenedores mediante IAM de instancia. La demo acepta esta limitación ya
-documentada en ADR-011:
+contenedores mediante IAM de instancia.
+
+Conviene enunciar la consecuencia entera, no solo la parte nueva: ese rol **ya**
+concede `cognito-idp:AdminSetUserPassword` y `ses:SendEmail`. Añadirle S3
+significa que cualquier contenedor del nodo podrá además leer y escribir en el
+bucket de assets. La demo acepta esta limitación, ya documentada en ADR-011:
 
 - el rol solo accede al bucket y prefijos de assets;
 - se conceden acciones concretas, nunca `s3:*`;
@@ -181,6 +216,7 @@ se presenta de otra forma.
 | Amenaza | Control exigido |
 | --- | --- |
 | Archivo disfrazado o contenido activo | Lista cerrada de MIME, magic bytes, decodificación real y rechazo de SVG/BMP |
+| Animación colada bajo un MIME admitido | Inspección de estructura: `ANIM`/`ANMF` en WebP y `acTL` en PNG. El MIME y los magic bytes NO la distinguen |
 | Archivo excesivo o bomba de imagen | `content-length-range`, máximo 5 MiB, límites de dimensiones/píxeles y decodificación acotada |
 | Sustitución o corrupción en tránsito | HTTPS, checksum SHA-256 firmado y verificado antes de promover |
 | Escritura en otra clave o reutilización de autorización | Clave generada por Catalog, política POST exacta, expiración <= 10 min y una intención de un solo uso |
@@ -241,7 +277,14 @@ firmada, firma, cabeceras de autorización ni contenido binario.
 
 EN-027.3 no provisiona recursos. Una Task posterior deberá aplicar en este orden:
 
-1. actualizar la política IAM que hoy bloquea S3 fuera de Terraform;
+1. actualizar **dos** políticas IAM, que están en módulos distintos y es fácil
+   descubrir la segunda a mitad de camino:
+   - la denegación del grupo de operación (`infra/modules/iam`, sentencia
+     `S3SoloParaElEstado`), que hoy deniega `s3:*` sobre todo lo que no sea el
+     bucket de estado y por tanto impide crear el bucket de assets;
+   - una concesión nueva y acotada al rol del nodo `app` (`infra/modules/compute`),
+     que hoy no declara ninguna acción de S3: solo `cognito-idp:AdminSetUserPassword`
+     y `ses:SendEmail`;
 2. crear el bucket privado y sus controles;
 3. desplegar el adaptador de assets con la funcionalidad deshabilitada;
 4. ejecutar pruebas de carga, validación, referencia y reconciliación;
@@ -255,6 +298,13 @@ inventariar referencias y verificar backup. Nunca se ejecuta `terraform
 destroy` sobre el bucket como rollback rutinario.
 
 ## Condiciones para pasar a Accepted
+
+Revisión del Tech Lead del 2026-09-02: las once decisiones quedan aprobadas, y
+las condiciones técnicas que traía esa revisión están incorporadas en este
+documento —detección de animación por estructura, tope de píxeles descrito como
+lo que es, prohibición de compensar ante resultado desconocido, las dos políticas
+IAM y el alcance real del rol compartido. Lo que resta es el registro de las
+aprobaciones humanas.
 
 - aprobación del Product Owner sobre ownership y visibilidad;
 - aprobación del Tech Lead sobre S3 privado, límites y compensación;
