@@ -88,6 +88,7 @@ jobs:
           docs/diagrams/sequence-checkout.puml
           docs/diagrams/sequence-notification.puml
           docs/diagrams/catalog-product-contract-compatibility.puml
+          docs/diagrams/catalog-atomicity-audit-outbox.puml
           docs/adr/ADR-001-repository-strategy.md
           docs/adr/ADR-002-backend-stack.md
           docs/adr/ADR-003-frontend-stack.md
@@ -101,6 +102,7 @@ jobs:
           docs/adr/ADR-011-deployment-topology.md
           docs/adr/ADR-012-orm-odm.md
           docs/adr/ADR-013-canonical-product-contract.md
+          docs/adr/ADR-015-catalog-atomicity-audit-outbox.md
           infra/README.md
           infra/envs/prod/terraform.tfvars.example
           docs/costs/assumptions.md
@@ -180,12 +182,22 @@ jobs:
       - name: Verificar contrato interno de evidencia MFA
         run: python3 scripts/verificar-contrato-mfa-catalog.py
 
+      - name: Verificar PoC de atomicidad MongoDB
+        run: python3 scripts/verificar-atomicidad-mongo.py
+
       - name: Validar el diagrama de compatibilidad de Producto
         run: |
           docker run --rm \
             -v "$PWD/docs/diagrams:/data:ro" \
             ghcr.io/plantuml/plantuml:1.2026.6 \
             -checkonly /data/catalog-product-contract-compatibility.puml
+
+      - name: Validar el diagrama de atomicidad de Producto
+        run: |
+          docker run --rm \
+            -v "$PWD/docs/diagrams:/data:ro" \
+            ghcr.io/plantuml/plantuml:1.2026.6 \
+            -checkonly /data/catalog-atomicity-audit-outbox.puml
 
       - name: Verificar que ADR-008 y ADR-011 acompanan al codigo de infraestructura
         run: |
