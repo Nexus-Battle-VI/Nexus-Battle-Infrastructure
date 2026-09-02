@@ -110,3 +110,140 @@ Apta para abrir Pull Request y revisión de Team Beta. **No** apta para cerrar
 la HU-04 hasta completar un recorrido humano contra Cognito real y un
 entorno desplegado, según la Definition of Done que ya usa este proyecto
 para historias equivalentes (HU-39).
+
+---
+
+# Verificación contra PRODUCCIÓN — 2026-09-01
+
+Esta sección la añade una verificación posterior, ejecutada contra el entorno
+desplegado. Responde en parte a lo que la sección anterior dejaba como
+pendiente («recorrido humano contra un ambiente desplegado»), y **encuentra un
+bloqueo duro que impide completarlo**.
+
+- **Ambiente:** `https://nexus.simuladorupbbga.app` (nodo `app`, `us-east-1`)
+- **Account:** `ghcr.io/nexus-battle-vi/nexus-battle-account@sha256:92503aaa5a14f18db9dcd9e0392a031dfacc63852e662a61cbd326e30339fcbc`
+- **Notifications:** `ghcr.io/nexus-battle-vi/nexus-battle-notifications@sha256:d7766a12e8f969e03299e2ab09972c1cccf058cf54f27ec847ff62d9d5be2541`
+- **Drivers reales:** `AUTH_MODE=jwt` contra el pool `us-east-1_HrEiSzzKW`;
+  `recovery_otp` con `driver=aleatorio` (confirmado en el log del contenedor)
+
+## Lo que SÍ queda verificado en producción
+
+| # | Comprobación | Resultado | Control que la respalda |
+| --- | --- | --- | --- |
+| 1 | Las cuatro rutas de recuperación están registradas | `POST` con cuerpo vacío → **400** en las cuatro | Una ruta hermana inexistente devuelve **404**, así que el 400 es validación real y no un comodín |
+| 2 | CA-02 — no hay enumeración de cuentas | Correo existente y correo inexistente devuelven **la misma forma**: `challengeToken` + las mismas 4 preguntas | Los dos cuerpos se compararon en la misma ejecución |
+| 3 | CA-02 — rechazo genérico | Respuestas incorrectas sobre cuenta real, sobre cuenta inexistente y con token inventado: **las tres respuestas byte a byte idénticas** (400, mismo mensaje) | El propio contraste entre los tres casos |
+| 4 | CA-01 y CA-04 — el flujo avanza y pide el envío | En el log de Account: `recovery_otp_issued` seguido de `notification_requested` con `templateId=account-password-recovery-code` | `VerifyRecoveryAnswers` solo alcanza esas líneas tras superar todas las guardas, así que su presencia prueba que unas respuestas correctas fueron aceptadas para una cuenta real |
+| 5 | El código nunca se registra en claro | `recovery_otp_issued` lleva solo `templateId`; `notification_requested` lleva `notificationId`, `templateId` y **el dominio**, nunca la dirección completa ni el código | Inspección directa del log del contenedor desplegado |
+| 6 | `driver=aleatorio` en producción | El log de arranque lo declara | Confirma que `RandomRecoveryOtp` está activo, no el fijo `000000` |
+
+**El punto 4 es el hallazgo importante:** la cadena funciona de extremo a
+extremo *dentro de Account*. El fallo no está en la lógica de HU-04.
+
+## El bloqueo: los pasos 3 y 4 NO se pueden verificar hoy
+
+**No existe ninguna forma de obtener el código en producción.** No es una
+dificultad operativa; es una consecuencia del diseño, y es correcta:
+
+1. El código se genera con `RandomRecoveryOtp` (CSPRNG, seis dígitos).
+2. Se guarda **hasheado**: `markQuestionsVerified(hashSecurityAnswer(code))`.
+   En PostgreSQL no hay texto claro que leer.
+3. Se entrega únicamente a `NotificationRequestPort`, y el adaptador activo es
+   `LoggingNotificationRequester`, que **registra metadatos y descarta las
+   variables**. El código no llega al log.
+
+En claro, el código existe solo en memoria durante la petición.
+
+> Una nota para quien retome esto: la idea de «sacar el código del log por SSM»
+> **no funciona**, aunque parezca lo obvio. Se comprobó y el log no lo lleva.
+
+### Por qué el código no sale de Account: el transporte no existe
+
+Verificado desde los dos extremos, no supuesto:
+
+| Extremo | Comprobación | Resultado |
+| --- | --- | --- |
+| Emisor | `NOTIFICATIONS_INGEST_URL` en el contenedor de Account | **No definido** → se selecciona `LoggingNotificationRequester` |
+| Receptor | Servidor HTTP de Notifications (puerto `HEALTH_PORT=3001`) | `POST` a `/`, `/notifications`, `/ingest`, `/notifications/ingest` → **405 `method_not_allowed`** en las cuatro. **Salvedad importante: `POST /dev/enqueue` SÍ responde 202** — ver la sección siguiente |
+| Receptor | Control positivo | `GET /health/ready` → **200**: el servidor está vivo |
+| Receptor | Control de enrutado | `GET /no-existe` → **404 `not_found`**: el 405 es rechazo por método, no un comodín |
+| Buzón | Bandeja de Mailpit | **`total: 0`**, vacía por completo, pese al OTP emitido y a dos notificaciones de bienvenida el mismo día |
+
+El servidor de Notifications es, por diseño, solo de sondas: rechaza **todo**
+método distinto de `GET` antes de enrutar. Su comentario lo dice sin rodeos:
+*«El worker no expone API de negocio: su entrada es la cola de mensajes»*. Y la
+cola es `InMemoryMessageQueue`, dentro del proceso, sin ningún productor.
+
+La bandeja vacía de Mailpit es la confirmación desde el lado receptor: no es
+que el correo se envíe y se pierda — **nunca llega a intentarse**.
+
+## Hallazgo de SEGURIDAD: `/dev/enqueue` está vivo en producción
+
+> Corrección de la tabla anterior. Se sondearon cuatro rutas plausibles y las
+> cuatro dieron 405, pero **faltaba probar la que existe de verdad**. Al leer el
+> código de `main` apareció `POST /dev/enqueue`, y en producción **responde**.
+
+El contenedor de Notifications corre con `NODE_ENV=development`, y el servidor
+de sondas inyecta el endpoint `/dev/enqueue` **solo bajo esa condición**. La
+configuración del nodo lo deja, por tanto, activo en producción.
+
+Comprobado ejecutando la inyección:
+
+```
+POST /dev/enqueue  ->  202 {"status":"queued"}
+```
+
+Ese mensaje se proceso y se entrego:
+
+```
+notification_enqueued
+notification_sent        notificationId=sonda-...  attempt=1
+batch_processed          received=1 sent=1 duplicated=0 deadLettered=0
+```
+
+El correo aparecio en Mailpit con su asunto y su cuerpo correctos.
+
+**Dos consecuencias, y la segunda es la grave:**
+
+1. **Buena noticia:** queda demostrado que **toda la cadena aguas abajo funciona
+   en producción** — cola, consumidor, renderizado de plantilla, envío. Lo único
+   que faltaba era el tramo Account → Notifications. Esto refuerza la conclusión
+   de esta verificación en lugar de contradecirla.
+
+2. **Riesgo:** `/dev/enqueue` **no valida el cuerpo ni pide credencial alguna**.
+   Publica en la cola lo que reciba. Hoy el daño es limitado porque el remitente
+   es `no-reply@nexus-battles.local` y la entrega termina en Mailpit, dentro del
+   nodo. **Deja de ser limitado en cuanto se active `EMAIL_DRIVER=ses`**: pasaría
+   a permitir enviar correo arbitrario firmado como
+   `no-reply@simuladorupbbga.app`, el dominio verificado, a cualquiera que
+   alcance la red interna de Docker.
+
+**Por eso `NODE_ENV=production` debe entrar en el MISMO cambio que active SES**,
+nunca después. Activar SES sin cerrar esto convertiría una comodidad de
+desarrollo en un vector de suplantación del dominio.
+
+Conviene además valorar retirar `/dev/enqueue` del código: desde que existe un
+servidor de ingesta con validación y autenticación opcional, es redundante, y
+depender de acertar con `NODE_ENV` es una garantía más débil que no tener el
+endpoint.
+
+## Estado de los criterios de aceptación en producción
+
+| CA | Estado | Nota |
+| --- | --- | --- |
+| CA-01 | ✅ verificado | Punto 4 de la tabla |
+| CA-02 | ✅ verificado | Puntos 2 y 3 |
+| CA-03 | ⛔ bloqueado | Exige un código válido |
+| CA-04 | ✅ verificado | La solicitud se emite con la plantilla correcta |
+| CA-05 a CA-09 | ⛔ bloqueados | Todos dependen de disponer del código |
+
+## Conclusión
+
+**HU-04 no se puede cerrar todavía, y el motivo no es un defecto de HU-04.**
+Su lógica queda verificada en producción hasta el último punto verificable. Lo
+que falta es el transporte Account → Notifications, que **no está construido** y
+cuya forma decide **ADR-006** (abierto como EN-027.4: ingesta HTTP frente a
+SQS).
+
+Mientras esa decisión no se tome, los pasos 3 y 4 no son verificables por
+ningún medio, ni en producción ni manualmente.
