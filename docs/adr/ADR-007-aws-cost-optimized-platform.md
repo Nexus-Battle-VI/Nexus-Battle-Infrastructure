@@ -58,16 +58,16 @@ Internet
 | S3 + CloudFront para estáticos de Web | Los estáticos los sirve el propio Caddy. Migrarlos no aporta beneficio a este volumen |
 | Managed Microsoft AD | Ver [ADR-004](ADR-004-identity-directory.md) |
 
-### Enmienda propuesta y acotada para recursos dinámicos de Producto
+### Enmienda aceptada y acotada para recursos dinámicos de Producto
 
-[ADR-016](ADR-016-product-asset-storage.md) propone permitir **un bucket S3
+[ADR-016](ADR-016-product-asset-storage.md) permite **un bucket S3
 Standard privado** para recursos visuales dinámicos administrados por Catalog.
-Esta excepción no está vigente mientras ADR-016 permanezca en `Proposed` y no
-autoriza S3 como hosting de Web, CloudFront, buckets adicionales ni un servicio
-de archivos nuevo.
+La excepción fue aceptada el 2026-09-02 y no autoriza S3 como hosting de Web,
+CloudFront, buckets adicionales ni un servicio de archivos nuevo.
 
-La política IAM desplegada continúa negando S3 fuera del estado de Terraform.
-Su modificación deberá realizarse en una Task de implementación posterior, con
+La aceptación todavía no provisiona el bucket: la política IAM desplegada
+continúa negando S3 fuera del estado de Terraform. Su modificación deberá
+realizarse en una Task de implementación posterior, con
 acciones y prefijos mínimos; EN-027.3 solo decide y documenta.
 
 ### Servicios que sí pueden evaluarse
@@ -140,3 +140,4 @@ La estimación y los supuestos están en [docs/costs](../costs/assumptions.md).
 [ADR-008](ADR-008-iac.md) declaraba que **no se escribe IaC hasta que ADR-007 esté aprobado**. Esa condición queda cumplida: puede escribirse Terraform, aunque ADR-008 sigue en `Proposed` a la espera de ratificación del equipo.
 
 **Lo que esta aceptación NO desbloquea:** exponer el sistema a internet. El BLOCKER de [ADR-004](ADR-004-identity-directory.md) sigue activo y es independiente del presupuesto.
+

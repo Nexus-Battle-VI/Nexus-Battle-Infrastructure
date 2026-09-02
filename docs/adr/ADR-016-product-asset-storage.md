@@ -1,7 +1,8 @@
 # ADR-016 — Almacenamiento y ownership de recursos visuales de Producto
 
-- **Estado:** **Proposed** — requiere aprobación del Product Owner y del Tech Lead en [EN-027.3 #283](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/283)
+- **Estado:** **Accepted** — aprobaciones del Product Owner y del Tech Lead registradas en [EN-027.3 #283](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/283#issuecomment-5517488723)
 - **Fecha:** 2026-09-02
+- **Fecha de aceptación:** 2026-09-02
 - **Decide:** Arquitectura, con aprobación funcional del Product Owner y técnica/económica del Tech Lead
 - **Relacionado:** [HU-33 #41](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/41), [HU-37 #45](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/45), [ADR-007](ADR-007-aws-cost-optimized-platform.md), [ADR-013](ADR-013-canonical-product-contract.md), [ADR-015](ADR-015-catalog-atomicity-audit-outbox.md)
 
@@ -35,7 +36,7 @@ distribuida que S3 y MongoDB no ofrecen.
 - pruebas locales y CI sin credenciales AWS;
 - ausencia de un nuevo microservicio sin ownership operativo.
 
-## Decisión propuesta
+## Decisión
 
 ### 1. Ownership
 
@@ -297,23 +298,23 @@ mientras haya referencias. Los objetos solo se exportan/eliminan después de
 inventariar referencias y verificar backup. Nunca se ejecuta `terraform
 destroy` sobre el bucket como rollback rutinario.
 
-## Condiciones para pasar a Accepted
+## Evidencia de aceptación y trabajo posterior
 
-Revisión del Tech Lead del 2026-09-02: las once decisiones quedan aprobadas, y
-las condiciones técnicas que traía esa revisión están incorporadas en este
-documento —detección de animación por estructura, tope de píxeles descrito como
-lo que es, prohibición de compensar ante resultado desconocido, las dos políticas
-IAM y el alcance real del rol compartido. Lo que resta es el registro de las
-aprobaciones humanas.
+El Product Owner y el Tech Lead aprobaron el PR #64. La evidencia consolidada
+está registrada en [Management #283](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/283#issuecomment-5517488723),
+y el Tech Lead publicó allí referenciada su
+[acta de revisión](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/64#issuecomment-5516199366).
 
-- aprobación del Product Owner sobre ownership y visibilidad;
-- aprobación del Tech Lead sobre S3 privado, límites y compensación;
-- aceptación explícita de la limitación IAM del rol EC2 compartido;
-- aprobación de la excepción acotada de ADR-007;
-- validación del contrato y del diagrama;
-- coste revisado dentro del techo;
-- Tasks separadas para IaC, adaptador de Catalog, reconciliación y pruebas;
-- ningún `terraform apply` como parte de esta decisión.
+- [x] Aprobado el ownership funcional de Catalog y la visibilidad entre contextos.
+- [x] Aprobados S3 privado, límites, compensación y reconciliación.
+- [x] Aceptada explícitamente la limitación IAM del rol EC2 compartido.
+- [x] Aprobada la excepción acotada de ADR-007.
+- [x] Validados el contrato, el diagrama y el coste dentro del techo.
+- [x] Incorporadas las condiciones técnicas de la revisión en el commit `e7d8049`.
+- [ ] Refinar Tasks separadas para IaC, adaptador de Catalog, reconciliación y pruebas.
+
+Esta aceptación no autoriza `terraform apply`, no provisiona el bucket y no
+actualiza el OpenAPI de Catalog. Esas acciones pertenecen a las Tasks posteriores.
 
 ## Consecuencias
 
@@ -332,3 +333,4 @@ aprobaciones humanas.
 - dependencia runtime de S3 para nuevas cargas y lecturas no cacheadas;
 - una excepción adicional a ADR-007;
 - aislamiento IAM solo a nivel de nodo en la demo.
+

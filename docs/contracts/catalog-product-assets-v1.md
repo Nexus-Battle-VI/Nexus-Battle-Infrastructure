@@ -1,6 +1,7 @@
-# Contrato propuesto — Recursos visuales de Producto v1
+# Contrato de diseño — Recursos visuales de Producto v1
 
-- **Estado:** Proposed; depende de ADR-016 y EN-027.3 #283.
+- **Estado:** Aprobado como diseño por ADR-016; implementación y actualización
+  de OpenAPI pendientes de Tasks posteriores.
 - **Owner:** Catalog.
 - **Consumidor de carga:** Web administrativo.
 - **Almacén:** S3 privado operado por Infrastructure.
@@ -218,3 +219,4 @@ Durante la adopción, Catalog puede conservar lectura de `imageUrl` heredadas,
 pero la ruta canónica solo admite referencias emitidas por este contrato cuando
 el feature flag de assets esté activo. El retiro de URL externas requiere
 telemetría y decisión explícita; no se infiere de este documento.
+
