@@ -89,6 +89,7 @@ jobs:
           docs/diagrams/sequence-notification.puml
           docs/diagrams/catalog-product-contract-compatibility.puml
           docs/diagrams/catalog-atomicity-audit-outbox.puml
+          docs/diagrams/catalog-product-asset-lifecycle.puml
           docs/adr/ADR-001-repository-strategy.md
           docs/adr/ADR-002-backend-stack.md
           docs/adr/ADR-003-frontend-stack.md
@@ -103,12 +104,15 @@ jobs:
           docs/adr/ADR-012-orm-odm.md
           docs/adr/ADR-013-canonical-product-contract.md
           docs/adr/ADR-015-catalog-atomicity-audit-outbox.md
+          docs/adr/ADR-016-product-asset-storage.md
           infra/README.md
           infra/envs/prod/terraform.tfvars.example
           docs/costs/assumptions.md
           docs/costs/sprint-demo-estimate.md
+          docs/costs/product-assets-s3-estimate.md
           docs/contracts/service-catalog.md
           docs/contracts/catalog-product-v1.openapi.yaml
+          docs/contracts/catalog-product-assets-v1.md
           docs/contracts/event-catalog.md
           docs/governance/rulesets/main-protection.template.json
           compose/compose.example.yml
@@ -198,6 +202,13 @@ jobs:
             -v "$PWD/docs/diagrams:/data:ro" \
             ghcr.io/plantuml/plantuml:1.2026.6 \
             -checkonly /data/catalog-atomicity-audit-outbox.puml
+
+      - name: Validar el diagrama de recursos visuales de Producto
+        run: |
+          docker run --rm \
+            -v "$PWD/docs/diagrams:/data:ro" \
+            ghcr.io/plantuml/plantuml:1.2026.6 \
+            -checkonly /data/catalog-product-asset-lifecycle.puml
 
       - name: Verificar que ADR-008 y ADR-011 acompanan al codigo de infraestructura
         run: |
