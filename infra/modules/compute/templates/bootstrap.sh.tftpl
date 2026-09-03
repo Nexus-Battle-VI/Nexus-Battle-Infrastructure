@@ -11,6 +11,71 @@ set -euo pipefail
 exec > >(tee -a /var/log/nexus-bootstrap.log) 2>&1
 echo "[nexus] arranque del nodo '${rol}' a las $(date --iso-8601=seconds)"
 
+%{~ if rol == "data" && montar_volumen_datos ~}
+# ---------------------------------------------------------------------------
+# El volumen de datos, ANTES de instalar Docker
+#
+# El orden no es una preferencia: Docker crea `/var/lib/docker/volumes` al
+# arrancar y escribe ahi los volumenes. Montar despues dejaria los datos en el
+# volumen raiz, que desaparece con la instancia, y todo pareceria correcto hasta
+# el primer reemplazo.
+#
+# SE ESPERA AL DISPOSITIVO. Terraform adjunta el volumen DESPUES de crear la
+# instancia, asi que en el primer arranque puede no existir todavia.
+#
+# Y si no llega, el arranque FALLA a proposito. La alternativa -seguir sin
+# volumen- dejaria un nodo que parece sano guardando las bases donde se van a
+# perder, que es justo el fallo que este bloque existe para evitar.
+# ---------------------------------------------------------------------------
+dispositivo_datos() {
+  for candidato in /dev/sdf /dev/xvdf /dev/nvme1n1; do
+    if [ -b "$candidato" ]; then
+      echo "$candidato"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+DISPOSITIVO=""
+for intento in $(seq 1 60); do
+  if DISPOSITIVO="$(dispositivo_datos)"; then
+    echo "[nexus] volumen de datos en $DISPOSITIVO tras $((intento * 5))s"
+    break
+  fi
+  sleep 5
+done
+
+if [ -z "$DISPOSITIVO" ]; then
+  echo "[nexus] ERROR: el volumen de datos no aparecio en 300s."
+  echo "[nexus] No se arranca nada: las bases irian al volumen raiz y se perderian."
+  exit 1
+fi
+
+# Formatear SOLO si no hay sistema de ficheros. Formatear "por si acaso" seria
+# el mismo desastre por otra via: un volumen con datos quedaria vacio y el
+# arranque saldria en verde.
+if ! blkid "$DISPOSITIVO" >/dev/null 2>&1; then
+  echo "[nexus] el volumen esta vacio; se formatea con XFS"
+  mkfs.xfs "$DISPOSITIVO"
+else
+  echo "[nexus] el volumen ya tiene sistema de ficheros; NO se formatea"
+fi
+
+install -d /var/lib/docker/volumes
+UUID_DATOS="$(blkid -s UUID -o value "$DISPOSITIVO")"
+
+if ! grep -q "$UUID_DATOS" /etc/fstab; then
+  # `nofail` para que un volumen ausente no deje la maquina sin arrancar: se
+  # prefiere un nodo accesible en el que se vea el problema.
+  echo "UUID=$UUID_DATOS /var/lib/docker/volumes xfs defaults,nofail 0 2" >> /etc/fstab
+fi
+
+mount /var/lib/docker/volumes
+echo "[nexus] volumen de datos montado en /var/lib/docker/volumes"
+%{~ endif ~}
+
 # ---------------------------------------------------------------------------
 # Docker
 #
