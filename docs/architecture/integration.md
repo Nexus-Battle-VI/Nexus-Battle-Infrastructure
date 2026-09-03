@@ -10,6 +10,7 @@ Una integración es **síncrona** cuando quien llama no puede continuar sin la r
 | --- | --- | --- |
 | Commerce → Catalog (precio) | Síncrono | Puerto definido, adaptador con catálogo local |
 | Catalog → Account (evidencia MFA) | Síncrono interno | Account integrado; promoción de Catalog en PR #27 y cierre funcional en Management #136 |
+| Catalog → Notifications (`catalog.product.created`) | Asíncrono | SQS Standard + outbox/inbox `Proposed` en ADR-017; no desplegado |
 | Account → Notifications | Asíncrono | Puerto definido, adaptador de registro |
 | Commerce → Notifications | Asíncrono | Pendiente |
 | Commerce → Player/Inventory (reserva) | Asíncrono con saga | **No implementado** |
@@ -23,6 +24,16 @@ El razonamiento en cada caso:
   responde `503`. En ambos casos se niega antes de escribir.
 - **Notificación**: una cuenta creada es válida aunque el correo de bienvenida tarde. Bloquear el registro por un correo sería peor que retrasar el correo.
 - **Reserva**: es un proceso de larga duración sin transacción común entre servicios.
+
+### Flujo propuesto de creación de Producto
+
+ADR-017 propone que Catalog persista `catalog.product.created` en el outbox de
+la misma transacción de ADR-015 y lo despache después a una cola SQS Standard.
+Notifications valida versión y deduplica por `eventId`. La cola es punto a
+punto para ese consumidor; no se envía un mensaje por jugador y no se promete
+orden ni exactly-once.
+
+Contrato: [catalog-events-v1.asyncapi.yaml](../contracts/catalog-events-v1.asyncapi.yaml).
 
 ## Contrato del mensaje de notificación
 
@@ -49,7 +60,8 @@ Los identificadores de plantilla forman parte del contrato: añadir o retirar un
 | `account.email-changed` | Account |
 | `inventory.item.added` | Player / Inventory |
 | `inventory.item.removed` | Player / Inventory |
-| `catalog.product.published` | Catalog |
+| `catalog.product.created` (externo V1 propuesto) | Catalog |
+| `catalog.product.published` (interno heredado) | Catalog |
 | `catalog.product.price-changed` | Catalog |
 | `catalog.product.archived` | Catalog |
 | `community.post.published` | Community |
