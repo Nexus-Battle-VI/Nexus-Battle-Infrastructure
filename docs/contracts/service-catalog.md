@@ -46,8 +46,19 @@ En los servicios NestJS, bajo el prefijo `/api`.
 | `GET` | `/api/inventories/:ownerId` | `200`, `404` |
 | `POST` | `/api/inventories/:ownerId/items` | `200`, `400`, `404` |
 | `POST` | `/api/inventories/:ownerId/items/removals` | `200`, `400`, `404` |
+| `GET` | `/api/inventories/me/items` | `200`, `400`, `401`, `503` |
+| `GET` | `/api/inventories/me/items/:itemReference` | `200`, `401`, `404`, `503` |
 
 El alta crea el inventario si no existe: un jugador sin inventario y un inventario vacío son el mismo estado de negocio.
+
+`GET /api/inventories/me/items` es la consulta self-service de HU-27: paginada de
+16, identidad tomada del testimonio (nunca de la URL), con `?q=` (búsqueda por
+nombre desde 4 caracteres) y `?type=` (tipo canónico). La búsqueda, el filtro y
+la ficha de detalle enriquecen con la lectura canónica de Catalog
+(`CATALOG_BASE_URL`); si Catalog no responde, esas operaciones devuelven `503` y
+el listado sin búsqueda se degrada con `product: null`. Rating y comentarios
+**no** forman parte de "Mi Inventario" (decisión funcional: pertenecen a
+E-commerce/Subasta).
 
 ### Catalog — `/api/products`
 
@@ -74,11 +85,24 @@ temporal. Su especificación está en
 | Método | Ruta | Códigos | Estado |
 | --- | --- | --- | --- |
 | `POST` | `/api/v1/catalog/products` | `201`, `400`, `401`, `403`, `409`, `422`, `503` | **Accepted; implementación trazada en Management #136** |
+| `GET` | `/api/v1/catalog/products/:reference` | `200`, `404` | **Implementado (HU-27):** lectura pública por `productId` o alias `sku`; devuelve `lifecycleStatus` para ACTIVE y SUSPENDED |
+| `POST` | `/api/v1/catalog/products/lookup` | `200`, `400` | **Implementado (HU-27):** resuelve hasta 500 referencias en una consulta (sin N+1), con filtro opcional por nombre normalizado y por tipo canónico. Es una lectura, no muta |
 
 La ruta nueva no sustituye todavía `/api/products`. Durante la transición, la
 superficie heredada se conserva como adaptador hacia los mismos casos de uso
 canónicos. El retiro requiere telemetría, ausencia confirmada de consumidores
 y aprobación del Product Owner.
+
+Las dos rutas de LECTURA canónica se añadieron para HU-27 (consumidor:
+Player/Inventory). Son `@Public()`, igual que `GET /api/products`: la información
+de producto, una vez creado el producto canónico, es de lectura pública
+(`SECURITY.md` de Catalog). **No habilitan enumeración del catálogo**: ambas
+exigen que el consumidor aporte referencias exactas (`productId` o `sku`); no
+hay endpoint de listado. Devuelven `lifecycleStatus` para ACTIVE y SUSPENDED
+porque un jugador puede poseer un producto suspendido y RF-27 pide su
+información vigente; en el modelo canónico no existe el estado `DRAFT`, que es el
+único que Catalog oculta a las consultas públicas. No sustituyen a la superficie
+heredada; son aditivas.
 
 El contrato objetivo reserva `imageUrl`, pero el almacenamiento y ownership de
 la imagen dependen de EN-027.3.

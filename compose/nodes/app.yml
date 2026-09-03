@@ -126,6 +126,10 @@ services:
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Lectura de Catalog para "Mi Inventario" (HU-27). Nombre de servicio de
+      # compose, red interna: no sale del nodo, no es un secreto. Vacio: la
+      # busqueda por nombre y la ficha de detalle responden 503.
+      CATALOG_BASE_URL: http://catalog:3003
     depends_on:
       inventory-migrate:
         condition: service_completed_successfully
