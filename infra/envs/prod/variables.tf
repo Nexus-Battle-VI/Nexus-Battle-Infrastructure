@@ -313,3 +313,9 @@ variable "mount_data_volume" {
   type        = bool
   default     = false
 }
+
+variable "product_assets_bucket_name" {
+  description = "Nombre del bucket S3 para los recursos visuales de Producto (ADR-016 / EN-027.9)."
+  type        = string
+  default     = ""
+}
