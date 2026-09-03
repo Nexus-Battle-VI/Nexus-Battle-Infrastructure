@@ -1,6 +1,6 @@
 @startuml hu-43-sequence-deletion
 !theme plain
-title HU-43 — Eliminación de cuenta y datos asociados (diseño de alto nivel, no implementado)
+title HU-43 — Eliminación de cuenta y datos asociados (implementado, mergeado a develop: Management #303-#307)
 
 skinparam defaultFontName sans-serif
 skinparam sequence {
@@ -23,11 +23,11 @@ note over account
   abierta durante los 30 días de plazo.
 end note
 
-user -> web : solicita eliminar cuenta
-web -> account : POST /accounts/deletion\n(JWT verificado)
+user -> web : solicita eliminar cuenta\n(portal de privacidad, HU-45.4)
+web -> account : POST /api/accounts/me/deletion-requests\n(JWT verificado, sin cuerpo)
 account -> account : subject verificado\n-> findBySubject -> Account
 account -> account : registrar solicitud\n(estado persistente, no en memoria)
-account --> web : confirmación de RECEPCIÓN
+account --> web : 200 OK — RECEIVED\n(idempotente: repetir mientras hay\nuna activa devuelve la MISMA)
 web --> user : "solicitud recibida"
 
 == la petición HTTP del titular termina aquí ==
@@ -46,11 +46,18 @@ note over account
   flujo — ver ADR-014 Decisión 5.
 end note
 
-account -> account : cerrar la solicitud
+account -> account : cerrar la solicitud\n(CLOSED, closedAt persistido)
 
-account -> notify : solicitar notificación de cierre\n(contrato pendiente de HU-43)
-notify --> account : ok
+account -> notify : solicitar notificación de cierre\n(templateId: account-deletion-closed,\nsin variables)
+notify -> user : correo de cierre\n(entrega asíncrona; Account no\nespera esta entrega ni la garantiza)
 
-account --> user : confirmación de CIERRE\n(dentro del plazo de 30 días)
+note over account, notify
+  No hay ninguna respuesta HTTP síncrona de
+  cierre al titular: la petición inicial ya
+  terminó en la confirmación de RECEPCIÓN.
+  Un fallo de Notifications se registra y
+  NO deshace el tratamiento de datos, que ya
+  es irreversible en este punto.
+end note
 
 @enduml

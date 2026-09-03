@@ -166,15 +166,33 @@ No se introduce un mecanismo nuevo de verificación para HU-43.
 
 ## Qué NO define este documento
 
-- el endpoint HTTP concreto de la solicitud de eliminación;
-- el formato exacto del registro de estado dentro de Account;
-- el contrato concreto de la notificación de cierre con Notifications (no
-  existe todavía en [event-catalog.md](../contracts/event-catalog.md) — se
-  declara pendiente de la implementación de HU-43, no se inventa aquí);
-- el mecanismo exacto de "confirmación de recepción" vs. "confirmación de
-  cierre" (¿correo vía Notifications? ¿estado consultable en el portal?);
-- qué ocurre si el plazo de 30 días se agota sin completar el tratamiento.
+Este documento fija el CONTRATO, no la implementación. Las decisiones de
+implementación concreta se listan resueltas en la siguiente sección; lo que
+sigue sin definir es:
 
-Estas decisiones pertenecen a la implementación de HU-43, sobre el alcance y
-el proceso ya fijados en
-[ADR-014](../adr/ADR-014-privacy-data-governance.md).
+- qué ocurre si el plazo de 30 días se agota sin completar el tratamiento —
+  HU-43 no define ninguna acción de negocio para ese caso, y la
+  implementación tampoco la inventa (ver más abajo).
+
+## Qué quedó implementado (verificado en código y PR mergeados a `develop`)
+
+Las Tasks de implementación (Management #303–#307) ya resolvieron el resto de
+los puntos que esta sección dejaba abiertos. Se documentan aquí para que este
+diseño no quede desalineado de lo que realmente corre:
+
+| Decisión de implementación | Valor real | Evidencia |
+| --- | --- | --- |
+| Endpoint HTTP de la solicitud | `POST /api/accounts/me/deletion-requests`, sin cuerpo, `200 OK` (idempotente: repetir mientras hay una activa devuelve la MISMA solicitud, no un error) | [Nexus-Battle-Account PR#56](https://github.com/Nexus-Battle-VI/Nexus-Battle-Account/pull/56) |
+| Registro de estado dentro de Account | Entidad `AccountDeletionRequest` (`RECEIVED` → `IN_PROGRESS` ⇄ `FAILED` → `CLOSED`), tabla `account_deletion_requests`, índice único parcial por cuenta activa | [Nexus-Battle-Account PR#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Account/pull/55) |
+| Mecanismo de procesamiento durable | Reclamo atómico de la solicitud pendiente más antigua (`claimNextPending`, `SELECT ... FOR UPDATE SKIP LOCKED` en PostgreSQL) ejecutado por un intervalo dentro del propio proceso de Account (`AccountDeletionProcessingScheduler`, apagado por defecto) — el mecanismo concreto quedaba explícitamente como decisión de implementación en [ADR-014 Decisión 5](../adr/ADR-014-privacy-data-governance.md#5-alcance-y-proceso-del-derecho-al-olvido-hu-43-ownership-de-account-sin-orquestación-multi-contexto) | [Nexus-Battle-Account PR#59](https://github.com/Nexus-Battle-VI/Nexus-Battle-Account/pull/59) |
+| Contrato de la notificación de cierre | `templateId: "account-deletion-closed"`, sin variables, sobre el `NotificationRequestPort` ya existente; solicitada únicamente después de persistir el cierre | [Nexus-Battle-Notifications PR#15](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/15), [Nexus-Battle-Account PR#59](https://github.com/Nexus-Battle-VI/Nexus-Battle-Account/pull/59) — ver también [event-catalog.md](../contracts/event-catalog.md) |
+| "Confirmación de recepción" vs. "confirmación de cierre" | La recepción es la respuesta HTTP `200` de la solicitud. La confirmación de cierre es el correo de `account-deletion-closed`, asíncrono, entregado por Notifications — no existe ninguna respuesta HTTP síncrona de cierre al titular | [Nexus-Battle-Account PR#59](https://github.com/Nexus-Battle-VI/Nexus-Battle-Account/pull/59) |
+| Plazo de 30 días | `AccountDeletionRequest.isWithinPolicyDeadline(now)` permite VERIFICAR si una solicitud sigue dentro del plazo (usado como señal de observabilidad al procesar). **No existe ninguna acción de negocio automática al superarlo** — HU-43 no la define y la implementación no la inventa | [Nexus-Battle-Account PR#59](https://github.com/Nexus-Battle-VI/Nexus-Battle-Account/pull/59) |
+| Interfaz del titular | Bloque "Eliminar mi cuenta" dentro del portal de privacidad ya existente (HU-45.4), con confirmación explícita en dos pasos; consume exactamente el endpoint anterior sin enviar `accountId`/`subject`/`email`; presenta RECEPCIÓN, nunca "cuenta eliminada" | [Nexus-Battle-Web PR#69](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/69) |
+| Cognito | **Sin decisión formal que ordene eliminar o deshabilitar la identidad.** No se implementó ninguna llamada a Cognito; sigue como pendiente explícito | Matriz de tratamiento, fila "Contraseña / credencial" |
+| Consentimiento (`terms_accepted`) | Sigue siendo únicamente `accounts.terms_accepted: boolean`, sin versión ni fecha. La categoría permanece **Pendiente decisión** en la matriz de tratamiento: el tratamiento de HU-43.3 no la resuelve, desaparece como consecuencia de la eliminación física de la fila, no por una decisión propia sobre ese campo | [consent-versioning.md](consent-versioning.md), [data-treatment-matrix-v0.3.md](data-treatment-matrix-v0.3.md) |
+
+Estas Tasks permanecen abiertas en Management (`Closes` solo cierra Issues al
+promoverse a `main`, y esta implementación vive hoy en `develop`); el estado
+de integración real es: mergeadas a `develop` en sus respectivos
+repositorios, no todavía promovidas a `main`.
