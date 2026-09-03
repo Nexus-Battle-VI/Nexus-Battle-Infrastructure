@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Nexus Battles VI - Catalog Product API
-  version: 1.0.0
+  version: 1.1.0
   license:
     name: Licensing pending project governance
     url: https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure#licencia
@@ -108,6 +108,7 @@ paths:
                             stackable: false
                     printRun: 150
                     printRunMode: LIMITED
+                    availableUnits: 40
                     lifecycleStatus: ACTIVE
                     creditsPrice: 40
                     premium: false
@@ -276,6 +277,7 @@ components:
         - attributes
         - printRun
         - printRunMode
+        - availableUnits
         - lifecycleStatus
         - creditsPrice
         - premium
@@ -312,6 +314,17 @@ components:
           $ref: '#/components/schemas/PrintRun'
         printRunMode:
           $ref: '#/components/schemas/PrintRunMode'
+        availableUnits:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+          readOnly: true
+          description: >-
+            Unidades que aún pueden emitirse (HU-34). Es `null` si y solo si el
+            tiraje es infinito, donde no se lleva contador; en cualquier otro
+            modo es un entero entre 0 y `printRun`. Cero significa agotado, y
+            agotado NO cambia `lifecycleStatus`: son condiciones independientes.
         lifecycleStatus:
           $ref: '#/components/schemas/LifecycleStatus'
         creditsPrice:

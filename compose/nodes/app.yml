@@ -190,6 +190,20 @@ services:
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Commerce pide a Catalog el decremento de inventario al confirmar un
+      # pedido (HU-34). El decremento es EXCLUSIVO de Catalog: Commerce no
+      # escribe sobre la disponibilidad, la solicita.
+      #
+      # Nombre de servicio de compose y red interna del nodo: la peticion no
+      # sale de la maquina ni pasa por el proxy.
+      #
+      # Sin secreto, Catalog responde 401 y la confirmacion del pedido falla
+      # CERRADA. No queda abierta: vender sin descontar seria peor que no
+      # vender.
+      CATALOG_INTERNAL_URL: http://catalog:3003
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      INTERNAL_SERVICE_NAME: commerce
+      INTERNAL_TIMEOUT_MS: ${INTERNAL_TIMEOUT_MS:-2000}
     depends_on:
       commerce-migrate:
         condition: service_completed_successfully
