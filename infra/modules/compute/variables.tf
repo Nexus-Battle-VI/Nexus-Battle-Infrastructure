@@ -135,3 +135,52 @@ variable "ses_from_address" {
   type        = string
   default     = "no-reply@simuladorupbbga.app"
 }
+
+variable "data_volume_gb" {
+  description = <<-DESC
+    Tamano del volumen EBS de datos del nodo `data`, en GiB.
+
+    Existe porque hasta ahora las dos bases vivian en el volumen RAIZ de la
+    instancia, con `delete_on_termination = true`. Como `user_data` lleva dentro
+    el compose del nodo y `user_data_replace_on_change` es cierto, editar
+    `compose/nodes/data.yml` reemplazaba la instancia y se llevaba por delante
+    las cuentas y los productos. Un volumen aparte rompe esa cadena.
+  DESC
+  type        = number
+  default     = 20
+
+  validation {
+    condition     = var.data_volume_gb >= 10
+    error_message = "El volumen de datos debe tener al menos 10 GiB."
+  }
+}
+
+variable "mount_data_volume" {
+  description = <<-DESC
+    Si el arranque monta el volumen de datos en `/var/lib/docker/volumes`.
+
+    ES FALSO POR DEFECTO, Y NO POR PRUDENCIA GENERICA. Cambiar esta bandera
+    cambia el guion de arranque, y el guion viaja en `user_data`: pasarla a
+    cierto REEMPLAZA el nodo `data`. Con los datos todavia en el volumen raiz,
+    ese reemplazo los destruye.
+
+    El orden seguro esta en `docs/runbooks/migrar-datos-al-volumen.md`:
+
+      1. aplicar con la bandera en `false` -crea y adjunta el volumen, sin
+         tocar el arranque ni, por tanto, la instancia-;
+      2. migrar los datos a mano, con el sistema parado y comprobando
+         recuentos;
+      3. aplicar con la bandera en `true`, que ya reemplaza sin perder nada.
+
+    Saltarse el paso 2 es exactamente el desastre que esta variable existe para
+    evitar.
+  DESC
+  type        = bool
+  default     = false
+}
+
+variable "product_assets_bucket" {
+  description = "Nombre del bucket S3 de assets de producto (ADR-016). Si se proporciona, habilita permisos mínimos al rol del nodo."
+  type        = string
+  default     = ""
+}

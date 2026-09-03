@@ -14,6 +14,8 @@ locals {
     ManagedBy   = "terraform"
     Repository  = "Nexus-Battle-Infrastructure"
   }
+
+  product_assets_bucket_name = var.product_assets_bucket_name != "" ? var.product_assets_bucket_name : "nexus-battles-vi-product-assets-${var.account_id}"
 }
 
 module "governance" {
@@ -43,10 +45,22 @@ module "tfstate" {
   tags = local.tags
 }
 
+module "product_assets" {
+  source = "../../modules/product_assets"
+
+  bucket_name = local.product_assets_bucket_name
+  tags        = local.tags
+
+  # El operador necesita que la política S3SoloParaElEstado haya incluido el bucket
+  # antes de que la llamada a CreateBucket sea autorizada por IAM.
+  depends_on = [module.iam]
+}
+
 module "iam" {
   source = "../../modules/iam"
 
   allowed_instance_types = var.allowed_instance_types
+  product_assets_bucket  = local.product_assets_bucket_name
 }
 
 module "network" {
@@ -145,6 +159,12 @@ locals {
       }
       entorno = {
         DB_PASSWORD = var.db_password
+
+        # La usa `mongo-rs-init` para declarar el miembro del conjunto con la
+        # direccion por la que lo alcanzan los servicios de la OTRA maquina.
+        # Con `localhost` la configuracion del conjunto quedaria escrita con una
+        # direccion que ningun cliente puede resolver.
+        DATA_HOST = var.nodes["data"].private_ip
       }
     }
   }
@@ -167,6 +187,9 @@ module "compute" {
   compose_plugin_url    = var.compose_plugin_url
   compose_plugin_sha256 = var.compose_plugin_sha256
   cognito_user_pool_arn = module.identity.user_pool_arn
+  data_volume_gb        = var.data_volume_gb
+  mount_data_volume     = var.mount_data_volume
+  product_assets_bucket = local.product_assets_bucket_name
 
   # El presupuesto y las alertas existen antes que cualquier recurso de computo.
   # Esta dependencia lo convierte en una garantia del grafo, no en una costumbre.

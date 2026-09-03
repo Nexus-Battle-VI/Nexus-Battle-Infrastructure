@@ -122,7 +122,7 @@ services:
       PORT: 3002
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://inventory:${DB_PASSWORD}@${DATA_HOST}:27017/player-inventory?authSource=player-inventory
+      MONGODB_URI: mongodb://inventory:${DB_PASSWORD}@${DATA_HOST}:27017/player-inventory?authSource=player-inventory&replicaSet=rs0
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
@@ -140,7 +140,7 @@ services:
       PORT: 3003
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://catalog:${DB_PASSWORD}@${DATA_HOST}:27017/catalog?authSource=catalog
+      MONGODB_URI: mongodb://catalog:${DB_PASSWORD}@${DATA_HOST}:27017/catalog?authSource=catalog&replicaSet=rs0
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
@@ -297,7 +297,7 @@ services:
       NODE_ENV: development
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://catalog:${DB_PASSWORD}@${DATA_HOST}:27017/catalog?authSource=catalog
+      MONGODB_URI: mongodb://catalog:${DB_PASSWORD}@${DATA_HOST}:27017/catalog?authSource=catalog&replicaSet=rs0
     restart: 'no'
 
   inventory-migrate:
@@ -309,7 +309,7 @@ services:
       NODE_ENV: development
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://inventory:${DB_PASSWORD}@${DATA_HOST}:27017/player-inventory?authSource=player-inventory
+      MONGODB_URI: mongodb://inventory:${DB_PASSWORD}@${DATA_HOST}:27017/player-inventory?authSource=player-inventory&replicaSet=rs0
     restart: 'no'
 
   # ---------------------------------------------------------------------

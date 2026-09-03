@@ -220,6 +220,75 @@ resource "aws_iam_role_policy" "cognito_admin_auth" {
   policy = data.aws_iam_policy_document.cognito_admin_auth.json
 }
 
+data "aws_iam_policy_document" "product_assets_access" {
+  count = var.product_assets_bucket != "" ? 1 : 0
+
+  statement {
+    sid    = "EscrituraStagingYPromocionAssets"
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:AbortMultipartUpload",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.product_assets_bucket}/staging/*",
+      "arn:aws:s3:::${var.product_assets_bucket}/assets/*",
+    ]
+  }
+
+  statement {
+    sid    = "LecturaStagingYAssets"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:GetObjectVersion",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.product_assets_bucket}/staging/*",
+      "arn:aws:s3:::${var.product_assets_bucket}/assets/*",
+    ]
+  }
+
+  statement {
+    sid    = "LimpiezaStaging"
+    effect = "Allow"
+    actions = [
+      "s3:DeleteObject",
+      "s3:DeleteObjectVersion",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.product_assets_bucket}/staging/*",
+    ]
+  }
+
+  statement {
+    sid    = "ListarPrefijosDeProducto"
+    effect = "Allow"
+    actions = [
+      "s3:ListBucket",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.product_assets_bucket}",
+    ]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values = [
+        "staging/*",
+        "assets/*",
+        "",
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "product_assets" {
+  count  = var.product_assets_bucket != "" ? 1 : 0
+  name   = "${var.name}-product-assets"
+  role   = aws_iam_role.node.name
+  policy = data.aws_iam_policy_document.product_assets_access[0].json
+}
+
 resource "aws_iam_instance_profile" "node" {
   name = "${var.name}-node"
   role = aws_iam_role.node.name
@@ -250,6 +319,12 @@ locals {
         arrancar_stack = var.arrancar_stack
         compose_url    = var.compose_plugin_url
         compose_sha256 = var.compose_plugin_sha256
+
+        # Con `false` la plantilla no emite NI UNA LINEA sobre el volumen, de
+        # modo que el guion renderizado es identico al de antes de este cambio y
+        # el nodo no se reemplaza. Es lo que permite crear y adjuntar el volumen
+        # en un `apply` y migrar los datos en otro momento.
+        montar_volumen_datos = var.mount_data_volume
       }
     )
   }
@@ -299,12 +374,9 @@ resource "aws_instance" "node" {
    * El plan lo dijo: `2 to add, 0 to change, 2 to destroy`. Merece la pena
    * mirar el plan POR NODO antes de cada apply.
    *
-   * El de datos se queda sin comprimir porque su arranque es pequeno y estable.
-   * Si algun dia crece hasta el limite, comprimirlo costara una recreacion, y
-   * entonces habra que respaldar antes en lugar de descubrirlo a mitad.
    */
-  user_data        = each.value.role == "data" ? local.arranque[each.key] : null
-  user_data_base64 = each.value.role == "data" ? null : base64gzip(local.arranque[each.key])
+  user_data        = null
+  user_data_base64 = base64gzip(local.arranque[each.key])
 
   # Sin esto, cambiar el arranque NO cambia nada en la maquina.
   #
@@ -414,4 +486,52 @@ resource "aws_eip_association" "app" {
 
   instance_id   = aws_instance.node["app"].id
   allocation_id = aws_eip.app[0].id
+}
+
+# ---------------------------------------------------------------------------
+# El volumen de datos, aparte de la instancia
+#
+# POR QUE EXISTE. Las dos bases vivian en el volumen RAIZ del nodo `data`, que
+# se declara con `delete_on_termination = true`. Y `compose/nodes/data.yml`
+# viaja dentro de `user_data`, que con `user_data_replace_on_change` reemplaza
+# la instancia en cuanto cambia. La suma de las dos cosas es que cualquier
+# edicion de la composicion del nodo de datos, aplicada, borraba todas las
+# cuentas y todos los productos. Comprobado en la maquina: un solo volumen de
+# 20 GB montado en `/`, con los volumenes de Docker dentro.
+#
+# `prevent_destroy` no es decoracion: impide que un `terraform destroy` o una
+# retirada accidental del recurso se lleve el volumen. Para retirarlo de verdad
+# hay que editar esta linea, que es una decision visible en un PR.
+# ---------------------------------------------------------------------------
+data "aws_subnet" "nodo" {
+  id = var.subnet_id
+}
+
+resource "aws_ebs_volume" "datos" {
+  for_each = { for clave, nodo in var.nodes : clave => nodo if nodo.role == "data" }
+
+  # La zona se toma de la subred donde corre el nodo: ligarlo al atributo de la
+  # instancia hace que al reemplazarla la zona sea "known after apply", lo que
+  # forzaria a recrear el volumen y activaria prevent_destroy.
+  availability_zone = data.aws_subnet.nodo.availability_zone
+  size              = var.data_volume_gb
+  type              = "gp3"
+  encrypted         = true
+
+  tags = merge(var.tags, { Name = "${var.name}-${each.key}-datos" })
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_volume_attachment" "datos" {
+  for_each = aws_ebs_volume.datos
+
+  # En instancias Nitro el kernel renombra el dispositivo: se pide `/dev/sdf` y
+  # aparece como `/dev/nvme1n1`. El arranque busca entre los dos nombres en vez
+  # de fijar uno, porque cual aparece depende del tipo de instancia.
+  device_name = "/dev/sdf"
+  volume_id   = each.value.id
+  instance_id = aws_instance.node[each.key].id
 }
