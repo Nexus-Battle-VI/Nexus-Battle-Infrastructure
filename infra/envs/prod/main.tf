@@ -145,12 +145,6 @@ locals {
       }
       entorno = {
         DB_PASSWORD = var.db_password
-
-        # La usa `mongo-rs-init` para declarar el miembro del conjunto con la
-        # direccion por la que lo alcanzan los servicios de la OTRA maquina.
-        # Con `localhost` la configuracion del conjunto quedaria escrita con una
-        # direccion que ningun cliente puede resolver.
-        DATA_HOST = var.nodes["data"].private_ip
       }
     }
   }
