@@ -137,6 +137,36 @@ NEXUS_ENV_EOF
 chmod 0600 /opt/nexus/.env
 umask 022
 
+%{~ if rol == "data" ~}
+# ---------------------------------------------------------------------------
+# El fichero de clave del conjunto de replicas
+#
+# NO VIAJA POR TERRAFORM, y es deliberado: el estado guarda `user_data` entero y
+# sin cifrar, asi que una clave generada con `random_password` acabaria en el
+# fichero de estado. Generarla aqui la deja solo en el disco del nodo.
+#
+# Vive en `/opt/nexus`, que esta en el volumen RAIZ: sobrevive a un reinicio,
+# NO a un reemplazo del nodo. Con un solo miembro eso no rompe nada -no hay par
+# al que autenticarse-, pero deja de ser cierto el dia que el conjunto tenga
+# tres, y entonces la clave tendra que venir de un origen compartido. Queda
+# dicho aqui para que ese dia no se descubra por sorpresa.
+#
+# 0400 y dueno 999, que es el usuario `mongodb` de la imagen oficial: mongod
+# RECHAZA arrancar con un keyfile mas abierto.
+# ---------------------------------------------------------------------------
+install -d -m 0700 /opt/nexus/secrets
+
+if [ ! -s /opt/nexus/secrets/mongo-keyfile ]; then
+  openssl rand -base64 756 > /opt/nexus/secrets/mongo-keyfile
+  echo "[nexus] fichero de clave del conjunto de replicas generado"
+else
+  echo "[nexus] el fichero de clave ya existia; se conserva"
+fi
+
+chmod 0400 /opt/nexus/secrets/mongo-keyfile
+chown 999:999 /opt/nexus/secrets/mongo-keyfile
+%{~ endif ~}
+
 %{~ if rol == "app" ~}
 # ---------------------------------------------------------------------------
 # El plano de aplicacion espera a que el de datos escuche
