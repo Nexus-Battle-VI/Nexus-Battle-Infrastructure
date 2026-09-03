@@ -44,26 +44,6 @@ services:
     pids_limit: 256
     ports:
       - '27017:27017'
-    # Conjunto de replicas de UN miembro (ADR-015).
-    #
-    # No da alta disponibilidad -una mayoria de uno sigue siendo el mismo punto
-    # unico de fallo de ADR-011-, pero es lo que HABILITA las transacciones
-    # multidocumento. Sin el, la escritura de producto, auditoria y outbox no
-    # puede ser atomica y HU-33 no cumple sus propias reglas de negocio.
-    #
-    # `--keyFile` es obligatorio en cuanto hay autenticacion: sin el, mongod se
-    # niega a arrancar como miembro de un conjunto. El fichero lo genera el
-    # arranque del nodo y NO viaja por git ni por el estado de Terraform.
-    #
-    # El oplog se fija en 128 MiB por ADR-015. Sin fijarlo, Mongo reserva el 5 %
-    # del disco libre, que en este nodo compartido es mucho mas de lo necesario.
-    command:
-      - --replSet
-      - rs0
-      - --keyFile
-      - /etc/mongo/keyfile
-      - --oplogSize
-      - '128'
     # Definir el usuario raiz es lo que ACTIVA la autenticacion en la imagen
     # oficial. Sin estas variables Mongo arranca abierto y cualquier servicio
     # puede leer la base de otro, aunque cada uno use la suya.
@@ -74,9 +54,6 @@ services:
     volumes:
       - mongo-data:/data/db
       - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
-      # Solo lectura y con dueno 999 (el usuario `mongodb` de la imagen): mongod
-      # RECHAZA un keyfile con permisos mas abiertos que 0600.
-      - ./secrets/mongo-keyfile:/etc/mongo/keyfile:ro
     healthcheck:
       test:
         [
@@ -87,48 +64,6 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-
-  # Inicia el conjunto de replicas UNA vez y sale.
-  #
-  # Es un servicio y no un paso del arranque del nodo a proposito: asi tambien
-  # se ejecuta cuando alguien levanta la composicion a mano, y no solo cuando la
-  # instancia nace.
-  #
-  # ES IDEMPOTENTE. `rs.status()` falla con `NotYetInitialized` la primera vez y
-  # devuelve el estado las siguientes; solo se inicia en el primer caso. Volver
-  # a llamar a `rs.initiate()` sobre un conjunto ya iniciado devolveria error y
-  # dejaria el servicio en fallo sin que nada estuviera mal.
-  #
-  # El miembro se declara con la IP PRIVADA del nodo, no con `localhost`: la
-  # direccion que se guarda en la configuracion del conjunto es la que usaran
-  # los clientes desde la otra maquina, y `localhost` los dejaria sin poder
-  # resolver el primario.
-  mongo-rs-init:
-    image: mongo:8
-    depends_on:
-      mongo:
-        condition: service_healthy
-    restart: 'no'
-    environment:
-      DB_PASSWORD: ${DB_PASSWORD}
-      DATA_HOST: ${DATA_HOST}
-    entrypoint:
-      - bash
-      - -c
-      - |
-        mongosh --quiet --host mongo:27017           --username root --password "$$DB_PASSWORD" --authenticationDatabase admin           --eval '
-            try {
-              rs.status()
-              print("[nexus] el conjunto de replicas ya estaba iniciado")
-            } catch (error) {
-              if (error.codeName !== "NotYetInitialized") { throw error }
-              rs.initiate({
-                _id: "rs0",
-                members: [{ _id: 0, host: process.env.DATA_HOST + ":27017" }],
-              })
-              print("[nexus] conjunto de replicas iniciado")
-            }
-          '
 
 volumes:
   postgres-data:
