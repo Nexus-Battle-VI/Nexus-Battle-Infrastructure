@@ -205,4 +205,5 @@ Se dejan tachadas en lugar de borrarlas: quien haya leído una versión anterior
 | [013](../adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Proposed |
 | [014](../adr/ADR-014-privacy-data-governance.md) | Gobierno de privacidad y tratamiento de datos | Proposed |
 | [015](../adr/ADR-015-catalog-atomicity-audit-outbox.md) | Atomicidad de Producto, auditoría y outbox | Accepted |
+| [016](../adr/ADR-016-product-asset-storage.md) | Almacenamiento y ownership de recursos visuales de Producto | Accepted |
 | [017](../adr/ADR-017-catalog-events-sqs.md) | Entrega de eventos de Producto mediante SQS | Proposed |
