@@ -305,12 +305,9 @@ resource "aws_instance" "node" {
    * El plan lo dijo: `2 to add, 0 to change, 2 to destroy`. Merece la pena
    * mirar el plan POR NODO antes de cada apply.
    *
-   * El de datos se queda sin comprimir porque su arranque es pequeno y estable.
-   * Si algun dia crece hasta el limite, comprimirlo costara una recreacion, y
-   * entonces habra que respaldar antes en lugar de descubrirlo a mitad.
    */
-  user_data        = each.value.role == "data" ? local.arranque[each.key] : null
-  user_data_base64 = each.value.role == "data" ? null : base64gzip(local.arranque[each.key])
+  user_data        = null
+  user_data_base64 = base64gzip(local.arranque[each.key])
 
   # Sin esto, cambiar el arranque NO cambia nada en la maquina.
   #
