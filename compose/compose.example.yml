@@ -165,6 +165,25 @@ services:
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Empuja el promedio y el conteo de calificaciones hacia el producto
+      # canonico de Catalog tras cada calificacion nueva (HU-40, CA-03), por el
+      # contrato interno `POST /internal/v1/catalog/products/{id}/rating`.
+      # Nombre de servicio de compose, red interna, sin TLS: no sale del nodo,
+      # no es un secreto -mismo patron que `CATALOG_BASE_URL` en `inventory` y
+      # que `CATALOG_INTERNAL_URL` en `commerce`-.
+      CATALOG_INTERNAL_URL: http://catalog:3003
+      # SIN `:?`, a proposito y a diferencia de `commerce`: para Community las
+      # tres variables de este contrato son OPCIONALES -su propio codigo trata
+      # el secreto vacio como "sin configurar" y sigue funcionando, y calificar
+      # NO deja de funcionar si Catalog no recibe el agregado-. Exigirlo aqui
+      # haria fallar el arranque de todo el stack por una integracion que el
+      # propio servicio esta preparado para no tener. En la practica ya esta
+      # definido: `account`, `catalog`, `inventory` y `commerce` lo exigen con
+      # `:?` mas arriba en este mismo fichero, asi que Compose ya para el
+      # arranque antes de llegar aqui si falta.
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      INTERNAL_SERVICE_NAME: community
+      INTERNAL_TIMEOUT_MS: ${INTERNAL_TIMEOUT_MS:-2000}
     depends_on:
       community-migrate:
         condition: service_completed_successfully
