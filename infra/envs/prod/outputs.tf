@@ -45,3 +45,13 @@ output "registro_dns_necesario" {
     module.compute.app_public_ip,
   )
 }
+
+output "product_assets_bucket_id" {
+  description = "Identificador y nombre del bucket S3 de assets de producto."
+  value       = module.product_assets.bucket_id
+}
+
+output "product_assets_bucket_arn" {
+  description = "ARN del bucket S3 de assets de producto."
+  value       = module.product_assets.bucket_arn
+}

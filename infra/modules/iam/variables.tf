@@ -33,3 +33,12 @@ variable "allowed_instance_types" {
   type        = list(string)
   default     = ["t4g.nano", "t4g.micro", "t4g.small", "t4g.medium"]
 }
+
+variable "product_assets_bucket" {
+  description = <<-DESC
+    Bucket de recursos visuales de Producto (ADR-016 / EN-027.9).
+    Excepción acotada de ADR-007 habilitada para almacenar activos dinámicos de catálogo.
+  DESC
+  type        = string
+  default     = null
+}

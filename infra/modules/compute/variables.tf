@@ -178,3 +178,9 @@ variable "mount_data_volume" {
   type        = bool
   default     = false
 }
+
+variable "product_assets_bucket" {
+  description = "Nombre del bucket S3 de assets de producto (ADR-016). Si se proporciona, habilita permisos mínimos al rol del nodo."
+  type        = string
+  default     = ""
+}
