@@ -250,6 +250,12 @@ locals {
         arrancar_stack = var.arrancar_stack
         compose_url    = var.compose_plugin_url
         compose_sha256 = var.compose_plugin_sha256
+
+        # Con `false` la plantilla no emite NI UNA LINEA sobre el volumen, de
+        # modo que el guion renderizado es identico al de antes de este cambio y
+        # el nodo no se reemplaza. Es lo que permite crear y adjuntar el volumen
+        # en un `apply` y migrar los datos en otro momento.
+        montar_volumen_datos = var.mount_data_volume
       }
     )
   }
@@ -414,4 +420,47 @@ resource "aws_eip_association" "app" {
 
   instance_id   = aws_instance.node["app"].id
   allocation_id = aws_eip.app[0].id
+}
+
+# ---------------------------------------------------------------------------
+# El volumen de datos, aparte de la instancia
+#
+# POR QUE EXISTE. Las dos bases vivian en el volumen RAIZ del nodo `data`, que
+# se declara con `delete_on_termination = true`. Y `compose/nodes/data.yml`
+# viaja dentro de `user_data`, que con `user_data_replace_on_change` reemplaza
+# la instancia en cuanto cambia. La suma de las dos cosas es que cualquier
+# edicion de la composicion del nodo de datos, aplicada, borraba todas las
+# cuentas y todos los productos. Comprobado en la maquina: un solo volumen de
+# 20 GB montado en `/`, con los volumenes de Docker dentro.
+#
+# `prevent_destroy` no es decoracion: impide que un `terraform destroy` o una
+# retirada accidental del recurso se lleve el volumen. Para retirarlo de verdad
+# hay que editar esta linea, que es una decision visible en un PR.
+# ---------------------------------------------------------------------------
+resource "aws_ebs_volume" "datos" {
+  for_each = { for clave, nodo in var.nodes : clave => nodo if nodo.role == "data" }
+
+  # La zona se toma de la instancia y no de una variable: un volumen en otra
+  # zona no se puede adjuntar, y el error aparece al aplicar, no al planificar.
+  availability_zone = aws_instance.node[each.key].availability_zone
+  size              = var.data_volume_gb
+  type              = "gp3"
+  encrypted         = true
+
+  tags = merge(var.tags, { Name = "${var.name}-${each.key}-datos" })
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_volume_attachment" "datos" {
+  for_each = aws_ebs_volume.datos
+
+  # En instancias Nitro el kernel renombra el dispositivo: se pide `/dev/sdf` y
+  # aparece como `/dev/nvme1n1`. El arranque busca entre los dos nombres en vez
+  # de fijar uno, porque cual aparece depende del tipo de instancia.
+  device_name = "/dev/sdf"
+  volume_id   = each.value.id
+  instance_id = aws_instance.node[each.key].id
 }

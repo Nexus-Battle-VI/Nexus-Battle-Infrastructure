@@ -296,3 +296,20 @@ variable "tls_contact_email" {
     error_message = "tls_contact_email debe ser un correo valido, o cadena vacia para usar la CA local. Un valor de relleno deja el proxy en bucle de reinicio."
   }
 }
+
+variable "data_volume_gb" {
+  description = "Tamano en GiB del volumen EBS de datos del nodo `data`."
+  type        = number
+  default     = 20
+}
+
+variable "mount_data_volume" {
+  description = <<-DESC
+    Si el arranque monta el volumen de datos. Ver la variable homonima del
+    modulo de computo: pasarla a cierto REEMPLAZA el nodo `data`, y hacerlo
+    antes de migrar los datos los destruye. El orden esta en
+    `docs/runbooks/migrar-datos-al-volumen.md`.
+  DESC
+  type        = bool
+  default     = false
+}
