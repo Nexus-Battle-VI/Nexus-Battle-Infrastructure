@@ -105,7 +105,7 @@ services:
       PORT: 3002
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://inventory:cambiar@mongo:27017/player-inventory?authSource=player-inventory
+      MONGODB_URI: mongodb://inventory-runtime:${MONGO_INVENTORY_RUNTIME_PASSWORD:-cambiar-inventory-runtime}@mongo:27017/player-inventory?authSource=player-inventory&replicaSet=rs0&directConnection=true&retryWrites=true&w=majority
       # `disabled` por defecto: es el estado que describe el BLOCKER de ADR-004.
       # Con el pool ya aprovisionado, activarlo es UNA variable en `.env`, no cinco
       # ediciones de este fichero.
@@ -126,7 +126,7 @@ services:
       PORT: 3003
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://catalog:cambiar@mongo:27017/catalog?authSource=catalog
+      MONGODB_URI: mongodb://catalog-runtime:${MONGO_CATALOG_RUNTIME_PASSWORD:-cambiar-catalog-runtime}@mongo:27017/catalog?authSource=catalog&replicaSet=rs0&directConnection=true&retryWrites=true&w=majority
       # `disabled` por defecto: es el estado que describe el BLOCKER de ADR-004.
       # Con el pool ya aprovisionado, activarlo es UNA variable en `.env`, no cinco
       # ediciones de este fichero.
@@ -284,10 +284,10 @@ services:
       NODE_ENV: development
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://catalog:cambiar@mongo:27017/catalog?authSource=catalog
+      MONGODB_URI: mongodb://catalog-migration:${MONGO_CATALOG_MIGRATION_PASSWORD:-cambiar-catalog-migration}@mongo:27017/catalog?authSource=catalog&replicaSet=rs0&directConnection=true&retryWrites=true&w=majority
     depends_on:
-      mongo:
-        condition: service_healthy
+      mongo-bootstrap:
+        condition: service_completed_successfully
     # Un contenedor de un solo uso NO se reinicia: al terminar bien sale con
     # codigo 0, y reiniciarlo volveria a ejecutar las migraciones en bucle.
     restart: 'no'
@@ -304,10 +304,10 @@ services:
       NODE_ENV: development
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://inventory:cambiar@mongo:27017/player-inventory?authSource=player-inventory
+      MONGODB_URI: mongodb://inventory-migration:${MONGO_INVENTORY_MIGRATION_PASSWORD:-cambiar-inventory-migration}@mongo:27017/player-inventory?authSource=player-inventory&replicaSet=rs0&directConnection=true&retryWrites=true&w=majority
     depends_on:
-      mongo:
-        condition: service_healthy
+      mongo-bootstrap:
+        condition: service_completed_successfully
     # Un contenedor de un solo uso NO se reinicia: al terminar bien sale con
     # codigo 0, y reiniciarlo volveria a ejecutar las migraciones en bucle.
     restart: 'no'
@@ -342,6 +342,8 @@ services:
 
   mongo:
     image: mongo:8
+    entrypoint: ['/usr/local/bin/nexus-mongo-entrypoint.sh']
+    command: ['mongod', '--replSet', 'rs0', '--bind_ip_all', '--oplogSize', '128', '--keyFile', '/data/configdb/nexus/keyfile']
     mem_limit: 384m
     pids_limit: 256
     # Definir el usuario raiz es lo que ACTIVA la autenticacion en la imagen
@@ -350,29 +352,48 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-cambiar}
-      DB_PASSWORD: ${DB_PASSWORD:-cambiar}
+      MONGO_CATALOG_RUNTIME_PASSWORD: ${MONGO_CATALOG_RUNTIME_PASSWORD:-cambiar-catalog-runtime}
+      MONGO_CATALOG_MIGRATION_PASSWORD: ${MONGO_CATALOG_MIGRATION_PASSWORD:-cambiar-catalog-migration}
+      MONGO_INVENTORY_RUNTIME_PASSWORD: ${MONGO_INVENTORY_RUNTIME_PASSWORD:-cambiar-inventory-runtime}
+      MONGO_INVENTORY_MIGRATION_PASSWORD: ${MONGO_INVENTORY_MIGRATION_PASSWORD:-cambiar-inventory-migration}
     volumes:
       - mongo-data:/data/db
       - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./mongo-entrypoint.sh:/usr/local/bin/nexus-mongo-entrypoint.sh:ro
+    secrets:
+      - mongo-keyfile
     healthcheck:
       test:
         [
-          'CMD',
-          'mongosh',
-          '--quiet',
-          '--username',
-          'root',
-          '--password',
-          'cambiar',
-          '--authenticationDatabase',
-          'admin',
-          '--eval',
-          'db.adminCommand("ping")',
+          'CMD-SHELL',
+          'mongosh --host 127.0.0.1 --quiet --username root --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval ''quit(db.hello().isWritablePrimary === true ? 0 : 1)''',
         ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 18
+      start_period: 20s
     restart: unless-stopped
+
+  mongo-bootstrap:
+    image: mongo:8
+    mem_limit: 96m
+    pids_limit: 64
+    environment:
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-cambiar}
+      MONGO_CATALOG_RUNTIME_PASSWORD: ${MONGO_CATALOG_RUNTIME_PASSWORD:-cambiar-catalog-runtime}
+      MONGO_CATALOG_MIGRATION_PASSWORD: ${MONGO_CATALOG_MIGRATION_PASSWORD:-cambiar-catalog-migration}
+      MONGO_INVENTORY_RUNTIME_PASSWORD: ${MONGO_INVENTORY_RUNTIME_PASSWORD:-cambiar-inventory-runtime}
+      MONGO_INVENTORY_MIGRATION_PASSWORD: ${MONGO_INVENTORY_MIGRATION_PASSWORD:-cambiar-inventory-migration}
+      MONGO_REPLICA_SET: rs0
+      MONGO_REPLICA_HOST: mongo:27017
+    volumes:
+      - ./bootstrap-mongo.sh:/opt/nexus/bootstrap-mongo.sh:ro
+      - ./bootstrap-mongo.js:/opt/nexus/bootstrap-mongo.js:ro
+    entrypoint: ['/bin/bash', '/opt/nexus/bootstrap-mongo.sh']
+    depends_on:
+      mongo:
+        condition: service_started
+    restart: 'no'
 
   # ---------------------------------------------------------------------
   # Correo de desarrollo
@@ -389,3 +410,7 @@ volumes:
   postgres-data:
   mongo-data:
   avatares:
+
+secrets:
+  mongo-keyfile:
+    file: ${MONGO_KEYFILE_PATH:-./secrets/mongo-keyfile}

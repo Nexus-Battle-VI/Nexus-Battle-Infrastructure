@@ -116,12 +116,16 @@ locals {
         "Caddyfile" = file("${local.compose_dir}/Caddyfile")
       }
       entorno = {
-        DATA_HOST             = var.nodes["data"].private_ip
-        DB_PASSWORD           = var.db_password
-        AUTH_MODE             = var.auth_mode
-        AUTHENTICATION_DRIVER = var.authentication_driver
-        COGNITO_USER_POOL_ID  = module.identity.user_pool_id
-        COGNITO_CLIENT_ID     = module.identity.client_id
+        DATA_HOST                          = var.nodes["data"].private_ip
+        DB_PASSWORD                        = var.db_password
+        MONGO_CATALOG_RUNTIME_PASSWORD     = var.mongo_credentials.catalog_runtime
+        MONGO_CATALOG_MIGRATION_PASSWORD   = var.mongo_credentials.catalog_migration
+        MONGO_INVENTORY_RUNTIME_PASSWORD   = var.mongo_credentials.inventory_runtime
+        MONGO_INVENTORY_MIGRATION_PASSWORD = var.mongo_credentials.inventory_migration
+        AUTH_MODE                          = var.auth_mode
+        AUTHENTICATION_DRIVER              = var.authentication_driver
+        COGNITO_USER_POOL_ID               = module.identity.user_pool_id
+        COGNITO_CLIENT_ID                  = module.identity.client_id
 
         # Contrato interno Account <-> Catalog para la evidencia de segundo
         # factor. Vacio deja el contrato cerrado: Account responde 503 y Catalog
@@ -140,17 +144,26 @@ locals {
     data = {
       compose = file("${local.compose_dir}/nodes/data.yml")
       ficheros = {
-        "init-postgres.sh" = file("${local.compose_dir}/init-postgres.sh")
-        "init-mongo.js"    = file("${local.compose_dir}/init-mongo.js")
+        "init-postgres.sh"    = file("${local.compose_dir}/init-postgres.sh")
+        "init-mongo.js"       = file("${local.compose_dir}/init-mongo.js")
+        "mongo-entrypoint.sh" = file("${local.compose_dir}/mongo-entrypoint.sh")
+        "bootstrap-mongo.sh"  = file("${local.compose_dir}/bootstrap-mongo.sh")
+        "bootstrap-mongo.js"  = file("${local.compose_dir}/bootstrap-mongo.js")
+        "backup-mongo.sh"     = file("${local.compose_dir}/backup-mongo.sh")
+        "restore-mongo.sh"    = file("${local.compose_dir}/restore-mongo.sh")
       }
       entorno = {
-        DB_PASSWORD = var.db_password
+        DB_PASSWORD                        = var.db_password
+        MONGO_CATALOG_RUNTIME_PASSWORD     = var.mongo_credentials.catalog_runtime
+        MONGO_CATALOG_MIGRATION_PASSWORD   = var.mongo_credentials.catalog_migration
+        MONGO_INVENTORY_RUNTIME_PASSWORD   = var.mongo_credentials.inventory_runtime
+        MONGO_INVENTORY_MIGRATION_PASSWORD = var.mongo_credentials.inventory_migration
 
-        # La usa `mongo-rs-init` para declarar el miembro del conjunto con la
+        # La usa `mongo-bootstrap` para declarar el miembro del conjunto con la
         # direccion por la que lo alcanzan los servicios de la OTRA maquina.
         # Con `localhost` la configuracion del conjunto quedaria escrita con una
         # direccion que ningun cliente puede resolver.
-        DATA_HOST = var.nodes["data"].private_ip
+        MONGO_REPLICA_HOST = "${var.nodes["data"].private_ip}:27017"
       }
     }
   }

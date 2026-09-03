@@ -6,7 +6,11 @@ Reproduce en una maquina de desarrollo la misma topologia que la arquitectura de
 
 ```bash
 cp compose.example.yml compose.yml
-# revisar y sustituir las credenciales de ejemplo
+cp .env.example .env
+mkdir -p secrets
+openssl rand -base64 756 | tr -d '\n' > secrets/mongo-keyfile
+chmod 0600 secrets/mongo-keyfile
+# revisar y sustituir las cinco credenciales de ejemplo
 docker compose up -d
 ```
 
@@ -35,7 +39,9 @@ navegador -> Caddy :8080
 
 ## Propiedad de datos, tambien aqui
 
-`init-postgres.sql` crea **una base de datos y un usuario por servicio**. El motor es compartido; el esquema no.
+`init-postgres.sh` crea una base y un usuario por servicio. MongoDB separa además
+las identidades `*-runtime` y `*-migration`. `catalog-runtime` puede insertar y
+leer `audit_log`, pero no actualizarlo ni borrarlo.
 
 Compartir host es una concesion de coste. Compartir esquema seria renunciar a la arquitectura, y por eso ni siquiera en la composicion de desarrollo se hace.
 
@@ -45,7 +51,8 @@ Este fichero **no es apto para produccion**:
 
 - credenciales de ejemplo en claro;
 - sin TLS;
-- sin replica, copias de seguridad ni limites de recursos;
+- replica set de un miembro, sin alta disponibilidad;
+- el backup es una operación programada, no una réplica;
 - **los servicios no verifican quien realiza la peticion** (ver [ADR-004](../docs/adr/ADR-004-identity-directory.md)).
 
 La politica de publicacion **ya esta decidida**: cada integracion en `main` publica en GHCR con tres etiquetas —`latest`, `sha-<12>` y la version de `package.json`—. Surte efecto cuando entran los siete PR que anaden el job `publish` a cada repositorio de servicio. Hasta entonces, `ghcr.io/nexus-battle-vi/...` no existe y hay que construir en local.
@@ -53,6 +60,8 @@ La politica de publicacion **ya esta decidida**: cada integracion en `main` publ
 ## Composiciones por nodo
 
 `nodes/app.yml` y `nodes/data.yml` son la particion de este mismo fichero segun la topologia T2 de [ADR-011](../docs/adr/ADR-011-deployment-topology.md). Las escribe Terraform en cada instancia por `user_data`, y el CI las valida con el mismo `docker compose config` que valida esta.
+
+El procedimiento completo está en el [runbook del replica set](../docs/runbooks/mongo-replica-set.md).
 
 La diferencia estructural con este fichero no es cosmetica: aqui las migraciones esperan a `postgres` con `service_healthy` porque el motor esta al lado; en `nodes/app.yml` el motor esta en otra maquina, asi que esa espera no puede existir.
 

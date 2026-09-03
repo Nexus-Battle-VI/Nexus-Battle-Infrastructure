@@ -122,7 +122,7 @@ services:
       PORT: 3002
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://inventory:${DB_PASSWORD}@${DATA_HOST}:27017/player-inventory?authSource=player-inventory&replicaSet=rs0
+      MONGODB_URI: mongodb://inventory-runtime:${MONGO_INVENTORY_RUNTIME_PASSWORD}@${DATA_HOST}:27017/player-inventory?authSource=player-inventory&replicaSet=rs0&directConnection=true&retryWrites=true&w=majority
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
@@ -140,7 +140,7 @@ services:
       PORT: 3003
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://catalog:${DB_PASSWORD}@${DATA_HOST}:27017/catalog?authSource=catalog&replicaSet=rs0
+      MONGODB_URI: mongodb://catalog-runtime:${MONGO_CATALOG_RUNTIME_PASSWORD}@${DATA_HOST}:27017/catalog?authSource=catalog&replicaSet=rs0&directConnection=true&retryWrites=true&w=majority
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
@@ -297,7 +297,7 @@ services:
       NODE_ENV: development
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://catalog:${DB_PASSWORD}@${DATA_HOST}:27017/catalog?authSource=catalog&replicaSet=rs0
+      MONGODB_URI: mongodb://catalog-migration:${MONGO_CATALOG_MIGRATION_PASSWORD}@${DATA_HOST}:27017/catalog?authSource=catalog&replicaSet=rs0&directConnection=true&retryWrites=true&w=majority
     restart: 'no'
 
   inventory-migrate:
@@ -309,7 +309,7 @@ services:
       NODE_ENV: development
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
-      MONGODB_URI: mongodb://inventory:${DB_PASSWORD}@${DATA_HOST}:27017/player-inventory?authSource=player-inventory&replicaSet=rs0
+      MONGODB_URI: mongodb://inventory-migration:${MONGO_INVENTORY_MIGRATION_PASSWORD}@${DATA_HOST}:27017/player-inventory?authSource=player-inventory&replicaSet=rs0&directConnection=true&retryWrites=true&w=majority
     restart: 'no'
 
   # ---------------------------------------------------------------------

@@ -9,8 +9,9 @@
 # desde el grupo `app`, referenciado por identificador y no por CIDR. Está en
 # `modules/network/main.tf` y se puede leer ahí.
 #
-# Sigue sin haber réplica ni copias de seguridad, y ADR-011 lo dice: perder el
-# volumen EBS de este nodo es perder los datos.
+# El replica set de un miembro habilita las transacciones de ADR-015. No aporta
+# alta disponibilidad: perder el volumen EBS sigue significando perder los
+# datos desde el ultimo backup restaurable.
 
 name: nexus-battles-vi-data
 
@@ -30,7 +31,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./init-postgres.sh:/docker-entrypoint-initdb.d/init.sh:ro
+      - ${NEXUS_COMPOSE_ASSET_DIR:-.}/init-postgres.sh:/docker-entrypoint-initdb.d/init.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U nexus']
       interval: 10s
@@ -40,96 +41,75 @@ services:
 
   mongo:
     image: mongo:8
+    entrypoint: ['/usr/local/bin/nexus-mongo-entrypoint.sh']
+    command:
+      [
+        'mongod',
+        '--replSet',
+        'rs0',
+        '--bind_ip_all',
+        '--oplogSize',
+        '128',
+        '--keyFile',
+        '/data/configdb/nexus/keyfile',
+      ]
     mem_limit: 384m
     pids_limit: 256
     ports:
       - '27017:27017'
-    # Conjunto de replicas de UN miembro (ADR-015).
-    #
-    # No da alta disponibilidad -una mayoria de uno sigue siendo el mismo punto
-    # unico de fallo de ADR-011-, pero es lo que HABILITA las transacciones
-    # multidocumento. Sin el, la escritura de producto, auditoria y outbox no
-    # puede ser atomica y HU-33 no cumple sus propias reglas de negocio.
-    #
-    # `--keyFile` es obligatorio en cuanto hay autenticacion: sin el, mongod se
-    # niega a arrancar como miembro de un conjunto. El fichero lo genera el
-    # arranque del nodo y NO viaja por git ni por el estado de Terraform.
-    #
-    # El oplog se fija en 128 MiB por ADR-015. Sin fijarlo, Mongo reserva el 5 %
-    # del disco libre, que en este nodo compartido es mucho mas de lo necesario.
-    command:
-      - --replSet
-      - rs0
-      - --keyFile
-      - /etc/mongo/keyfile
-      - --oplogSize
-      - '128'
     # Definir el usuario raiz es lo que ACTIVA la autenticacion en la imagen
     # oficial. Sin estas variables Mongo arranca abierto y cualquier servicio
     # puede leer la base de otro, aunque cada uno use la suya.
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
-      DB_PASSWORD: ${DB_PASSWORD}
+      MONGO_CATALOG_RUNTIME_PASSWORD: ${MONGO_CATALOG_RUNTIME_PASSWORD}
+      MONGO_CATALOG_MIGRATION_PASSWORD: ${MONGO_CATALOG_MIGRATION_PASSWORD}
+      MONGO_INVENTORY_RUNTIME_PASSWORD: ${MONGO_INVENTORY_RUNTIME_PASSWORD}
+      MONGO_INVENTORY_MIGRATION_PASSWORD: ${MONGO_INVENTORY_MIGRATION_PASSWORD}
     volumes:
       - mongo-data:/data/db
-      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
-      # Solo lectura y con dueno 999 (el usuario `mongodb` de la imagen): mongod
-      # RECHAZA un keyfile con permisos mas abiertos que 0600.
-      - ./secrets/mongo-keyfile:/etc/mongo/keyfile:ro
+      - ${NEXUS_COMPOSE_ASSET_DIR:-.}/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ${NEXUS_COMPOSE_ASSET_DIR:-.}/mongo-entrypoint.sh:/usr/local/bin/nexus-mongo-entrypoint.sh:ro
+    secrets:
+      - mongo-keyfile
     healthcheck:
       test:
         [
           'CMD-SHELL',
-          'mongosh --quiet --username root --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval ''db.adminCommand("ping")''',
+          'mongosh --host 127.0.0.1 --quiet --username root --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval ''quit(db.hello().isWritablePrimary === true ? 0 : 1)''',
         ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 18
+      start_period: 20s
     restart: unless-stopped
 
-  # Inicia el conjunto de replicas UNA vez y sale.
-  #
-  # Es un servicio y no un paso del arranque del nodo a proposito: asi tambien
-  # se ejecuta cuando alguien levanta la composicion a mano, y no solo cuando la
-  # instancia nace.
-  #
-  # ES IDEMPOTENTE. `rs.status()` falla con `NotYetInitialized` la primera vez y
-  # devuelve el estado las siguientes; solo se inicia en el primer caso. Volver
-  # a llamar a `rs.initiate()` sobre un conjunto ya iniciado devolveria error y
-  # dejaria el servicio en fallo sin que nada estuviera mal.
-  #
-  # El miembro se declara con la IP PRIVADA del nodo, no con `localhost`: la
-  # direccion que se guarda en la configuracion del conjunto es la que usaran
-  # los clientes desde la otra maquina, y `localhost` los dejaria sin poder
-  # resolver el primario.
-  mongo-rs-init:
+  mongo-bootstrap:
     image: mongo:8
+    mem_limit: 96m
+    pids_limit: 64
+    environment:
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MONGO_CATALOG_RUNTIME_PASSWORD: ${MONGO_CATALOG_RUNTIME_PASSWORD}
+      MONGO_CATALOG_MIGRATION_PASSWORD: ${MONGO_CATALOG_MIGRATION_PASSWORD}
+      MONGO_INVENTORY_RUNTIME_PASSWORD: ${MONGO_INVENTORY_RUNTIME_PASSWORD}
+      MONGO_INVENTORY_MIGRATION_PASSWORD: ${MONGO_INVENTORY_MIGRATION_PASSWORD}
+      MONGO_REPLICA_SET: rs0
+      MONGO_REPLICA_HOST: ${MONGO_REPLICA_HOST:-mongo:27017}
+    volumes:
+      - ${NEXUS_COMPOSE_ASSET_DIR:-.}/bootstrap-mongo.sh:/opt/nexus/bootstrap-mongo.sh:ro
+      - ${NEXUS_COMPOSE_ASSET_DIR:-.}/bootstrap-mongo.js:/opt/nexus/bootstrap-mongo.js:ro
+    entrypoint: ['/bin/bash', '/opt/nexus/bootstrap-mongo.sh']
     depends_on:
       mongo:
-        condition: service_healthy
+        condition: service_started
     restart: 'no'
-    environment:
-      DB_PASSWORD: ${DB_PASSWORD}
-      DATA_HOST: ${DATA_HOST}
-    entrypoint:
-      - bash
-      - -c
-      - |
-        mongosh --quiet --host mongo:27017           --username root --password "$$DB_PASSWORD" --authenticationDatabase admin           --eval '
-            try {
-              rs.status()
-              print("[nexus] el conjunto de replicas ya estaba iniciado")
-            } catch (error) {
-              if (error.codeName !== "NotYetInitialized") { throw error }
-              rs.initiate({
-                _id: "rs0",
-                members: [{ _id: 0, host: process.env.DATA_HOST + ":27017" }],
-              })
-              print("[nexus] conjunto de replicas iniciado")
-            }
-          '
 
 volumes:
   postgres-data:
   mongo-data:
+
+secrets:
+  mongo-keyfile:
+    file: ${MONGO_KEYFILE_PATH:-./secrets/mongo-keyfile}

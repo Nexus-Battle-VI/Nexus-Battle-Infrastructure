@@ -237,6 +237,9 @@ El flujo propuesto y el estado actual están separados visualmente en
 - [x] Creadas las Tasks posteriores: [EN-027.5 #289](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/289), [EN-027.6 #290](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/290), [EN-027.7 #291](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/291) y [EN-027.8 #292](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/292).
 - [x] EN-027.2 no ejecutó `terraform apply` ni modificó infraestructura productiva.
 - [x] Se aclaró que la imagen queda fuera de la transacción MongoDB y que su coordinación o compensación pertenece a EN-027.3 #283.
+- [ ] EN-027.5 #289 se cierra solo después de integrar y ejecutar los gates de
+  PRIMARY, identidades separadas, backup/restore, carga y rollback; desplegar
+  `rs0` por sí solo no completa esas evidencias.
 
 ## Consecuencias
 

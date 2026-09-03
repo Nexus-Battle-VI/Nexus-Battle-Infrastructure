@@ -8,6 +8,7 @@
 # Composicion local derivada del ejemplo, y el `.env` que la acompana
 compose/compose.yml
 compose/.env
+compose/secrets/
 
 # Editores y sistema
 .idea/

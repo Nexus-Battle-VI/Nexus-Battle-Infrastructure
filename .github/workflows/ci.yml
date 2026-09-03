@@ -80,6 +80,7 @@ jobs:
           docs/architecture/developer-workflow.md
           docs/architecture/branching-and-release.md
           docs/architecture/cost-constraints.md
+          docs/runbooks/mongo-replica-set.md
           docs/diagrams/system-context.puml
           docs/diagrams/microservices-component.puml
           docs/diagrams/sprint-demo-aws-deployment.puml
@@ -125,6 +126,13 @@ jobs:
           compose/nodes/data.yml
           compose/init-postgres.sh
           compose/init-mongo.js
+          compose/mongo-entrypoint.sh
+          compose/bootstrap-mongo.sh
+          compose/bootstrap-mongo.js
+          compose/backup-mongo.sh
+          compose/restore-mongo.sh
+          scripts/verificar-replica-set-operativo.py
+          scripts/verificar-backup-restore-mongo.sh
           "
           for file in $required; do
             if [ ! -f "$file" ]; then
@@ -199,6 +207,12 @@ jobs:
 
       - name: Verificar PoC de atomicidad MongoDB
         run: python3 scripts/verificar-atomicidad-mongo.py
+
+      - name: Verificar replica set operativo y carga conjunta
+        run: python3 scripts/verificar-replica-set-operativo.py
+
+      - name: Verificar backup y restauracion de Catalog
+        run: bash scripts/verificar-backup-restore-mongo.sh
 
       - name: Validar el diagrama de compatibilidad de Producto
         run: |
@@ -342,9 +356,15 @@ jobs:
 
       - name: Validar la composicion de referencia
         run: |
+          keyfile=$(mktemp)
+          openssl rand -base64 756 | tr -d '\n' > "$keyfile"
+          chmod 0600 "$keyfile"
+          export MONGO_KEYFILE_PATH="$keyfile"
+          export NEXUS_COMPOSE_ASSET_DIR="$PWD/compose"
+          trap 'rm -f "$keyfile" compose/compose.yml' EXIT
+
           cp compose/compose.example.yml compose/compose.yml
           docker compose -f compose/compose.yml config > /dev/null
-          rm compose/compose.yml
           echo "Composicion de referencia valida."
 
           # Las composiciones por nodo se validan IGUAL que la de referencia, y
@@ -354,6 +374,12 @@ jobs:
           # Las variables se dan aqui solo para que la sustitucion tenga algo
           # que poner. Lo que se comprueba es la estructura, no los valores.
           for nodo in app data; do
-            DATA_HOST=10.0.0.1 DB_PASSWORD=validacion               docker compose -f "compose/nodes/$nodo.yml" config > /dev/null
+            DATA_HOST=10.0.0.1 DB_PASSWORD=validacion \
+              MONGO_REPLICA_HOST=10.0.0.1:27017 \
+              MONGO_CATALOG_RUNTIME_PASSWORD=validacion-catalog-runtime \
+              MONGO_CATALOG_MIGRATION_PASSWORD=validacion-catalog-migration \
+              MONGO_INVENTORY_RUNTIME_PASSWORD=validacion-inventory-runtime \
+              MONGO_INVENTORY_MIGRATION_PASSWORD=validacion-inventory-migration \
+              docker compose -f "compose/nodes/$nodo.yml" config > /dev/null
             echo "Composicion del nodo $nodo valida."
           done

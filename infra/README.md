@@ -129,6 +129,15 @@ Cuando una acción no está en la lista, el workflow **no falla: no llega a arra
 
 La acción sigue fijada por SHA de commit completo en el workflow. La lista permitida es un control grueso; el anclaje por SHA es el fino. Los dos se complementan y ninguno sustituye al otro.
 
+## Gate operativo de MongoDB
+
+El replica set de un miembro habilita transacciones, no alta disponibilidad.
+Antes de aplicar las identidades separadas se deben definir las cuatro
+`mongo_credentials`, ejecutar primero el plano `data` y después `app`, y seguir
+el [runbook de MongoDB](../docs/runbooks/mongo-replica-set.md). El volumen EBS
+persistente evita perder las bases al reemplazar el nodo, pero no sustituye un
+backup restaurable externo.
+
 ## Coste de lo que este código crearía
 
 | Concepto | Mensual |

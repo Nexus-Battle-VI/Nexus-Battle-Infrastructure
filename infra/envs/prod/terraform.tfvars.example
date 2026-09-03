@@ -9,6 +9,15 @@ alert_email = "alertas@ejemplo.invalid"
 # mismo valor para Account y Catalog. Vacio mantiene el contrato fail-closed.
 internal_service_auth_secret = ""
 
+# Cuatro valores URI-safe diferentes entre si y distintos de db_password. Se
+# crean fuera de Git antes del despliegue por fases descrito en el runbook.
+mongo_credentials = {
+  catalog_runtime     = ""
+  catalog_migration   = ""
+  inventory_runtime   = ""
+  inventory_migration = ""
+}
+
 # Topologia T2 (ADR-011): plano sin estado separado del plano con estado.
 #
 # El criterio no es cuantos microservicios hay, sino que componentes tienen

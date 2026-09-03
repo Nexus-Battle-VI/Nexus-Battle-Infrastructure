@@ -49,6 +49,48 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "mongo_credentials" {
+  description = <<-DESC
+    Credenciales independientes para ejecucion y migraciones de Catalog e Inventory.
+
+    No se reutiliza db_password: compartir el valor permitiria a un proceso
+    runtime autenticarse como la identidad de migracion y obtener dbAdmin. Los
+    valores siguen el mecanismo sensible ya existente de user_data/estado; no
+    deben registrarse ni enviarse por canales informales.
+  DESC
+  type = object({
+    catalog_runtime     = string
+    catalog_migration   = string
+    inventory_runtime   = string
+    inventory_migration = string
+  })
+  sensitive = true
+  default = {
+    catalog_runtime     = ""
+    catalog_migration   = ""
+    inventory_runtime   = ""
+    inventory_migration = ""
+  }
+
+  validation {
+    condition = !var.arrancar_stack || alltrue([
+      for credential in values(var.mongo_credentials) : (
+        length(credential) >= 16 &&
+        length(credential) <= 128 &&
+        can(regex("^[A-Za-z0-9_-]+$", credential))
+      )
+    ])
+    error_message = "Para arrancar el stack, las cuatro credenciales Mongo deben tener 16-128 caracteres URI-safe (A-Z, a-z, 0-9, _ o -)."
+  }
+
+  validation {
+    condition = !var.arrancar_stack || (
+      length(distinct(concat(values(var.mongo_credentials), [var.db_password]))) == 5
+    )
+    error_message = "Las credenciales Mongo runtime/migration y db_password deben ser cinco valores diferentes."
+  }
+}
+
 variable "internal_service_auth_secret" {
   description = <<-DESC
     Secreto compartido del contrato interno entre servicios.
