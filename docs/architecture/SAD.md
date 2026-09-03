@@ -136,7 +136,13 @@ confirmado. Ver [ADR-004](../adr/ADR-004-identity-directory.md) y
 política versionada, matriz de tratamiento, contrato de portabilidad,
 consentimiento y diseño de alto nivel de HU-43/HU-45 — vive en
 [docs/privacy](../privacy/) y [ADR-014](../adr/ADR-014-privacy-data-governance.md)
-(`Proposed`). Sin implementación runtime todavía.
+(`Proposed`). El derecho al olvido (HU-43) ya tiene implementación runtime
+completa, Account-only, mergeada a `develop` en Account, Notifications y Web
+(Management #303–#307) — ver
+[hu-43-account-deletion-design.md](../privacy/hu-43-account-deletion-design.md#qué-quedó-implementado-verificado-en-código-y-pr-mergeados-a-develop).
+La evidencia de consentimiento versionado (Decisión 1 de ADR-014) y el
+agregador de portabilidad multi-contexto de HU-45 (Decisión 4) siguen sin
+runtime.
 
 ## 12. Observabilidad
 
