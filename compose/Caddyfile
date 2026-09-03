@@ -20,6 +20,44 @@
 		reverse_proxy inventory:3002
 	}
 
+	# Comentarios y calificaciones de producto (HU-40, Management #28). Son
+	# contratos PUBLICOS de Community, no de Catalog, aunque cuelguen bajo
+	# `/api/products/{id}/...`: comparten prefijo con el catalogo pero el
+	# servicio que los responde es otro.
+	#
+	# VAN ANTES QUE `/api/products*` EN EL FICHERO, y se comprobo con
+	# `caddy adapt` que tambien van antes en la ruta final compilada: el
+	# adaptador de Caddyfile reordena los bloques `handle` por especificidad de
+	# ruta y no se limita a copiar el orden textual, asi que la posicion en
+	# este fichero no es, por si sola, garantia de precedencia -por eso cada
+	# cambio de estas rutas debe revalidarse con `caddy adapt`, no solo leerse-.
+	# Si Catalog llegara a interceptar esta peticion, el sintoma seria un 404
+	# -o peor, un 200 equivocado- en vez de la respuesta real de Community.
+	# `GET /api/products/{id}` en si mismo NO coincide con ninguno de los dos
+	# matchers de aqui abajo, asi que sigue cayendo en el comodin de Catalog
+	# sin cambio.
+	# `path_regexp` y no el matcher `path` con comodines. Se probo primero con
+	# comodines contra un Caddy real (v2.11.4) y el resultado fue inconsistente
+	# y no documentado con precision: un `*` de segmento (`/*/comments*`) deja
+	# de cruzar `/` en cuanto el patron tiene mas de un comodin, y `**` en esta
+	# version solo cubre UN segmento adicional, no "cero o mas" como dice la
+	# documentacion -`GET /api/products/{id}/comments/x/y` no coincidia con
+	# `/api/products/*/comments/**`, solo `GET .../comments/x`-. Se descubrio
+	# probando peticiones reales contra un contenedor `caddy:2-alpine`, no
+	# leyendo la documentacion. La expresion regular no tiene esa ambiguedad:
+	# ancla el prefijo con `^` y no limita lo que sigue.
+	@community_comments path_regexp ^/api/products/[^/]+/comments
+	handle @community_comments {
+		reverse_proxy community:3004
+	}
+
+	# Incluye `GET /api/products/{id}/reviews/summary` y cualquier otra ruta
+	# anidada bajo `/reviews`, a cualquier profundidad.
+	@community_reviews path_regexp ^/api/products/[^/]+/reviews
+	handle @community_reviews {
+		reverse_proxy community:3004
+	}
+
 	handle /api/products* {
 		reverse_proxy catalog:3003
 	}
@@ -61,6 +99,15 @@
 	# error.
 
 	handle /api/threads* {
+		reverse_proxy community:3004
+	}
+
+	# Reportes de comentario (HU-46, Management #40) y las operaciones de
+	# moderacion de Community bajo `/api/comments/...`. Sin esta entrada,
+	# `POST /api/comments/{id}/reports` caia en el comodin final y lo
+	# respondia Web con su `index.html`.
+	@community_comment_reports path_regexp ^/api/comments
+	handle @community_comment_reports {
 		reverse_proxy community:3004
 	}
 

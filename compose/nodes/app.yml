@@ -182,6 +182,17 @@ services:
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Empuja el promedio y el conteo de calificaciones hacia el producto
+      # canonico de Catalog tras cada calificacion nueva (HU-40, CA-03).
+      # Nombre de servicio de compose, red interna del nodo: no sale de la
+      # maquina, no es un secreto -mismo patron que `CATALOG_INTERNAL_URL` en
+      # `commerce`-. A diferencia de `commerce`, es OPCIONAL para Community:
+      # sin secreto, calificar sigue funcionando y Catalog simplemente no
+      # recibe el agregado.
+      CATALOG_INTERNAL_URL: http://catalog:3003
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      INTERNAL_SERVICE_NAME: community
+      INTERNAL_TIMEOUT_MS: ${INTERNAL_TIMEOUT_MS:-2000}
     depends_on:
       community-migrate:
         condition: service_completed_successfully
