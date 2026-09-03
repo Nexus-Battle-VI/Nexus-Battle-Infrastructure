@@ -167,7 +167,7 @@ chmod 0400 /opt/nexus/secrets/mongo-keyfile
 chown 999:999 /opt/nexus/secrets/mongo-keyfile
 %{~ endif ~}
 
-%{~ if rol == "app" ~}
+%{~ if rol == "app" && arrancar_stack ~}
 # ---------------------------------------------------------------------------
 # El plano de aplicacion espera a que el de datos escuche
 #
@@ -177,10 +177,8 @@ chown 999:999 /opt/nexus/secrets/mongo-keyfile
 # `app` llego antes que `data`; en el segundo salieron bien solo porque `data`
 # termino ocho segundos antes. Eso es suerte, no orden.
 #
-# Se espera con un limite: si a los tres minutos el plano de datos no escucha,
-# se sigue igualmente y las migraciones fallaran de forma visible. Esperar para
-# siempre convertiria un nodo de datos caido en un arranque colgado sin decir
-# por que.
+# Se espera con un limite. Si el plano de datos no esta listo, el arranque
+# termina con error antes de lanzar migraciones.
 #
 # `/dev/tcp` es de bash y no necesita instalar nada.
 # ---------------------------------------------------------------------------
@@ -199,12 +197,38 @@ esperar_puerto() {
     sleep 2
   done
 
-  echo "[nexus] AVISO: $destino:$puerto no respondio en 180s; se continua igualmente"
+  echo "[nexus] ERROR: $destino:$puerto no respondio en 180s; no se ejecutan migraciones"
   return 1
 }
 
 esperar_puerto "${data_host}" 5432
 esperar_puerto "${data_host}" 27017
+
+# El puerto abierto tambien responde durante la inicializacion del replica set.
+# Las transacciones de Catalog e Inventory necesitan un primario de rs0. hello
+# es el comando publico de descubrimiento: no requiere credenciales de usuario.
+# La imagen ya es la misma que usa el plano de datos; no instala otro cliente.
+docker run --rm --entrypoint mongosh mongo:8 \
+  "mongodb://${data_host}:27017/?directConnection=true&serverSelectionTimeoutMS=5000&connectTimeoutMS=5000" \
+  --quiet --eval '
+    const limite = Date.now() + 180000;
+    while (Date.now() < limite) {
+      let primario = false;
+      try {
+        const estado = db.hello();
+        primario = estado.setName === "rs0" && estado.isWritablePrimary;
+      } catch (error) {
+        // La eleccion puede cerrar una conexion; se reintenta dentro del limite.
+      }
+      if (primario) {
+        print("[nexus] Mongo rs0 tiene primario; se pueden ejecutar migraciones");
+        quit(0);
+      }
+      sleep(2000);
+    }
+    print("[nexus] ERROR: Mongo rs0 no eligio primario en 180s");
+    quit(1);
+  '
 %{~ endif ~}
 
 # ---------------------------------------------------------------------------

@@ -53,15 +53,13 @@ variable "internal_service_auth_secret" {
   description = <<-DESC
     Secreto compartido del contrato interno entre servicios.
 
-    Lo usan Account y Catalog para firmar y verificar las consultas de evidencia
-    de segundo factor con HMAC-SHA256. Ambos deben recibir EL MISMO valor: si
-    difieren, Catalog no podra comprobar la evidencia y las mutaciones
-    administrativas fallaran CERRADAS con 503, que es el comportamiento correcto
-    pero deja el catalogo inadministrable.
+    Lo usan Account, Catalog, Commerce, Player-Inventory y Notifications para
+    firmar y verificar sus contratos internos con HMAC-SHA256. Todos deben
+    recibir el mismo valor para verificar las firmas.
 
-    Vacio por defecto, igual que `db_password`. Con el vacio, el contrato interno
-    de Account responde 503 y Catalog rechaza las mutaciones administrativas: un
-    despliegue incompleto NO deja el endpoint interno abierto.
+    Vacio por defecto, igual que `db_password`. Solo permite preparar nodos con
+    arrancar_stack=false. Arrancar el stack exige un secreto de al menos 32
+    caracteres; compose tambien rechaza el valor vacio.
 
     PENDIENTE OPERACIONAL, y conviene no perderlo de vista: este valor sigue el
     mismo camino que `db_password` -entra en `user_data`, que el estado de
@@ -83,6 +81,11 @@ variable "arrancar_stack" {
   validation {
     condition     = !var.arrancar_stack || length(var.db_password) >= 16
     error_message = "Para arrancar el stack hace falta una contrasena de al menos 16 caracteres. Con la de la composicion de referencia, el nodo quedaria con credenciales conocidas."
+  }
+
+  validation {
+    condition     = !var.arrancar_stack || length(trimspace(var.internal_service_auth_secret)) >= 32
+    error_message = "Para arrancar el stack hace falta un secreto interno de al menos 32 caracteres, compartido por los cinco servicios."
   }
 }
 
@@ -318,4 +321,10 @@ variable "product_assets_bucket_name" {
   description = "Nombre del bucket S3 para los recursos visuales de Producto (ADR-016 / EN-027.9)."
   type        = string
   default     = ""
+}
+
+variable "product_assets_cors_origins" {
+  description = "Origenes que pueden leer imagenes privadas mediante la URL firmada de Catalog."
+  type        = list(string)
+  default     = ["https://nexus.simuladorupbbga.app"]
 }

@@ -48,8 +48,9 @@ module "tfstate" {
 module "product_assets" {
   source = "../../modules/product_assets"
 
-  bucket_name = local.product_assets_bucket_name
-  tags        = local.tags
+  bucket_name         = local.product_assets_bucket_name
+  tags                = local.tags
+  allowed_web_origins = var.product_assets_cors_origins
 
   # El operador necesita que la política S3SoloParaElEstado haya incluido el bucket
   # antes de que la llamada a CreateBucket sea autorizada por IAM.
@@ -137,10 +138,14 @@ locals {
         COGNITO_USER_POOL_ID  = module.identity.user_pool_id
         COGNITO_CLIENT_ID     = module.identity.client_id
 
-        # Contrato interno Account <-> Catalog para la evidencia de segundo
-        # factor. Vacio deja el contrato cerrado: Account responde 503 y Catalog
-        # rechaza las mutaciones administrativas. Ver la variable para el
-        # pendiente operacional sobre donde acaba este valor.
+        # El bucket y el rol ya existen en el grafo: Catalog debe recibir la
+        # configuracion para usar ese almacenamiento en lugar de memoria.
+        ASSETS_STORAGE_DRIVER      = "s3"
+        PRODUCT_ASSETS_BUCKET_NAME = module.product_assets.bucket_id
+        AWS_REGION                 = var.region
+
+        # Firma compartida por Account, Catalog, Commerce, Inventory y
+        # Notifications. arrancar_stack exige un valor no vacio.
         INTERNAL_SERVICE_AUTH_SECRET = var.internal_service_auth_secret
 
         # Vacio deja el sitio publico en `localhost:8443`, que nadie alcanza.
