@@ -9,65 +9,48 @@ skinparam sequence {
 
 actor "Titular" as user
 participant "Web" as web
-participant "Account\n(verificación de\nidentidad)" as account
-participant "Coordinador de\neliminación\n(dentro de Account)" as orchestrator
-participant "Player/Inventory" as inventory
-participant "Community" as community
-participant "Commerce" as commerce
+participant "Account\n(verificación de\nidentidad y ownership)" as account
 participant "Notifications" as notify
 
-note over orchestrator
-  Proceso DURABLE, coordinado por
-  Account con llamadas síncronas
-  por contexto — ADR-014 Decisión 5.
-  No depende de ADR-006: ese ADR
-  no define el derecho al olvido
-  en su alcance. La petición HTTP
-  del titular NO permanece abierta
-  durante los 30 días de plazo.
+note over account
+  Alcance fijado por EN-011 (Management #197)
+  y reflejado en ADR-014 Decisión 5:
+  Account es owner de la cuenta y de los
+  datos personales que administra. Un
+  `subject` opaco en otro bounded context
+  NO lo hace partícipe de HU-43 por sí solo.
+  La petición HTTP del titular NO permanece
+  abierta durante los 30 días de plazo.
 end note
 
 user -> web : solicita eliminar cuenta
 web -> account : POST /accounts/deletion\n(JWT verificado)
 account -> account : subject verificado\n-> findBySubject -> Account
-account -> account : registrar solicitud\n(progreso durable, no en memoria)
+account -> account : registrar solicitud\n(estado persistente, no en memoria)
 account --> web : confirmación de RECEPCIÓN
 web --> user : "solicitud recibida"
 
 == la petición HTTP del titular termina aquí ==
-== lo siguiente ocurre de forma durable, fuera de esa petición ==
+== lo siguiente ocurre de forma durable, dentro de Account ==
 
-account -> orchestrator : iniciar proceso durable\n(subject, plazo máx. 30 días,\nllamadas idempotentes)
+account -> account : tratar datos personales\npropiedad de Account\n(eliminar / anonimizar / retener\nsegún la matriz de tratamiento,\nidempotente, sin invocar a\nningún otro bounded context)
 
-par por cada bounded context, según la matriz de tratamiento
-  orchestrator -> inventory : eliminar inventario del titular
-  inventory --> orchestrator : ok
-else
-  orchestrator -> community : eliminar/anonimizar\ncomentarios propios
-  community --> orchestrator : ok
-else
-  orchestrator -> commerce : anonimizar pedidos\n(retener por obligación aplicable)
-  commerce --> orchestrator : ok, con excepción de retención
-end
+account -> account : aplicar únicamente las\nexcepciones de retención\nformalmente aprobadas
 
-note over orchestrator
-  Auditoría administrativa y sanciones
-  definitivas: sin owner de bounded
-  context implementado todavía — no hay
-  datos que orquestar hoy. Cuando ese
-  contexto exista, deberá aplicar la
-  excepción de retención (mínimo 5 años,
-  Política §11) desde el primer día.
+note over account
+  Community, Commerce, Player/Inventory,
+  Catalog y demás bounded contexts pueden
+  conservar referencias técnicas opacas
+  (`subject`) según su propio ownership.
+  NO participan automáticamente en este
+  flujo — ver ADR-014 Decisión 5.
 end note
 
-orchestrator -> orchestrator : persistir progreso por contexto\n(reintento idempotente dentro del\nplazo si algo falla o no responde;\nreanudable si Account se reinicia)
+account -> account : cerrar la solicitud
 
-orchestrator -> account : eliminar datos de cuenta\n(salvo evidencia de consentimiento,\nver consent-versioning.md)
-account --> orchestrator : ok
+account -> notify : solicitar notificación de cierre\n(contrato pendiente de HU-43)
+notify --> account : ok
 
-orchestrator -> notify : solicitar notificación de cierre
-notify --> orchestrator : ok
-
-orchestrator --> user : confirmación de CIERRE\n(dentro del plazo de 30 días)
+account --> user : confirmación de CIERRE\n(dentro del plazo de 30 días)
 
 @enduml

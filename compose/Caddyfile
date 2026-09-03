@@ -34,6 +34,28 @@
 		reverse_proxy catalog:3003
 	}
 
+	# Administracion del catalogo (HU-34). Incluye
+	# `PATCH /api/v1/admin/products/{id}/inventory` y los recursos visuales.
+	#
+	# Sin esta entrada, la peticion cae en el comodin y la responde Web con un
+	# 200 y el `index.html`: el formulario administrativo pareceria funcionar y
+	# no ajustaria nada.
+	#
+	# El servicio exige rol administrativo Y evidencia de segundo factor, asi
+	# que publicar la ruta no la deja abierta.
+	handle /api/v1/admin* {
+		reverse_proxy catalog:3003
+	}
+
+	# `/api/internal*` NO se publica, y esa ausencia es deliberada.
+	#
+	# Ahi vive el contrato entre servicios -la evidencia de segundo factor de
+	# Account y el decremento de inventario de Catalog-, que se llama por la red
+	# interna del nodo. Va firmado con HMAC, asi que publicarlo no lo abriria,
+	# pero no hay ninguna razon para exponer al mundo una ruta que nadie de
+	# fuera puede usar. Si algun dia aparece aqui una entrada `internal`, es un
+	# error.
+
 	handle /api/threads* {
 		reverse_proxy community:3004
 	}
