@@ -119,6 +119,7 @@ services:
     pids_limit: 128
     environment:
       NODE_ENV: development
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:?Define el secreto interno en .env}
       PORT: 3002
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
@@ -145,6 +146,11 @@ services:
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
       MONGODB_URI: mongodb://catalog:${DB_PASSWORD}@${DATA_HOST}:27017/catalog?authSource=catalog&replicaSet=rs0
+      # Terraform activa S3 y pasa el bucket creado por product_assets. Una
+      # composicion manual sin ese almacenamiento conserva el adaptador memory.
+      ASSETS_STORAGE_DRIVER: ${ASSETS_STORAGE_DRIVER:-memory}
+      PRODUCT_ASSETS_BUCKET_NAME: ${PRODUCT_ASSETS_BUCKET_NAME:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
@@ -187,6 +193,10 @@ services:
     pids_limit: 128
     environment:
       NODE_ENV: development
+      COMMERCE_INTEGRATION_MODE: http
+      INVENTORY_INTERNAL_URL: http://inventory:3002
+      NOTIFICATIONS_INTERNAL_URL: http://notifications:3003
+      ACCOUNT_URL: http://account:3000
       PORT: 3005
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: postgres
@@ -229,6 +239,12 @@ services:
       # a quien alcance la red interna. Por eso se cierra EN EL MISMO cambio que
       # activa SES, nunca despues.
       NODE_ENV: production
+      PURCHASE_HTTP_ENABLED: 'true'
+      PURCHASE_HTTP_PORT: 3003
+      PURCHASE_INBOX_DRIVER: mongo
+      MONGO_URL: mongodb://notifications:${DB_PASSWORD}@${DATA_HOST}:27017/notifications?authSource=notifications&replicaSet=rs0
+      MONGO_DB_NAME: notifications
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:?Define el secreto interno en .env}
       HEALTH_PORT: 3001
       LOG_LEVEL: info
       # Ingesta HTTP del tramo Account -> Notifications (ADR-006).

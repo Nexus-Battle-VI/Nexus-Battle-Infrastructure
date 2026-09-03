@@ -26,6 +26,7 @@ if (!clave) {
 const servicios = [
   { base: 'player-inventory', usuario: 'inventory' },
   { base: 'catalog', usuario: 'catalog' },
+  { base: 'notifications', usuario: 'notifications' },
 ]
 
 for (const servicio of servicios) {

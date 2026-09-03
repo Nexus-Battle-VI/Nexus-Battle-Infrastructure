@@ -3,6 +3,17 @@ variable "bucket_name" {
   type        = string
 }
 
+variable "allowed_web_origins" {
+  description = "Origenes Web autorizados para leer imagenes mediante URLs firmadas (sin dar acceso publico al bucket)."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for origin in var.allowed_web_origins : can(regex("^https?://[^/?#*]+$", origin))])
+    error_message = "Cada origen debe ser HTTP(S), sin comodines, ruta, parametros o fragmento."
+  }
+}
+
 variable "tags" {
   description = "Etiquetas comunes del proyecto."
   type        = map(string)
