@@ -244,11 +244,15 @@ contexto" que agregar, porque ningún otro contexto participa por defecto.
 HU-43 exige que, al cerrar la solicitud, el titular reciba una notificación
 de cierre (Política §10). Esto **no convierte a Notifications en
 participante de la eliminación**: su única intervención es materializar esa
-notificación final, si ya existe un contrato apropiado para invocarla. A la
-fecha de este ADR **no existe un contrato definido** para esa notificación
-de cierre en [event-catalog.md](../contracts/event-catalog.md) ni en
-ningún otro documento de contratos — se declara **pendiente de la
-implementación de HU-43**, sin inventar aquí un endpoint o evento nuevo.
+notificación final, sobre el `NotificationRequestPort` ya existente.
+
+**Actualización (implementación completa, ver
+[hu-43-account-deletion-design.md](../privacy/hu-43-account-deletion-design.md#qué-quedó-implementado-verificado-en-código-y-pr-mergeados-a-develop)):**
+el contrato ya quedó definido — `templateId: "account-deletion-closed"`, sin
+variables — y registrado en [event-catalog.md](../contracts/event-catalog.md).
+Se solicita únicamente después de que Account persiste el cierre, nunca
+antes. Notifications no decide el cierre, no elimina la cuenta y no consulta
+ninguna base de datos privada de Account.
 
 #### Por qué no se necesita una saga con compensación tipo checkout
 
@@ -262,11 +266,16 @@ idempotencia y reintento (descrito arriba) resuelve el problema de
 fiabilidad sin necesitar saga, compensación, ni construir infraestructura de
 mensajería nueva solo para esto.
 
-**Lo que sí sigue pendiente y no se fija en este ADR:** el endpoint HTTP
-concreto de la solicitud, el formato exacto del registro de estado dentro de
-Account, el contrato de la notificación de cierre con Notifications, y qué
-pasa si el plazo de 30 días se agota sin completar el tratamiento — quedan
-para la implementación de HU-43.
+**Actualización — resuelto por la implementación (Management #303–#307,
+mergeados a `develop`; detalle completo en
+[hu-43-account-deletion-design.md](../privacy/hu-43-account-deletion-design.md#qué-quedó-implementado-verificado-en-código-y-pr-mergeados-a-develop)):**
+el endpoint HTTP concreto de la solicitud, el formato del registro de estado
+dentro de Account y el contrato de la notificación de cierre ya están
+implementados. **Lo único que sigue sin definirse, porque HU-43 no lo
+exige,** es qué acción de negocio ocurre si el plazo de 30 días se agota sin
+completar el tratamiento: la implementación solo permite VERIFICAR el
+incumplimiento del plazo (señal de observabilidad), sin ninguna acción
+automática asociada.
 
 ### 6. No se centraliza en una "base de privacidad"
 
@@ -358,9 +367,15 @@ aprobación registrada").
 
 ## Reversión
 
-Ninguna de las decisiones de este ADR tiene runtime todavía: no hay tabla de
-consentimiento, agregador de portabilidad ni proceso de tratamiento de HU-43
-en Account que revertir. Revertirlo antes de implementación es simplemente no
-adoptar estos principios; después de implementación, requeriría un ADR que lo
-sustituya, igual que el resto de decisiones arquitectónicas de este
-repositorio.
+**Actualización:** la Decisión 5 (alcance y proceso del derecho al olvido)
+**ya tiene runtime**, mergeado a `develop` en `Nexus-Battle-Account`
+(Management #303, #304, #305), `Nexus-Battle-Notifications` (#306) y
+`Nexus-Battle-Web` (#307) — ver
+[hu-43-account-deletion-design.md](../privacy/hu-43-account-deletion-design.md#qué-quedó-implementado-verificado-en-código-y-pr-mergeados-a-develop).
+Revertir esa decisión ahora requeriría un ADR que la sustituya, no solo dejar
+de adoptar un principio todavía no implementado.
+
+Las Decisiones 1 (evidencia de consentimiento versionado) y 4 (agregador de
+portabilidad de HU-45) **siguen sin runtime**: no hay tabla de consentimiento
+ni agregador de HU-43/HU-45 más allá de lo ya descrito. Revertirlas antes de
+implementación sigue siendo simplemente no adoptar esos principios.

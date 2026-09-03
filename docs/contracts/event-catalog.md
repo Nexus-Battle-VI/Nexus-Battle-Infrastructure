@@ -117,6 +117,7 @@ Los identificadores forman parte del contrato. Añadir o retirar uno **es un cam
 | --- | --- | --- |
 | `account-verification-code` | `displayName`, `code`, `expiresInMinutes` | Account |
 | `account-welcome` | `displayName` | Account |
+| `account-deletion-closed` | Ninguna | Account (HU-43.4, Management #306) |
 | `commerce-order-confirmed` | `displayName`, `orderId`, `total` | Commerce |
 
 Los marcadores sin valor se sustituyen por cadena vacía, **nunca por `undefined`**: un correo con la palabra «undefined» en el cuerpo es un fallo visible para quien lo recibe.

@@ -4,11 +4,9 @@ No sustituye el lint de OpenAPI ni ``docker compose config``. Fija las piezas
 transversales que esas herramientas no relacionan: metodo exigido, codigos 403
 y 503, misma variable de secreto y direcciones internas.
 
-EL SECRETO ES UNO SOLO Y LO COMPARTEN TRES SERVICIOS desde HU-34: Account lo
-verifica, Catalog lo usa en las dos direcciones -cliente de la evidencia de
-segundo factor y servidor del descuento de inventario- y Commerce lo usa para
-pedir ese descuento. Si dos de ellos recibieran variables distintas, la firma no
-cuadraria y el sintoma seria un 401 sin ninguna explicacion visible.
+El secreto es compartido por Account, Catalog, Commerce, Player-Inventory y
+Notifications. Ademas de la evidencia MFA protege las reservas de stock, la
+entrega del lote y la confirmacion por correo del ecommerce.
 """
 
 from pathlib import Path
@@ -38,14 +36,33 @@ for fragment in (
     require(openapi, fragment, "OpenAPI de Catalog")
 
 compose = read("compose/nodes/app.yml")
-secret_binding = "INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}"
-SERVICIOS_DEL_CONTRATO = 3
-if compose.count(secret_binding) != SERVICIOS_DEL_CONTRATO:
-    raise SystemExit(
-        "FALLO: Account, Catalog y Commerce deben recibir exactamente la misma "
-        "variable INTERNAL_SERVICE_AUTH_SECRET. Si se suma otro servicio al "
-        "contrato interno, ajusta SERVICIOS_DEL_CONTRATO junto al compose."
+services = dict(re.findall(r"^  ([a-z-]+):\n(.*?)(?=^  [a-z-]+:|\Z)", compose, re.M | re.S))
+for name in ("account", "catalog", "commerce", "inventory", "notifications"):
+    service = services.get(name, "")
+    bindings = re.findall(
+        r"^\s+INTERNAL_SERVICE_AUTH_SECRET:\s*(.+)$", service, re.M
     )
+    if len(bindings) != 1 or re.fullmatch(
+        r"\$\{INTERNAL_SERVICE_AUTH_SECRET:(?:-|\?[^}]*)\}", bindings[0]
+    ) is None:
+        raise SystemExit(
+            f"FALLO: {name} debe recibir exactamente una vez la variable "
+            "compartida INTERNAL_SERVICE_AUTH_SECRET."
+        )
+
+for name, fragment in (
+    ("commerce", "COMMERCE_INTEGRATION_MODE: http"),
+    ("commerce", "INVENTORY_INTERNAL_URL: http://inventory:3002"),
+    ("commerce", "NOTIFICATIONS_INTERNAL_URL: http://notifications:3003"),
+    ("notifications", "PURCHASE_HTTP_ENABLED: 'true'"),
+    ("notifications", "PURCHASE_HTTP_PORT: 3003"),
+    ("notifications", "PURCHASE_INBOX_DRIVER: mongo"),
+    ("notifications", "MONGO_DB_NAME: notifications"),
+    ("catalog", "ASSETS_STORAGE_DRIVER: ${ASSETS_STORAGE_DRIVER:-memory}"),
+    ("catalog", "PRODUCT_ASSETS_BUCKET_NAME: ${PRODUCT_ASSETS_BUCKET_NAME:-}"),
+    ("catalog", "AWS_REGION: ${AWS_REGION:-us-east-1}"),
+):
+    require(services[name], fragment, f"compose del servicio {name}")
 
 for fragment in (
     "INTERNAL_SERVICE_ALLOWED_SERVICES: catalog",
@@ -80,5 +97,23 @@ secret_variable = re.search(
 if secret_variable is None:
     raise SystemExit("FALLO: no se pudo interpretar internal_service_auth_secret.")
 require(secret_variable.group("body"), "sensitive   = true", "variable del secreto interno")
+require(
+    terraform_variables,
+    "!var.arrancar_stack || length(trimspace(var.internal_service_auth_secret)) >= 32",
+    "validacion del secreto antes del arranque",
+)
+for key, value in (
+    ("ASSETS_STORAGE_DRIVER", '"s3"'),
+    ("PRODUCT_ASSETS_BUCKET_NAME", "module.product_assets.bucket_id"),
+    ("AWS_REGION", "var.region"),
+):
+    if re.search(rf"^\s+{key}\s*=\s*{re.escape(value)}\s*$", terraform_main, re.M) is None:
+        raise SystemExit(f"FALLO: Terraform no transmite {key} al nodo de aplicaciones.")
 
-print("Contrato interno de Account, Catalog, Commerce e Infrastructure alineado.")
+bootstrap = read("infra/modules/compute/templates/bootstrap.sh.tftpl")
+require(bootstrap, 'estado.setName === "rs0" && estado.isWritablePrimary', "espera de Mongo")
+require(bootstrap, "const limite = Date.now() + 180000", "limite de espera de Mongo")
+if bootstrap.index('estado.setName === "rs0"') > bootstrap.index("docker compose up -d"):
+    raise SystemExit("FALLO: las migraciones deben esperar al primario de Mongo.")
+
+print("Contratos internos de cinco servicios, assets S3 y arranque de Mongo alineados.")

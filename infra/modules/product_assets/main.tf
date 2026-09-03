@@ -20,6 +20,18 @@ resource "aws_s3_bucket" "this" {
   }
 }
 
+resource "aws_s3_bucket_cors_configuration" "web_images" {
+  count  = length(var.allowed_web_origins) > 0 ? 1 : 0
+  bucket = aws_s3_bucket.this.id
+
+  cors_rule {
+    allowed_methods = ["GET", "HEAD"]
+    allowed_origins = var.allowed_web_origins
+    expose_headers  = ["ETag"]
+    max_age_seconds = 600
+  }
+}
+
 resource "aws_s3_bucket_ownership_controls" "this" {
   bucket = aws_s3_bucket.this.id
 

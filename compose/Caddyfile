@@ -47,6 +47,10 @@
 		reverse_proxy catalog:3003
 	}
 
+	handle /api/internal* {
+		respond "Not found" 404
+	}
+
 	# `/api/internal*` NO se publica, y esa ausencia es deliberada.
 	#
 	# Ahi vive el contrato entre servicios -la evidencia de segundo factor de
@@ -58,6 +62,14 @@
 
 	handle /api/threads* {
 		reverse_proxy community:3004
+	}
+
+	handle /api/wishlist* {
+		reverse_proxy commerce:3005
+	}
+
+	handle /api/saved-cart* {
+		reverse_proxy commerce:3005
 	}
 
 	handle /api/orders* {
