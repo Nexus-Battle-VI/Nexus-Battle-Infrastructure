@@ -315,10 +315,12 @@ components:
         printRunMode:
           $ref: '#/components/schemas/PrintRunMode'
         availableUnits:
-          type: integer
+          # OpenAPI 3.1 retiro `nullable`: la union se declara con el tipo.
+          type:
+            - integer
+            - 'null'
           format: int64
           minimum: 0
-          nullable: true
           readOnly: true
           description: >-
             Unidades que aún pueden emitirse (HU-34). Es `null` si y solo si el
