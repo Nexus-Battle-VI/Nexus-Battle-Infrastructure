@@ -437,12 +437,17 @@ resource "aws_eip_association" "app" {
 # retirada accidental del recurso se lleve el volumen. Para retirarlo de verdad
 # hay que editar esta linea, que es una decision visible en un PR.
 # ---------------------------------------------------------------------------
+data "aws_subnet" "nodo" {
+  id = var.subnet_id
+}
+
 resource "aws_ebs_volume" "datos" {
   for_each = { for clave, nodo in var.nodes : clave => nodo if nodo.role == "data" }
 
-  # La zona se toma de la instancia y no de una variable: un volumen en otra
-  # zona no se puede adjuntar, y el error aparece al aplicar, no al planificar.
-  availability_zone = aws_instance.node[each.key].availability_zone
+  # La zona se toma de la subred donde corre el nodo: ligarlo al atributo de la
+  # instancia hace que al reemplazarla la zona sea "known after apply", lo que
+  # forzaria a recrear el volumen y activaria prevent_destroy.
+  availability_zone = data.aws_subnet.nodo.availability_zone
   size              = var.data_volume_gb
   type              = "gp3"
   encrypted         = true
