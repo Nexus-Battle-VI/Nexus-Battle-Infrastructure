@@ -75,6 +75,13 @@ opciones existentes de S3, Cognito y notificaciones del despliegue.
 
 ## Verificación de aceptación
 
+La [evidencia local del 3 de septiembre de 2026](../evidence/ecommerce-integration-smoke.json)
+registra ocho escenarios aprobados con los cuatro repositorios limpios y
+huellas estables: cuatro compras completas, un rechazo durable y cuatro
+correos capturados. Omite rutas locales, conexiones y datos identificables de
+las fixtures. Incluye sus límites: no prueba Cognito, S3, SMTP ni despliegue
+Docker reales.
+
 Ejecutar [el smoke](../../scripts/ecommerce-smoke.md) con servicios actuales y
 bases aisladas. Después, en el entorno desplegado y con cuentas de prueba,
 crear un producto canónico publicable, verificar imagen, búsqueda, detalle,

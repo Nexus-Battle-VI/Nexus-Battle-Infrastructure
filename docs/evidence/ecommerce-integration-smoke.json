@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-cross-service-integration",
+  "startedAt": "2026-09-03T11:45:54.382Z",
+  "finishedAt": "2026-09-03T11:47:10.057Z",
+  "passed": true,
+  "stages": [
+    "alta canonica y vitrina publica en Mongo real",
+    "autorizacion HTTP y carrito UUID aislado por usuario",
+    "guardar y restaurar carrito PostgreSQL tras recrear Commerce",
+    "compra completa por HTTP HMAC sin transferencia parcial",
+    "replay de pago y correo tras recrear Notifications no duplica",
+    "segunda compra obtiene nueva operacion y acumula inventario",
+    "respuesta de grant perdida: reinicio recupera IDs sin volver a entregar",
+    "rechazo terminal Inventory libera stock y devuelve DRAFT"
+  ],
+  "result": {
+    "completedOrders": 4,
+    "rejectedAttempts": 1,
+    "capturedEmails": 4,
+    "accountFixtureCalls": 5,
+    "databasesIsolated": true,
+    "createdProducts": 2
+  },
+  "revisions": {
+    "Catalog": {
+      "sha": "795d005f9b5c90d88ce5837fb5ffc7ee7f118cfc",
+      "dirty": false,
+      "runtimeSha256": "6c12aa0eee4dfa221045695d99c4975d142ad64a42f074c20fc0f868a0e2781a"
+    },
+    "Commerce": {
+      "sha": "8ab14e4bd59a5cc9b55cce3fc5ed8f120679bb09",
+      "dirty": false,
+      "runtimeSha256": "99e06d0c891ca1addf746ecafc7ebae41b0327ee1a5b590c7db0fe6c48e9fe2f"
+    },
+    "Player-Inventory": {
+      "sha": "7326fd39365021aec541a1c00f8f562864ccc743",
+      "dirty": false,
+      "runtimeSha256": "9967c88d8e1cdf371f7ed65b7fc4dab605a0b46ef9a3032e119d9c2ddc8abbc0"
+    },
+    "Notifications": {
+      "sha": "6d0f795b160375e2ce367d6aaf61f8edee594101",
+      "dirty": false,
+      "runtimeSha256": "9106c5c499fed04ff44ebff61dc2eb871be8dada53e36aa70145ab2c2a78110a"
+    }
+  },
+  "revisionsAtEnd": {
+    "Catalog": {
+      "sha": "795d005f9b5c90d88ce5837fb5ffc7ee7f118cfc",
+      "dirty": false,
+      "runtimeSha256": "6c12aa0eee4dfa221045695d99c4975d142ad64a42f074c20fc0f868a0e2781a"
+    },
+    "Commerce": {
+      "sha": "8ab14e4bd59a5cc9b55cce3fc5ed8f120679bb09",
+      "dirty": false,
+      "runtimeSha256": "99e06d0c891ca1addf746ecafc7ebae41b0327ee1a5b590c7db0fe6c48e9fe2f"
+    },
+    "Player-Inventory": {
+      "sha": "7326fd39365021aec541a1c00f8f562864ccc743",
+      "dirty": false,
+      "runtimeSha256": "9967c88d8e1cdf371f7ed65b7fc4dab605a0b46ef9a3032e119d9c2ddc8abbc0"
+    },
+    "Notifications": {
+      "sha": "6d0f795b160375e2ce367d6aaf61f8edee594101",
+      "dirty": false,
+      "runtimeSha256": "9106c5c499fed04ff44ebff61dc2eb871be8dada53e36aa70145ab2c2a78110a"
+    }
+  },
+  "sourcesChangedDuringRun": false,
+  "cleanedUp": true,
+  "limitations": [
+    "Cognito/JWT cryptography uses fixture verification, not a live account session; administrative MFA is not exercised.",
+    "Canonical creation uses the real application use case and Mongo transaction; admin browser creation is not exercised.",
+    "Product image metadata is verified; remote image bytes/S3/CDN are not fetched.",
+    "Email sender captures locally; real SMTP deliverability and the send/mark-SENT crash window are not exercised.",
+    "Services load current TypeScript sources; Notifications loads npm run build output. Run repository typecheck/build/CI gates separately.",
+    "Docker images, Compose startup and deployed per-service database credentials are not exercised."
+  ],
+  "sanitization": "Original local filesystem paths, connection strings, credentials, tokens, recipient addresses, database names and product fixture identifiers are omitted."
+}
