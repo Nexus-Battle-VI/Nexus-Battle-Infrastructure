@@ -99,10 +99,16 @@ data "aws_iam_policy_document" "prohibidos" {
 
     actions = ["s3:*"]
 
-    not_resources = [
-      "arn:aws:s3:::${var.tfstate_bucket}",
-      "arn:aws:s3:::${var.tfstate_bucket}/*",
-    ]
+    not_resources = compact(concat(
+      [
+        "arn:aws:s3:::${var.tfstate_bucket}",
+        "arn:aws:s3:::${var.tfstate_bucket}/*",
+      ],
+      var.product_assets_bucket != null ? [
+        "arn:aws:s3:::${var.product_assets_bucket}",
+        "arn:aws:s3:::${var.product_assets_bucket}/*",
+      ] : []
+    ))
   }
 
   /**

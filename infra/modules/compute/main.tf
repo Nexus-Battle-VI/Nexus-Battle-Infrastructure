@@ -220,6 +220,75 @@ resource "aws_iam_role_policy" "cognito_admin_auth" {
   policy = data.aws_iam_policy_document.cognito_admin_auth.json
 }
 
+data "aws_iam_policy_document" "product_assets_access" {
+  count = var.product_assets_bucket != "" ? 1 : 0
+
+  statement {
+    sid    = "EscrituraStagingYPromocionAssets"
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:AbortMultipartUpload",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.product_assets_bucket}/staging/*",
+      "arn:aws:s3:::${var.product_assets_bucket}/assets/*",
+    ]
+  }
+
+  statement {
+    sid    = "LecturaStagingYAssets"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:GetObjectVersion",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.product_assets_bucket}/staging/*",
+      "arn:aws:s3:::${var.product_assets_bucket}/assets/*",
+    ]
+  }
+
+  statement {
+    sid    = "LimpiezaStaging"
+    effect = "Allow"
+    actions = [
+      "s3:DeleteObject",
+      "s3:DeleteObjectVersion",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.product_assets_bucket}/staging/*",
+    ]
+  }
+
+  statement {
+    sid    = "ListarPrefijosDeProducto"
+    effect = "Allow"
+    actions = [
+      "s3:ListBucket",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.product_assets_bucket}",
+    ]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values = [
+        "staging/*",
+        "assets/*",
+        "",
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "product_assets" {
+  count  = var.product_assets_bucket != "" ? 1 : 0
+  name   = "${var.name}-product-assets"
+  role   = aws_iam_role.node.name
+  policy = data.aws_iam_policy_document.product_assets_access[0].json
+}
+
 resource "aws_iam_instance_profile" "node" {
   name = "${var.name}-node"
   role = aws_iam_role.node.name
