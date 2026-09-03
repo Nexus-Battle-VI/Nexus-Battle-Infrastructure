@@ -52,6 +52,8 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [013](docs/adr/ADR-013-canonical-product-contract.md) | Contrato canónico de Producto y compatibilidad | Accepted |
 | [014](docs/adr/ADR-014-privacy-data-governance.md) | Gobierno de privacidad y tratamiento de datos | Proposed |
 | [015](docs/adr/ADR-015-catalog-atomicity-audit-outbox.md) | Atomicidad de Producto, auditoría y outbox | Accepted |
+| [016](docs/adr/ADR-016-product-asset-storage.md) | Almacenamiento y ownership de recursos visuales de Producto | Accepted |
+| [017](docs/adr/ADR-017-catalog-events-sqs.md) | Entrega de eventos de Producto mediante SQS | Proposed |
 
 El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 `Accepted` con evidencia de aprobación registrada.
@@ -59,8 +61,9 @@ El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 ### Diagramas
 
 Los diagramas PlantUML están en [docs/diagrams](docs/diagrams), incluidos los cuatro
-editables de HU-39, el contrato canónico de Producto y la decisión de atomicidad
-de auditoría/outbox. Los de despliegue
+editables de HU-39, el contrato canónico de Producto, la decisión de atomicidad
+de auditoría/outbox, el ciclo de vida aceptado de recursos visuales y el flujo
+propuesto de `catalog.product.created` por SQS. Los de despliegue
 **separan visualmente demo y objetivo** para que no se confundan; el de Producto
 distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 
@@ -70,8 +73,12 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | --- | --- |
 | [assumptions.md](docs/costs/assumptions.md) | Supuestos de la estimación. **Leer antes que las cifras** |
 | [sprint-demo-estimate.md](docs/costs/sprint-demo-estimate.md) | Estimación y requisitos previos al despliegue |
+| [product-assets-s3-estimate.md](docs/costs/product-assets-s3-estimate.md) | Estimación aceptada de recursos visuales en S3 |
+| [catalog-events-sqs-estimate.md](docs/costs/catalog-events-sqs-estimate.md) | Estimación propuesta de eventos de Producto en SQS |
 | [service-catalog.md](docs/contracts/service-catalog.md) | Superficie HTTP de cada servicio |
-| [catalog-product-v1.openapi.yaml](docs/contracts/catalog-product-v1.openapi.yaml) | Contrato objetivo `Proposed` para HU-33; todavía no desplegado |
+| [catalog-product-v1.openapi.yaml](docs/contracts/catalog-product-v1.openapi.yaml) | Contrato canónico de Producto v1 |
+| [catalog-product-assets-v1.md](docs/contracts/catalog-product-assets-v1.md) | Contrato de diseño aprobado para carga, finalización y lectura de recursos visuales |
+| [catalog-events-v1.asyncapi.yaml](docs/contracts/catalog-events-v1.asyncapi.yaml) | AsyncAPI propuesto de `catalog.product.created` V1 |
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
 
 ### Gobierno
@@ -160,3 +167,4 @@ Se aplican las convenciones descritas en [CONTRIBUTING.md](CONTRIBUTING.md) y la
 ## Licencia
 
 `Licensing pending project governance`. Este repositorio todavía no tiene una licencia asignada; su definición requiere autorización del gobierno del proyecto.
+

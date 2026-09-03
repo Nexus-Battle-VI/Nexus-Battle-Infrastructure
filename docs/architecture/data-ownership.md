@@ -34,6 +34,23 @@ Cuando se adopte el contrato:
 - ningún consumidor almacenará el documento de Product ni accederá a MongoDB
   de Catalog.
 
+### Recursos visuales de Producto — decisión EN-027.3
+
+[ADR-016](../adr/ADR-016-product-asset-storage.md) (`Accepted`) asigna a
+**Catalog** la semántica y el ciclo de vida del asset: intención, validación,
+asociación, referencia estable, reemplazo, conservación y autorización.
+Infrastructure operará un bucket S3 privado y sus controles, pero no decidirá
+reglas de Producto. Web transferirá y mostrará; Player/Inventory conservará
+`productId`, no una copia del binario ni una URL S3 firmada.
+
+Catalog persistiría `assetId` y una clave opaca en su propio almacén. El objeto
+binario residiría en S3 mediante un puerto del contexto; ningún consumidor
+accedería al bucket como fuente de datos de Producto. Una `imageUrl` canónica
+sería estable y resolvería temporalmente el contenido sin persistir firmas.
+
+Esta asignación está aceptada, pero todavía no describe una capacidad desplegada.
+Su implementación depende de Tasks posteriores de IaC y Catalog.
+
 ## Cómo se cruza la frontera
 
 Las referencias externas son **identificadores opacos**. Un servicio que necesita más que el identificador **pregunta por la API**:
@@ -125,3 +142,4 @@ centralice información personal de varios contextos. Ver
 La elección de ORM u ODM queda **deliberadamente abierta** ([ADR-005](../adr/ADR-005-data-strategy.md)). De ella dependen el esquema, las migraciones y los índices.
 
 Configurar `PERSISTENCE_DRIVER=postgres` o `=mongo` valida la configuración y lo advierte en el registro, pero **no habilita un adaptador que no existe**. Fallar al arrancar ante una configuración incoherente es preferible a arrancar aparentando una persistencia que no hay.
+

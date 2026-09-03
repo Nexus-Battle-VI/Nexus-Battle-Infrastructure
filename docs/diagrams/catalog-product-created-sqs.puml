@@ -1,0 +1,96 @@
+@startuml
+title EN-027.4 — Publicación at-least-once de catalog.product.created
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+actor "Administrador" as admin
+participant "Catalog API" as api
+database "MongoDB Catalog\nproducts + audit_log + outbox" as mongo
+participant "Outbox Dispatcher\nCatalog" as dispatcher
+queue "SQS Standard\ncatalog-product-created" as sqs
+participant "Notifications Worker" as worker
+database "Inbox / Idempotency\nNotifications" as inbox
+queue "SQS DLQ" as dlq
+
+== Creación y outbox ==
+
+admin -> api : POST /api/v1/catalog/products
+api -> mongo : begin transaction
+api -> mongo : product + audit_log + outbox(eventId)
+alt falla cualquier escritura
+  mongo --> api : abort 0/3
+  api --> admin : error; no hay evento publicable
+else commit 3/3
+  mongo --> api : commit
+  api --> admin : 201 Product
+end
+
+== Despacho recuperable ==
+
+dispatcher -> mongo : reclamar outbox por lease
+mongo --> dispatcher : eventId + envelope V1
+dispatcher -> sqs : SendMessage(eventId estable)
+alt envío falla
+  sqs --> dispatcher : error transitorio
+  dispatcher -> mongo : liberar/expirar lease; conservar pendiente
+else envío aceptado
+  sqs --> dispatcher : éxito
+  dispatcher -> mongo : marcar entregado
+end
+
+note over mongo,sqs
+  Una caída después de SendMessage y antes de marcar
+  entregado produce duplicado. No se promete exactly-once.
+end note
+
+== Consumo idempotente ==
+
+worker -> sqs : ReceiveMessage long poll (20 s)
+sqs --> worker : body + receiptHandle + ApproximateReceiveCount
+worker -> worker : validar eventType + eventVersion + schema
+
+alt envelope o versión inválida
+  worker -> dlq : dead-letter controlado
+  worker -> sqs : DeleteMessage original
+else válido
+  worker -> inbox : insertar eventId con unicidad
+  alt eventId ya procesado
+    inbox --> worker : duplicado
+    worker -> sqs : DeleteMessage
+  else primer procesamiento
+    worker -> worker : materializar cambio de catálogo\n(sin fan-out SQS por jugador)
+    worker -> inbox : confirmar efecto procesado
+    alt efecto confirmado
+      worker -> sqs : DeleteMessage
+    else error transitorio
+      worker -> sqs : no borrar / ChangeMessageVisibility
+      note right of sqs
+        El próximo receive incrementa
+        ApproximateReceiveCount.
+      end note
+    end
+  end
+end
+
+== Redrive ==
+
+loop hasta maxReceiveCount = 5
+  sqs -> worker : reentrega; orden no garantizado
+end
+sqs -> dlq : redrive automático tras el quinto fallo
+
+alt causa corregida y redrive autorizado
+  admin -> dlq : iniciar redrive auditado
+  dlq -> sqs : devolver mensajes
+  sqs -> worker : reentrega con el mismo eventId
+  worker -> inbox : deduplicar antes del efecto
+end
+
+note over sqs,worker
+  La cola es punto a punto para Notifications.
+  Un futuro segundo bounded context requiere su propia cola
+  y una decisión explícita de fan-out.
+end note
+
+@enduml

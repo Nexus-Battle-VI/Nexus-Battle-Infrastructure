@@ -2,9 +2,9 @@
 
 ## Estado
 
-**Ningún evento se publica todavía hacia un transporte.** Los eventos se emiten dentro de su agregado y se registran en la observabilidad. El transporte depende de [ADR-006](../adr/ADR-006-messaging.md).
+**Ningún evento se publica todavía hacia un transporte.** Los eventos existentes se emiten dentro de sus agregados y se registran en observabilidad. [ADR-017](../adr/ADR-017-catalog-events-sqs.md) propone SQS para `catalog.product.created`; mientras permanezca en `Proposed`, no hay cola ni adaptadores productivos.
 
-Este catálogo documenta el contrato que existirá cuando esa decisión se resuelva, y que **ya está implementado en el código**.
+El catálogo mezcla contratos internos ya implementados con contratos externos propuestos. Cada tabla indica la diferencia; no se presenta el AsyncAPI nuevo como runtime existente.
 
 ## Convención de nombres
 
@@ -25,6 +25,14 @@ Todo evento incluye:
 | `occurredAt` | `Date` | Cuándo ocurrió el hecho |
 
 `occurredAt` **se recibe desde fuera del dominio**, mediante `ClockPort`. Ninguna entidad lee el reloj del sistema, lo que hace los agregados deterministas y verificables sin falsear temporizadores globales.
+
+### Envelope externo versionado
+
+Los eventos que crucen un transporte usan un envelope adicional con `eventId`,
+`eventType`, `eventVersion`, `aggregateId`, `occurredAt`, `producer`,
+`correlationId` y `data`. `eventId` permanece estable en outbox, reintentos, SQS
+e inbox y es la clave de idempotencia. El contrato formal inicial está en
+[catalog-events-v1.asyncapi.yaml](catalog-events-v1.asyncapi.yaml).
 
 ## Account
 
@@ -47,7 +55,8 @@ Ambos incluyen la cantidad de la operación **y la resultante**, de modo que un 
 
 | Evento | Cuándo | Campos propios |
 | --- | --- | --- |
-| `catalog.product.published` | Un producto pasa a estar disponible | `productName`, `category`, `priceAmount`, `priceCurrency` |
+| `catalog.product.created` | **Propuesto externo V1:** se confirma un Producto canónico | envelope V1 + `productId`, `name`, `type`, `lifecycleStatus`, `imageUrl` |
+| `catalog.product.published` | **Interno heredado:** un producto pasa a estar disponible | `productName`, `category`, `priceAmount`, `priceCurrency` |
 | `catalog.product.price-changed` | Cambia el precio | `previousAmount`, `newAmount`, `currency` |
 | `catalog.product.archived` | Deja de estar disponible | — |
 
@@ -127,4 +136,6 @@ Un cambio incompatible exige versionar el evento y mantener ambas versiones hast
 
 ## AsyncAPI
 
-La especificación formal se generará cuando [ADR-006](../adr/ADR-006-messaging.md) defina el transporte. Documentar canales y protocolos antes de decidirlos produciría una especificación que habría que rehacer.
+[catalog-events-v1.asyncapi.yaml](catalog-events-v1.asyncapi.yaml) formaliza la propuesta de EN-027.4 para `catalog.product.created`. Usa AsyncAPI 3.0.0 y declara una cola SQS Standard, envelope V1, productor Catalog y consumidor Notifications.
+
+El contrato permanece propuesto hasta aceptar ADR-017. Los demás eventos de este catálogo no quedan adoptados por esa decisión y no deben enviarse por la cola de Producto.
