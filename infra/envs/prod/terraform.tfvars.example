@@ -9,6 +9,23 @@ alert_email = "alertas@ejemplo.invalid"
 # mismo valor para Account y Catalog. Vacio mantiene el contrato fail-closed.
 internal_service_auth_secret = ""
 
+# ---------------------------------------------------------------------------
+# Filtro automatico de contenido de Community (HU-41.7, Management#29)
+# ---------------------------------------------------------------------------
+#
+# AMBAS OPCIONALES y vacias por defecto: Community arranca igual y el filtro
+# simplemente no genera ninguna deteccion. Este repositorio NO define la
+# politica funcional -que terminos o patrones son reales lo decide cada
+# ambiente, y no se versiona una lista real de insultos, marcas ni terminos
+# ofensivos-.
+#
+# Formato que Community interpreta (ver `compose/.env.example`): lista
+# separada por comas, cada elemento recortado de espacios.
+#
+# Para pruebas se permite EXCLUSIVAMENTE un valor sintetico:
+# comment_moderation_forbidden_terms     = "forbidden-test-term"
+# comment_moderation_suspicious_patterns = ""
+
 # Topologia T2 (ADR-011): plano sin estado separado del plano con estado.
 #
 # El criterio no es cuantos microservicios hay, sino que componentes tienen

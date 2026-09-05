@@ -184,6 +184,14 @@ services:
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
       INTERNAL_SERVICE_NAME: community
       INTERNAL_TIMEOUT_MS: ${INTERNAL_TIMEOUT_MS:-2000}
+      # Filtro automatico de contenido (HU-41.7, Management#29): solo genera
+      # una senal de revision humana en la cola de moderacion existente -NUNCA
+      # oculta, elimina ni sanciona por si solo-. Sin `:?`, a proposito: son
+      # vocabulario OPCIONAL, y vacio es una configuracion valida que Community
+      # ya sabe interpretar como "sin reglas configuradas, cero detecciones".
+      # Infrastructure NO define aqui la politica funcional -ver `.env.example`-.
+      COMMENT_MODERATION_FORBIDDEN_TERMS: ${COMMENT_MODERATION_FORBIDDEN_TERMS:-}
+      COMMENT_MODERATION_SUSPICIOUS_PATTERNS: ${COMMENT_MODERATION_SUSPICIOUS_PATTERNS:-}
     depends_on:
       community-migrate:
         condition: service_completed_successfully

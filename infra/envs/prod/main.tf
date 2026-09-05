@@ -148,6 +148,13 @@ locals {
         # Notifications. arrancar_stack exige un valor no vacio.
         INTERNAL_SERVICE_AUTH_SECRET = var.internal_service_auth_secret
 
+        # Filtro automatico de contenido de Community (HU-41.7,
+        # Management#29). Vacio por defecto: Community arranca igual y no
+        # genera ninguna deteccion. Terraform NO define aqui la politica
+        # funcional, solo transporta lo que cada ambiente decida.
+        COMMENT_MODERATION_FORBIDDEN_TERMS     = var.comment_moderation_forbidden_terms
+        COMMENT_MODERATION_SUSPICIOUS_PATTERNS = var.comment_moderation_suspicious_patterns
+
         # Vacio deja el sitio publico en `localhost:8443`, que nadie alcanza.
         # Abrir `public_ingress_cidrs` sin poner esto abriria dos puertos donde
         # el proxy no sirve nada util.
