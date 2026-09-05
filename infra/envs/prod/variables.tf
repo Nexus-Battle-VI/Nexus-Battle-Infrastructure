@@ -73,6 +73,40 @@ variable "internal_service_auth_secret" {
   sensitive   = true
 }
 
+variable "comment_moderation_forbidden_terms" {
+  description = <<-DESC
+    Terminos que activan el filtro automatico de contenido de Community
+    (HU-41.7, Management#29), separados por comas. Community los interpreta
+    como subcadena, insensible a mayusculas -formato que este repositorio no
+    reinventa, solo transporta-. Un termino coincidente solo genera una senal
+    `AUTOMATIC_FILTER` en la cola de moderacion existente para revision
+    humana; nunca oculta, elimina ni sanciona por si solo.
+
+    Vacio por defecto, y vacio es una configuracion VALIDA: Community arranca
+    igual y el filtro simplemente no genera ninguna deteccion. Infrastructure
+    NO define aqui la politica funcional -que terminos son reales lo decide
+    cada ambiente, fuera de este repositorio y de Git-.
+  DESC
+  type        = string
+  default     = ""
+}
+
+variable "comment_moderation_suspicious_patterns" {
+  description = <<-DESC
+    Patrones que activan el filtro automatico de contenido de Community
+    (HU-41.7, Management#29), separados por comas. Cada elemento se compila
+    como expresion regular insensible a mayusculas -mismo contrato que
+    `comment_moderation_forbidden_terms`, sin inventar un formato distinto-.
+    Un patron invalido impide arrancar Community a proposito, para no
+    descubrirlo en produccion con el primer comentario que lo ejercite.
+
+    Vacio por defecto, y vacio es una configuracion VALIDA: sin patrones, el
+    filtro no genera ninguna deteccion por esta via.
+  DESC
+  type        = string
+  default     = ""
+}
+
 variable "arrancar_stack" {
   description = "Si el arranque de cada nodo termina levantando su composicion."
   type        = bool
