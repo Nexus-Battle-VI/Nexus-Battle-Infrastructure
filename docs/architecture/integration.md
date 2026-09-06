@@ -11,6 +11,8 @@ Una integración es **síncrona** cuando quien llama no puede continuar sin la r
 | Commerce → Catalog (precio) | Síncrono | Puerto definido, adaptador con catálogo local |
 | Catalog → Account (evidencia MFA) | Síncrono interno | Account integrado; promoción de Catalog en PR #27 y cierre funcional en Management #136 |
 | Catalog → Notifications (`catalog.product.created`) | Asíncrono | SQS Standard + outbox/inbox `Proposed` en ADR-017; no desplegado |
+| Catalog → Notifications (`suspended`/`reactivated`/`inventory.adjusted`/`premium.configured`, HU-38) | Asíncrono | Consumidor implementado en Notifications (#20/#21/#22); Catalog ya escribe los 4 eventos en su outbox, pero **no tiene ningún dispatcher/worker que los publique** (auditado en código: no existe); sin cola SQS provisionada (ADR-017 `Proposed`, sin Terraform). No desplegado -brecha de Catalog, no de Infrastructure- |
+| Notifications → Player/Inventory (resolución de propietarios, HU-38) | Síncrono interno | **Implementado** (Notifications#21, Player-Inventory#23): HMAC servicio-a-servicio, mismo mecanismo que Catalog→Account. Un fallo transitorio reintenta (Notifications#22); indisponible o sin configurar sigue la misma ruta de reintento/DLQ, nunca cae a un destinatario inventado |
 | Account → Notifications | Asíncrono | Puerto definido, adaptador de registro |
 | Commerce → Notifications | Asíncrono | Pendiente |
 | Commerce → Player/Inventory (reserva) | Asíncrono con saga | **No implementado** |
@@ -24,6 +26,7 @@ El razonamiento en cada caso:
   responde `503`. En ambos casos se niega antes de escribir.
 - **Notificación**: una cuenta creada es válida aunque el correo de bienvenida tarde. Bloquear el registro por un correo sería peor que retrasar el correo.
 - **Reserva**: es un proceso de larga duración sin transacción común entre servicios.
+- **Resolución de propietarios (HU-38)**: sin saber qué jugadores poseen el producto suspendido/reactivado no hay a quién notificar; Notifications no puede continuar el procesamiento del evento sin esa respuesta. Ver [docs/contracts/product-owners.md](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/product-owners.md) de Player-Inventory para el contrato completo.
 
 ### Flujo propuesto de creación de Producto
 

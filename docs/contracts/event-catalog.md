@@ -58,23 +58,80 @@ Ambos incluyen la cantidad de la operación **y la resultante**, de modo que un 
 | `catalog.product.created` | **Propuesto externo V1:** se confirma un Producto canónico | envelope V1 + `productId`, `name`, `type`, `lifecycleStatus`, `imageUrl` |
 | `catalog.product.suspended` | **En outbox (HU-35, Catalog #49):** se suspende (borrado lógico) un Producto | envelope V1 + snapshot completo del producto (`catalogProductLifecycleDataV1`) |
 | `catalog.product.reactivated` | **En outbox (HU-35, Catalog #49):** se reactiva un Producto suspendido | envelope V1 + snapshot completo del producto (`catalogProductLifecycleDataV1`) |
+| `catalog.product.inventory.adjusted` | **En outbox (HU-34, `AdjustProductInventory`):** cambia el tiraje de un Producto | envelope V1 + snapshot completo del producto (`catalogProductLifecycleDataV1`) |
+| `catalog.product.premium.configured` | **En outbox (HU-36, `ConfigureProductPremium`):** cambia la condición Premium de un Producto | envelope V1 + snapshot completo del producto (`catalogProductLifecycleDataV1`) |
 | `catalog.product.published` | **Interno heredado:** un producto pasa a estar disponible | `productName`, `category`, `priceAmount`, `priceCurrency` |
 | `catalog.product.price-changed` | Cambia el precio | `previousAmount`, `newAmount`, `currency` |
 | `catalog.product.archived` | Deja de estar disponible | — |
 
 `price-changed` incluye el importe anterior de forma deliberada: permite detectar la dirección del cambio sin consultar el servicio.
 
-`catalog.product.suspended` y `catalog.product.reactivated` **ya se escriben en
-el outbox de MongoDB de Catalog** (`UpdateProductLifecycleStatus`, ADR-015),
-igual que `catalog.product.created`, pero a diferencia de este **no tienen
-canal ni operación en el AsyncAPI**: ADR-017 -Proposed- cubre únicamente la
-cola de `catalog.product.created`, y este mismo documento ya establece que los
-demás eventos no deben enviarse por esa cola. Se documentan como componentes
+Los cuatro eventos de ciclo de vida (`suspended`, `reactivated`,
+`inventory.adjusted`, `premium.configured`) **ya se escriben en el outbox de
+MongoDB de Catalog** (verificado en código: `UpdateProductLifecycleStatus`,
+`AdjustProductInventory`, `ConfigureProductPremium`, ADR-015), igual que
+`catalog.product.created`, pero a diferencia de este **no tienen canal ni
+operación en el AsyncAPI**: ADR-017 -Proposed- cubre únicamente la cola de
+`catalog.product.created`, y este mismo documento ya establece que los demás
+eventos no deben enviarse por esa cola. Se documentan como componentes
 reutilizables en
 [catalog-events-v1.asyncapi.yaml](catalog-events-v1.asyncapi.yaml) para fijar
-el contrato exacto que Catalog produce. Definir transporte y consumidor es
-responsabilidad de HU-38 (no implementada); hasta entonces el evento no cruza
-ningún transporte real.
+el contrato exacto que Catalog produce.
+
+**Estado real de HU-38 (Management #46), auditado al integrar Infrastructure
+con Notifications:**
+
+- **Consumidor implementado:** `Nexus-Battle-VI/Nexus-Battle-Notifications#20`/`#21`/`#22`
+  (mergeadas a `develop`) consumen los cinco eventos anteriores -incluido
+  `catalog.product.created`- y generan `CatalogNotification`. `#21` añade la
+  resolución real de propietarios contra Player-Inventory para
+  `suspended`/`reactivated`; `#22` corrige el tratamiento de sus fallos
+  transitorios (reintento/DLQ en vez de pérdida silenciosa).
+- **Productor auditado y confirmado ausente:** Catalog escribe los cinco
+  eventos en su colección `outbox` de MongoDB, pero **no existe ningún
+  proceso -dispatcher, worker, poller- que lea esa colección y publique hacia
+  ningún transporte**. Se buscó explícitamente en el código de Catalog
+  (`dispatcher`, `worker`, `poller`, `OutboxDispatcher`) y no aparece: solo
+  existe el repositorio de persistencia del outbox (`claim`, `record`), no
+  quien despacha. **Esto es una brecha real de Catalog, no de
+  Infrastructure**, y requiere un PR separado en ese repositorio.
+- **Transporte:** sin Terraform que provisione ninguna cola (`aws_sqs_queue`
+  no aparece en `infra/`) y sin ADR-006/ADR-017 aceptados, no existe -ni se
+  provisiona en este cambio- ningún canal real. Provisionar SQS ahora, sin
+  ADR aceptado y sin un dispatcher del lado de Catalog que lo alimente, sería
+  infraestructura sin nadie que la use: se documenta la brecha en vez de
+  crearla en silencio.
+- **Consecuencia:** el consumidor de Notifications (`CatalogLifecycleEventsConsumer`,
+  `CatalogProductEventsConsumer`) está listo y probado, pero en cualquier
+  entorno real -sin `CATALOG_LIFECYCLE_QUEUE_URL`/`CATALOG_QUEUE_URL`
+  configurados, porque no hay cola real que apuntarles- opera en memoria
+  local: ningún evento de Catalog llega hoy a Notifications entre procesos
+  distintos. La integración Notifications↔Player-Inventory (resolución de
+  destinatarios) sí es real y fue verificada en este cambio; lo que falta es
+  exclusivamente el tramo Catalog→transporte→Notifications.
+
+### DLQ de los eventos de ciclo de vida — decisión pendiente, no una brecha silenciada
+
+Notifications#22 ya implementa reintento/DLQ del lado del consumidor
+(`CatalogLifecycleEventsConsumer`: `Retry` reencola, `DeadLetter` va a la cola
+de fallidos), pero su configuración (`deadLetterQueueUrl`) es **una única
+variable general**, compartida hoy por el consumidor de notificaciones
+transaccionales, el de `catalog.product.created` y el de ciclo de vida -no
+existe una DLQ dedicada por consumidor en el código actual de Notifications-.
+
+Cuando se acepte ADR-017 (o una extensión) y se provisione la cola real de
+ciclo de vida, habrá que decidir explícitamente:
+
+- **Compartir** la DLQ general ya prevista para `catalog.product.created`, o
+- **Dedicar** una DLQ propia para `catalog.product.suspended`/`reactivated`/
+  `inventory.adjusted`/`premium.configured`.
+
+Esta decisión **no se toma en este cambio** -no hay cola que provisionar
+todavía-, pero queda documentada para no descubrirla al aceptar el ADR. Si la
+arquitectura decide una DLQ dedicada, Notifications necesitará una variable de
+configuración nueva (p. ej. `CATALOG_LIFECYCLE_DEAD_LETTER_QUEUE_URL`): **eso
+es un PR separado en `Nexus-Battle-Notifications`**, no un cambio que
+Infrastructure deba hacer por su cuenta en ese repositorio.
 
 ## Community
 

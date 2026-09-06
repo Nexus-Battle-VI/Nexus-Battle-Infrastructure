@@ -60,6 +60,27 @@ el listado sin búsqueda se degrada con `product: null`. Rating y comentarios
 **no** forman parte de "Mi Inventario" (decisión funcional: pertenecen a
 E-commerce/Subasta).
 
+#### Contrato interno — `/api/internal/v1/inventory`
+
+**Implementado e integrado en `develop`.** Servicio-a-servicio exclusivamente:
+firmado con el mismo HMAC-SHA256 (`x-internal-service`/`x-internal-timestamp`/
+`x-internal-signature`) que ya usa Commerce, `INTERNAL_SERVICE_AUTH_SECRET`
+compartido. **NO se publica mediante Caddy** (`/api/internal*` responde `404`
+en el proxy, ver más abajo).
+
+| Método | Ruta | Códigos | Servicio permitido | HU |
+| --- | --- | --- | --- | --- |
+| `POST` | `/api/internal/v1/inventory/grants` | `200`, `400`, `409`, `422`, `503` | `commerce` | HU-59 |
+| `GET` | `/api/internal/v1/inventory/products/:productId/owners` | `200`, `400`, `401` | `commerce`, `notifications` | HU-38 |
+
+`.../products/:productId/owners` resuelve qué jugadores poseen actualmente un
+producto (`{ productId, owners: [{ playerId }] }`, sin correo, nombre ni
+inventario completo): lo consume Notifications para dirigir notificaciones de
+suspensión/reactivación (HU-38) sin acceder directamente a esta base de datos.
+Especificación: [Nexus-Battle-VI/Nexus-Battle-Management#175](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/175).
+Implementación: [Nexus-Battle-VI/Nexus-Battle-Player-Inventory#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/23)
+(mergeada a `develop`).
+
 ### Catalog — `/api/products`
 
 **Estado implementado.** Esta sigue siendo la superficie desplegada y probada.
@@ -175,7 +196,28 @@ La lectura **omite los mensajes ocultos**. La persistencia los conserva.
 
 ### Notifications
 
-Sin API de negocio. Su entrada es la cola de mensajes; el contrato está en [event-catalog.md](event-catalog.md).
+Su entrada principal sigue siendo la cola de mensajes; el contrato de eventos está en [event-catalog.md](event-catalog.md). Desde HU-38 (Management #46) tiene además superficie HTTP propia, **implementada e integrada en `develop`**, detrás de `CATALOG_NOTIFICATIONS_HTTP_ENABLED` (opcional, `false` por defecto en el propio servicio -ver [Nexus-Battle-VI/Nexus-Battle-Notifications#20](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/20)-; la composición de referencia de este repositorio la habilita, ver `compose/compose.example.yml` y `compose/nodes/app.yml`).
+
+| Método | Ruta | Códigos | Quién |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/notifications/me/pending` | `200`, `401` | Jugador autenticado |
+| `GET` | `/api/v1/notifications/me/history` | `200`, `401` | Jugador autenticado |
+| `POST` | `/api/v1/notifications/me/read` | `200`, `400`, `401` | Jugador autenticado |
+| `GET` | `/api/v1/banners` | `200` | Público, sin testimonio |
+| `GET` | `/api/v1/admin/banners` | `200`, `401`, `403` | ADMINISTRATOR / SUPER_ADMINISTRATOR |
+| `POST` | `/api/v1/admin/banners` | `201`, `400`, `401`, `403` | ADMINISTRATOR / SUPER_ADMINISTRATOR |
+
+El `playerId` de `/me/*` se deriva siempre del testimonio JWT de Cognito (mismo mecanismo que el resto de servicios), nunca de la URL ni del cuerpo. MODERATOR no está autorizado sobre el banner: HU-38 solo nombra Admin y Super Admin.
+
+**Publicada por Caddy** con reglas dedicadas: `handle /api/v1/admin/banners*` y `handle /api/v1/notifications*` y `handle /api/v1/banners*` en `compose/Caddyfile`, todas hacia `notifications:3004`. `handle /api/v1/admin/banners*` va **antes** que la regla general `handle /api/v1/admin*` (hacia Catalog): sin esa precedencia, `/api/v1/admin/banners` caería en el comodín de Catalog. Verificado con `caddy adapt` (el bloque de banners queda antes en la ruta compilada) y con peticiones reales contra un `caddy:2-alpine` en ejecución, no solo por inspección del fichero.
+
+Depende internamente de Player-Inventory para resolver destinatarios de `catalog.product.suspended`/`reactivated` -ver `PATCH .../products/:id/owners` en la sección de Player/Inventory más abajo-; esa llamada es servicio-a-servicio, nunca alcanzable desde Web ni desde Internet.
+
+Especificación: [Nexus-Battle-VI/Nexus-Battle-Management#46](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/46). Implementación: [Nexus-Battle-VI/Nexus-Battle-Notifications#20](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/20), [#21](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/21), [#22](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/22) (las tres mergeadas a `develop`). Ninguna afirma despliegue: solo que el contrato está implementado e integrado en `develop`, y que este repositorio ya lo enruta y configura en la composición de referencia.
+
+**No implementa correo** (HU-38.6, ver Notifications#20): la notificación es exclusivamente in-app + banner.
+
+**Readiness**: `GET /health/ready` añade la comprobación `catalog-notifications` únicamente cuando `CATALOG_NOTIFICATIONS_HTTP_ENABLED=true`, y esa comprobación solo verifica Mongo (`ping`). La ausencia de `PLAYER_INVENTORY_BASE_URL`/`INTERNAL_SERVICE_AUTH_SECRET` **no** hace fallar el readiness ni impide arrancar: es una degradación controlada y deliberada de Notifications#21 (cae en `UnavailableProductOwnersResolver`, y `suspended`/`reactivated` quedan como `Retry`/`DeadLetter` en vez de perderse), no una dependencia obligatoria inventada aquí. Este repositorio no modifica esa decisión.
 
 ## Convenciones comunes
 
