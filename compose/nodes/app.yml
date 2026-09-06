@@ -151,6 +151,28 @@ services:
       ASSETS_STORAGE_DRIVER: ${ASSETS_STORAGE_DRIVER:-memory}
       PRODUCT_ASSETS_BUCKET_NAME: ${PRODUCT_ASSETS_BUCKET_NAME:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
+      # HU-38: activa el productor real del outbox de Producto hacia las dos
+      # colas SQS ya provisionadas (ADR-017/ADR-018, Infrastructure#93/#95),
+      # implementado en Catalog#51. Hardcodeado a "true" -no `${VAR:-false}`-
+      # a proposito: Catalog#51 elige `false` como default de despliegue
+      # seguro (no publicar por accidente), pero en este nodo integrado
+      # queremos el productor explicitamente activo, no depender de ese
+      # default. Con esto en `true`, Catalog#51 exige tambien
+      # CATALOG_EVENTS_QUEUE_URL, CATALOG_LIFECYCLE_QUEUE_URL y AWS_REGION
+      # -fail closed, ConfigurationError si falta alguna- en vez de arrancar
+      # aparentando que publica.
+      CATALOG_EVENT_DISPATCH_ENABLED: "true"
+      # Alias de CATALOG_QUEUE_URL (mas abajo, servicio `notifications`):
+      # ambas variables resuelven al MISMO output de
+      # infra/modules/catalog_events_queue (ADR-017). Notifications consume
+      # con CATALOG_QUEUE_URL; Catalog#51 publica con este nombre. Una sola
+      # cola, dos variables porque cada servicio ya fijo la suya antes de que
+      # este PR las conectara.
+      CATALOG_EVENTS_QUEUE_URL: ${CATALOG_EVENTS_QUEUE_URL:-}
+      # Misma cola que CATALOG_LIFECYCLE_QUEUE_URL de `notifications` (ADR-018,
+      # infra/modules/catalog_lifecycle_events_queue): aqui ambos servicios ya
+      # usaban el mismo nombre, asi que no hace falta alias.
+      CATALOG_LIFECYCLE_QUEUE_URL: ${CATALOG_LIFECYCLE_QUEUE_URL:-}
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}

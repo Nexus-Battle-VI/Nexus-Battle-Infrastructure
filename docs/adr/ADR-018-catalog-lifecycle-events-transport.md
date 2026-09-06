@@ -19,7 +19,7 @@ Auditado explícitamente tras el merge de Infrastructure#93: no existía ningún
 
 **Lo que ya existe y es un hecho verificable, no una suposición:**
 
-- Catalog escribe los cuatro eventos en su outbox de MongoDB (`UpdateProductLifecycleStatus`, `AdjustProductInventory`, `ConfigureProductPremium`, ADR-015), auditado en código. No tiene dispatcher que los publique hacia ningún transporte (brecha separada, de Catalog, no de esta decisión).
+- Catalog escribe los cuatro eventos en su outbox de MongoDB (`UpdateProductLifecycleStatus`, `AdjustProductInventory`, `ConfigureProductPremium`, ADR-015), auditado en código, y desde [Catalog#51](https://github.com/Nexus-Battle-VI/Nexus-Battle-Catalog/pull/51) tiene el dispatcher que los publica hacia esta cola.
 - Notifications#20/#21/#22 ya implementan y prueban el consumo de los cuatro eventos con un **único parser y un único consumidor** (`CatalogLifecycleEventParser.ts`, `CatalogLifecycleEventsConsumer.ts`): los cuatro comparten el mismo envelope (`catalogProductLifecycleEnvelopeV1` en el AsyncAPI) y la misma forma de `data`; el consumidor distingue el tratamiento funcional por el campo `eventType` dentro del mensaje, no por la cola de origen.
 - Notifications ya tiene una variable de configuración dedicada y ya reservada para este transporte: `CATALOG_LIFECYCLE_QUEUE_URL`, documentada en su `.env.example` y consumida en `catalog-notifications-application.ts`.
 - Notifications ya implementa idempotencia por `eventId` (`catalog:lifecycle:${eventType}:${eventId}`), reintento y camino a DLQ para los cuatro eventos (`HandleCatalogLifecycleEvent.ts`), con la misma disciplina que `catalog.product.created`.
@@ -29,7 +29,7 @@ Auditado explícitamente tras el merge de Infrastructure#93: no existía ningún
 1. La activación SQS de `lifecycleQueue` dependía de `config.queueDriver === QueueDriver.Sqs` -el interruptor de la cola **general**-, exactamente el mismo acoplamiento que [Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23) había corregido para `catalogQueue`/`catalog.product.created` mediante `CATALOG_QUEUE_DRIVER`. **Corregido por Notifications#24** mediante `CATALOG_LIFECYCLE_QUEUE_DRIVER`, un driver propio e independiente.
 2. `lifecycleQueue` se construía con `deadLetterQueueUrl: config.deadLetterQueueUrl` -la DLQ **general** de notificaciones transaccionales-, el mismo problema que #23 había corregido para `catalogQueue`. **Corregido por Notifications#24**: ya no se le pasa `deadLetterQueueUrl`, y confía en la redrive policy de su propia cola dedicada.
 
-Con Notifications#24 mergeado, y con esta misma Task inyectando `CATALOG_LIFECYCLE_QUEUE_DRIVER=sqs` en `compose/nodes/app.yml`, el wiring de configuración queda completo. Sigue faltando, para un flujo E2E real: `terraform apply` de la cola (ver Estado de despliegue, más abajo) y el dispatcher de Catalog que la alimente.
+Con Notifications#24 mergeado, `CATALOG_LIFECYCLE_QUEUE_DRIVER=sqs` inyectado en `compose/nodes/app.yml` (Infrastructure#96), el dispatcher de Catalog implementado ([Catalog#51](https://github.com/Nexus-Battle-VI/Nexus-Battle-Catalog/pull/51)) y `CATALOG_EVENT_DISPATCH_ENABLED=true` activado en el mismo nodo (esta Task), el wiring de configuración queda completo en ambos extremos. Sigue faltando, para un flujo E2E real: `terraform apply` de la cola (ver Estado de despliegue, más abajo).
 
 ## Fuerzas de decisión
 
@@ -112,13 +112,9 @@ Mismos tres estados que ADR-017, y no deben confundirse entre sí:
 | **Provisioned in IaC** | La cola y la DLQ existen como código Terraform reproducible (`infra/modules/catalog_lifecycle_events_queue`, módulo separado del de ADR-017), con IAM de mínimo privilegio en una política propia sobre el rol compartido del nodo `app` | Infrastructure#95 |
 | **Applied/deployed** | `terraform apply` se ejecutó de verdad contra la cuenta real; la cola existe en AWS | **Todavía no** — requiere autorización explícita fuera de esta Task |
 
-**Wiring de configuración: completo.** [Notifications#24](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/24) agregó `CATALOG_LIFECYCLE_QUEUE_DRIVER` como driver independiente de `QUEUE_DRIVER`, y dejó de reenviar a la DLQ general (ver Contexto, arriba). Esta misma Task (rama `fix/hu-38-enable-lifecycle-sqs`) inyecta `CATALOG_LIFECYCLE_QUEUE_DRIVER=sqs` junto a `CATALOG_LIFECYCLE_QUEUE_URL` en `compose/nodes/app.yml`, con el mismo criterio fail-closed que `CATALOG_QUEUE_DRIVER`: si `terraform apply` no se ha ejecutado y la URL llega vacía, Notifications rechaza el arranque en vez de caer a memoria en silencio.
+**Wiring de configuración: completo en ambos extremos.** [Notifications#24](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/24) agregó `CATALOG_LIFECYCLE_QUEUE_DRIVER` como driver independiente de `QUEUE_DRIVER`, y dejó de reenviar a la DLQ general (ver Contexto, arriba); Infrastructure#96 inyectó `CATALOG_LIFECYCLE_QUEUE_DRIVER=sqs` junto a `CATALOG_LIFECYCLE_QUEUE_URL` en `compose/nodes/app.yml`, con el mismo criterio fail-closed que `CATALOG_QUEUE_DRIVER`. [Catalog#51](https://github.com/Nexus-Battle-VI/Nexus-Battle-Catalog/pull/51) implementó el dispatcher del outbox, y esta Task activa `CATALOG_EVENT_DISPATCH_ENABLED=true` en el mismo nodo -mismo criterio fail-closed: si `terraform apply` no se ha ejecutado y las URLs llegan vacías, tanto Notifications como Catalog rechazan el arranque en vez de aparentar salud.
 
-Falta una sola pieza para que el evento fluya de extremo a extremo:
-
-- **dispatcher en Catalog** que lea el outbox y publique hacia esta cola (confirmado ausente en código, PR separado en `Nexus-Battle-Catalog`).
-
-Mientras esa pieza -y `terraform apply`- no existan, los cuatro eventos de ciclo de vida permanecen sin transporte productivo real, aunque el contrato, la decisión arquitectónica, la infraestructura como código y el wiring de configuración ya estén en su lugar.
+Mientras `terraform apply` no se ejecute, los cuatro eventos de ciclo de vida permanecen sin transporte productivo real, aunque el contrato, la decisión arquitectónica, la infraestructura como código y el wiring de configuración ya estén en su lugar.
 
 ## Consecuencias
 

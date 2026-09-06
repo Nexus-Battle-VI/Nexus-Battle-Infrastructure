@@ -2,9 +2,9 @@
 
 ## Estado
 
-**Ningún evento cruza todavía un transporte real entre procesos distintos.** Los eventos existentes se emiten dentro de sus agregados y se registran en observabilidad. [ADR-017](../adr/ADR-017-catalog-events-sqs.md) está `Accepted` ([Management #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284#issuecomment-5519755749), merge de [Infrastructure #65](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/65)) para SQS con `catalog.product.created`, su cola y DLQ ya están **Provisioned in IaC** (`infra/modules/catalog_events_queue`, Infrastructure#93), y Notifications ya sabe activarla de forma independiente de su cola general (`CATALOG_QUEUE_DRIVER`, [Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23)) -este mismo cambio ya inyecta `CATALOG_QUEUE_DRIVER=sqs` en `compose/nodes/app.yml`-. Nada de esto equivale a desplegado: no se ejecutó `terraform apply` y Catalog no tiene dispatcher que alimente la cola.
+**Ningún evento cruza todavía un transporte real entre procesos distintos -falta `terraform apply`-, pero el wiring de configuración de los dos extremos ya está completo.** Los eventos existentes se emiten dentro de sus agregados y se registran en observabilidad. [ADR-017](../adr/ADR-017-catalog-events-sqs.md) está `Accepted` ([Management #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284#issuecomment-5519755749), merge de [Infrastructure #65](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/65)) para SQS con `catalog.product.created`, su cola y DLQ ya están **Provisioned in IaC** (`infra/modules/catalog_events_queue`, Infrastructure#93). Notifications activa su consumo de forma independiente de su cola general (`CATALOG_QUEUE_DRIVER`, [Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23)) y Catalog implementa el dispatcher del outbox que publica hacia la cola ([Catalog#51](https://github.com/Nexus-Battle-VI/Nexus-Battle-Catalog/pull/51)); esta Task activa ese productor en el nodo real (`CATALOG_EVENT_DISPATCH_ENABLED=true` en `compose/nodes/app.yml`). Nada de esto equivale a desplegado: no se ejecutó `terraform apply`, así que la cola no existe todavía en AWS.
 
-Los eventos de ciclo de vida (`suspended`/`reactivated`/`inventory.adjusted`/`premium.configured`) ya tienen decisión de transporte: [ADR-018](../adr/ADR-018-catalog-lifecycle-events-transport.md) está `Accepted` ([Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960)) para una cola SQS compartida entre los cuatro, con su propia DLQ, **distinta** de la de `catalog.product.created` y de la cola general de Notifications. Su cola y DLQ ya están **Provisioned in IaC** (`infra/modules/catalog_lifecycle_events_queue`, módulo Terraform separado del de ADR-017 para no arriesgar esos recursos). Architecture Accepted; runtime pendiente de Notifications wiring y deployment: no se ejecutó `terraform apply`, Catalog no tiene dispatcher, y Notifications todavía activa su consumidor de ciclo de vida (`catalog-notifications-application.ts`) con el interruptor de la cola GENERAL (`QUEUE_DRIVER`) y reenvía a la DLQ general -el mismo acoplamiento que Notifications#23 ya corrigió para `catalog.product.created`, sin equivalente todavía para el ciclo de vida-: hace falta un PR de Notifications que lo resuelva antes de que esta cola, ya aceptada y provisionada en código, sirva de algo en tiempo de ejecución.
+Los eventos de ciclo de vida (`suspended`/`reactivated`/`inventory.adjusted`/`premium.configured`) ya tienen decisión de transporte: [ADR-018](../adr/ADR-018-catalog-lifecycle-events-transport.md) está `Accepted` ([Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960)) para una cola SQS compartida entre los cuatro, con su propia DLQ, **distinta** de la de `catalog.product.created` y de la cola general de Notifications. Su cola y DLQ ya están **Provisioned in IaC** (`infra/modules/catalog_lifecycle_events_queue`, módulo Terraform separado del de ADR-017 para no arriesgar esos recursos). Architecture Accepted, wiring de configuración completo en ambos extremos (Notifications#24 desacopló su consumo de la cola general; Catalog#51 implementó el dispatcher; esta Task activa el productor en el nodo real); deployment pendiente: no se ejecutó `terraform apply`.
 
 El catálogo mezcla contratos internos ya implementados con un contrato externo ya aceptado pero sin transporte desplegado. Cada tabla indica la diferencia; no se presenta el AsyncAPI nuevo como runtime existente.
 
@@ -90,26 +90,28 @@ con Notifications:**
   resolución real de propietarios contra Player-Inventory para
   `suspended`/`reactivated`; `#22` corrige el tratamiento de sus fallos
   transitorios (reintento/DLQ en vez de pérdida silenciosa).
-- **Productor auditado y confirmado ausente:** Catalog escribe los cinco
-  eventos en su colección `outbox` de MongoDB, pero **no existe ningún
-  proceso -dispatcher, worker, poller- que lea esa colección y publique hacia
-  ningún transporte**. Se buscó explícitamente en el código de Catalog
-  (`dispatcher`, `worker`, `poller`, `OutboxDispatcher`) y no aparece: solo
-  existe el repositorio de persistencia del outbox (`claim`, `record`), no
-  quien despacha. **Esto es una brecha real de Catalog, no de
-  Infrastructure**, y requiere un PR separado en ese repositorio.
+- **Productor implementado:** [Catalog#51](https://github.com/Nexus-Battle-VI/Nexus-Battle-Catalog/pull/51)
+  añade `DispatchProductOutbox`, el proceso que reclama los cinco eventos
+  aprobados de la colección `outbox` de MongoDB (allowlist exacta de
+  `eventType`; otros eventos, como `catalog.product.stock.depleted`,
+  permanecen intactos) y los publica hacia la cola correspondiente vía
+  `@aws-sdk/client-sqs`, sin credenciales estáticas. Por defecto
+  (`CATALOG_EVENT_DISPATCH_ENABLED=false`) no publica nada -despliegue
+  seguro-; esta Task lo activa explícitamente en el nodo real.
 - **Transporte de `catalog.product.created`:** ADR-017 está `Accepted`
-  (Management #284, merge de Infrastructure #65) y ahora **Provisioned in
+  (Management #284, merge de Infrastructure #65) y **Provisioned in
   IaC**: `infra/modules/catalog_events_queue` ([Infrastructure #93](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/93)) declara la cola Standard y su DLQ con los
   parámetros exactos de ADR-017, y el rol del nodo `app` recibe
   `sqs:SendMessage` (Catalog) y `sqs:ReceiveMessage`/`DeleteMessage`/
-  `ChangeMessageVisibility`/`GetQueueAttributes` (Notifications). **No
-  Applied/deployed**: ningún `terraform apply` se ejecutó, así que la cola no
-  existe todavía en AWS. Y aunque se aplicara, sigue faltando el dispatcher
-  del lado de Catalog que la alimente -ver el punto anterior-, así que el
-  evento no fluye.
+  `ChangeMessageVisibility`/`GetQueueAttributes` (Notifications). Wiring de
+  runtime completo en ambos extremos: Notifications consume con
+  `CATALOG_QUEUE_DRIVER=sqs` (Notifications#23); Catalog publica con
+  `CATALOG_EVENT_DISPATCH_ENABLED=true` + `CATALOG_EVENTS_QUEUE_URL`, el
+  MISMO output que `CATALOG_QUEUE_URL` (esta Task, `compose/nodes/app.yml`).
+  **No Applied/deployed**: ningún `terraform apply` se ejecutó, así que la
+  cola no existe todavía en AWS y el evento no fluye.
 - **Transporte de los eventos de ciclo de vida: Architecture Accepted,
-  Provisioned in IaC, runtime configurado, deployment pendiente.**
+  Provisioned in IaC, wiring de runtime completo, deployment pendiente.**
   [ADR-018](../adr/ADR-018-catalog-lifecycle-events-transport.md) está
   `Accepted` ([Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960))
   para una cola SQS compartida entre los cuatro eventos, con los mismos
@@ -126,35 +128,34 @@ con Notifications:**
   GENERAL) mediante `CATALOG_LIFECYCLE_QUEUE_DRIVER` propio, y dejó de
   reenviar a `deadLetterQueueUrl` (DLQ GENERAL) -mismo patrón que
   [Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23)
-  ya aplicó a `catalog.product.created`-. Esta Task inyecta
-  `CATALOG_LIFECYCLE_QUEUE_DRIVER=sqs` en `compose/nodes/app.yml`, cerrando el
-  wiring de configuración correspondiente.
+  ya aplicó a `catalog.product.created`-.
 - **Consecuencia, resumen del estado real:** `catalog.product.created` tiene
-  ADR `Accepted`, cola `Provisioned in IaC` (Infrastructure#93) y wiring de
-  Notifications completo (`CATALOG_QUEUE_DRIVER=sqs` en
-  `compose/nodes/app.yml`); le falta únicamente `terraform apply` y el
-  dispatcher de Catalog. Los cuatro eventos de ciclo de vida tienen ADR
+  ADR `Accepted`, cola `Provisioned in IaC` (Infrastructure#93), dispatcher
+  implementado (Catalog#51) y wiring de runtime completo en Notifications
+  (`CATALOG_QUEUE_DRIVER=sqs`) y en Catalog (`CATALOG_EVENT_DISPATCH_ENABLED=true`
+  + `CATALOG_EVENTS_QUEUE_URL`, esta Task); le falta únicamente
+  `terraform apply`. Los cuatro eventos de ciclo de vida tienen ADR
   `Accepted` (ADR-018), cola `Provisioned in IaC`
-  (`infra/modules/catalog_lifecycle_events_queue`) y wiring de Notifications
-  ahora también completo (`CATALOG_LIFECYCLE_QUEUE_DRIVER=sqs` en
-  `compose/nodes/app.yml`); les falta igualmente `terraform apply` y el
-  dispatcher de Catalog. La configuración de runtime está lista para
-  consumir la cola lifecycle en cuanto la infraestructura se aplique y
-  Catalog publique hacia ella -no antes-. La integración
-  Notifications↔Player-Inventory (resolución de destinatarios) sigue siendo
-  real e independiente de todo esto.
+  (`infra/modules/catalog_lifecycle_events_queue`) y el mismo wiring de
+  runtime completo de ambos lados (`CATALOG_LIFECYCLE_QUEUE_DRIVER=sqs` en
+  Notifications, `CATALOG_EVENT_DISPATCH_ENABLED=true` +
+  `CATALOG_LIFECYCLE_QUEUE_URL` en Catalog); les falta igualmente
+  `terraform apply`. La configuración de runtime está lista para que el
+  evento fluya en cuanto la infraestructura se aplique -no antes-. La
+  integración Notifications↔Player-Inventory (resolución de destinatarios)
+  sigue siendo real e independiente de todo esto.
 
-### Nombre de variable recomendado para el dispatcher de Catalog
+### Variable del productor de Catalog
 
-Catalog no tiene hoy ninguna variable de entorno relacionada con SQS
-(auditado: solo existe `AWS_REGION`, usada por el almacenamiento de assets de
-ADR-016). Para el PR que implemente el dispatcher del outbox, se recomienda
-`CATALOG_EVENTS_QUEUE_URL`: Notifications ya la acepta como alias equivalente
+`CATALOG_EVENTS_QUEUE_URL` es la variable que Catalog#51 usa para publicar
+hacia la cola de ADR-017 -Notifications ya la acepta como alias equivalente
 a `CATALOG_QUEUE_URL` en su `env.ts` (`env['CATALOG_QUEUE_URL'] ??
-env['CATALOG_EVENTS_QUEUE_URL']`), así que ambos servicios pueden compartir el
-mismo nombre de variable para el mismo valor -el output `queue_url` de
-`infra/modules/catalog_events_queue`- sin que Infrastructure tenga que inventar
-un nombre distinto del que el consumidor ya reconoce.
+env['CATALOG_EVENTS_QUEUE_URL']`)-, así que ambos servicios comparten el
+mismo output (`infra/modules/catalog_events_queue.queue_url`) bajo dos
+nombres de variable distintos: uno por cada servicio que ya lo fijó antes de
+que esta Task los conectara. Para la cola de ciclo de vida no hace falta
+alias: Catalog y Notifications ya usan el mismo nombre,
+`CATALOG_LIFECYCLE_QUEUE_URL`.
 
 ### DLQ de los eventos de ciclo de vida — ADR-018 Accepted, wiring completo, aplicación pendiente
 

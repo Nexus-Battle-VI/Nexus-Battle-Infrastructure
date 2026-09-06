@@ -57,12 +57,12 @@ output "product_assets_bucket_arn" {
 }
 
 output "catalog_events_queue_url" {
-  description = "URL de la cola SQS de catalog.product.created (ADR-017). Es el mismo valor que recibe CATALOG_QUEUE_URL en Notifications."
+  description = "URL de la cola SQS de catalog.product.created (ADR-017). Es el mismo valor que recibe CATALOG_QUEUE_URL en Notifications y CATALOG_EVENTS_QUEUE_URL en el dispatcher de Catalog (Catalog#51)."
   value       = module.catalog_events_queue.queue_url
 }
 
 output "catalog_events_queue_arn" {
-  description = "ARN de la cola principal. Nombre recomendado para el futuro dispatcher de Catalog: CATALOG_EVENTS_QUEUE_URL (alias que Notifications ya acepta) para el valor de URL equivalente."
+  description = "ARN de la cola principal, para las politicas IAM de sqs:SendMessage (Catalog) y consumo (Notifications)."
   value       = module.catalog_events_queue.queue_arn
 }
 

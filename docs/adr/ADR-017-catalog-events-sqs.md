@@ -246,12 +246,12 @@ Tres estados distintos, que no se deben confundir entre sí:
 | **Provisioned in IaC** | La cola y la DLQ existen como código Terraform reproducible (`infra/modules/catalog_events_queue`), con IAM de mínimo privilegio en el rol compartido del nodo `app` | [Infrastructure #93](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/93) |
 | **Applied/deployed** | `terraform apply` se ejecutó de verdad contra la cuenta real; la cola existe en AWS | **Todavía no** — requiere autorización explícita fuera de esta Task |
 
-Además, incluso una vez aplicado, faltarían dos piezas para que el evento fluya de extremo a extremo:
+Las dos piezas que faltaban para que el evento fluyera de extremo a extremo ya están resueltas:
 
-- **dispatcher/worker en Catalog** que lea el outbox y publique hacia esta cola (confirmado ausente en código, PR separado en `Nexus-Battle-Catalog`);
-- **`QUEUE_DRIVER=sqs` coherente en Notifications**, que es un interruptor global: activarlo exige también `QUEUE_URL` de la cola general de ADR-006 (notificaciones transaccionales), que sigue `Proposed` y sin provisionar. Sin esa cola general, activar `sqs` rompe el arranque de **todo** el worker de Notifications, no solo del consumidor de `catalog.product.created`.
+- **dispatcher/worker en Catalog** que lee el outbox y publica hacia esta cola: implementado en [Catalog#51](https://github.com/Nexus-Battle-VI/Nexus-Battle-Catalog/pull/51);
+- **consumo de Notifications independiente de la cola general**: `CATALOG_QUEUE_DRIVER=sqs` propio ([Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23)), sin depender de `QUEUE_DRIVER` (interruptor de la cola general de ADR-006, que sigue `Proposed`).
 
-Mientras esas piezas no existan, `catalog.product.created` permanece sin transporte productivo real, aunque el contrato, la decisión arquitectónica y ahora la infraestructura como código ya estén en su lugar.
+El wiring de runtime de ambos extremos está completo (`CATALOG_QUEUE_DRIVER=sqs` en Notifications; `CATALOG_EVENT_DISPATCH_ENABLED=true` + `CATALOG_EVENTS_QUEUE_URL` en Catalog, `compose/nodes/app.yml`). Mientras `terraform apply` no se ejecute, `catalog.product.created` permanece sin transporte productivo real: la cola no existe todavía en AWS, aunque el contrato, la decisión arquitectónica, la infraestructura como código y el wiring de configuración ya estén en su lugar.
 
 ## Consecuencias
 
