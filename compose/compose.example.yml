@@ -246,11 +246,31 @@ services:
       EMAIL_FROM: no-reply@nexus-battles.local
       # El adaptador SQS depende de ADR-006.
       QUEUE_DRIVER: memory
+      # --- HU-38: notificaciones de catalogo in-app + banner (Notifications#20) ---
+      CATALOG_NOTIFICATIONS_HTTP_ENABLED: 'true'
+      CATALOG_NOTIFICATIONS_HTTP_PORT: 3004
+      CATALOG_NOTIFICATIONS_REPOSITORY_DRIVER: mongo
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Resolucion de propietarios para suspension/reactivacion
+      # (Notifications#21, Player-Inventory#23). Nombre de servicio de
+      # compose, red interna: no sale del nodo, no es TLS ni un secreto.
+      PLAYER_INVENTORY_BASE_URL: http://inventory:3002
+      # SIN COLA REAL TODAVIA. ADR-017 esta Accepted pero sin Terraform SQS
+      # provisionado, y Catalog no tiene todavia un despachador que saque
+      # eventos del outbox (ver docs/contracts/event-catalog.md). Sin esta variable, el
+      # consumidor de ciclo de vida de Notifications se ejercita en memoria
+      # local: no hay entrega cross-servicio real de
+      # catalog.product.suspended/reactivated/inventory.adjusted/
+      # premium.configured todavia. No se define un valor de relleno.
+      # CATALOG_LIFECYCLE_QUEUE_URL:
     depends_on:
       mailpit:
         condition: service_started
       mongo-rs-init:
         condition: service_completed_successfully
+      inventory:
+        condition: service_started
     restart: unless-stopped
 
   # ---------------------------------------------------------------------

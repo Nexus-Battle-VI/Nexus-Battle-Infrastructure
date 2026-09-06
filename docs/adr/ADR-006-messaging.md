@@ -42,10 +42,12 @@ Una integración es **síncrona** cuando quien llama **no puede continuar** sin 
 
 ### Adopción acotada propuesta para eventos de Producto
 
-[ADR-017](ADR-017-catalog-events-sqs.md) propone adoptar SQS Standard
-exclusivamente para `catalog.product.created` desde Catalog hacia
-Notifications. Mientras ADR-017 permanezca en `Proposed`, no existe cola ni
-adaptador productivo.
+[ADR-017](ADR-017-catalog-events-sqs.md) adopta SQS Standard exclusivamente
+para `catalog.product.created` desde Catalog hacia Notifications; el Tech Lead
+ya lo aceptó en [EN-027.4 #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284#issuecomment-5519755749).
+La aceptación cubre el contrato y la arquitectura, no el despliegue: todavía no
+existe cola SQS provisionada ni dispatcher en Catalog que publique el outbox,
+así que no hay transporte productivo hasta que esas Tasks se completen.
 
 Esta propuesta no adopta automáticamente SQS para Account, Commerce, la saga de
 checkout ni futuros consumidores. Cada consumidor adicional necesita una cola
