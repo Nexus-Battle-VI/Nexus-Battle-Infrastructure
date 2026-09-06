@@ -1,11 +1,26 @@
 asyncapi: 3.0.0
 info:
   title: Nexus Battle Catalog Product Events
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     Contrato propuesto para la entrega at-least-once de
     catalog.product.created desde Catalog hacia Notifications mediante una
     cola SQS Standard. No representa infraestructura provisionada.
+
+
+    version 1.1.0 documenta adicionalmente el envelope de
+    `catalog.product.suspended` y `catalog.product.reactivated` (HU-35,
+    Management #43), que Catalog #49 ya escribe en su outbox interno
+    (`UpdateProductLifecycleStatus`, ADR-015). A diferencia de
+    `catalog.product.created`, estos dos mensajes se documentan SOLO como
+    componentes reutilizables (`components.messages`): no se declara un canal
+    ni una operación `send`/`receive` para ellos, porque ADR-017 -Proposed-
+    cubre unicamente la cola de `catalog.product.created` y
+    docs/contracts/event-catalog.md es explícito en que los demás eventos "no
+    deben enviarse por la cola de Producto". Definir transporte y consumidor
+    para estos dos eventos es responsabilidad de HU-38, que no está
+    implementada; mientras tanto, el evento vive únicamente en el outbox de
+    MongoDB de Catalog y no cruza ningún transporte real.
 defaultContentType: application/json
 servers:
   awsSqsUsEast1:
@@ -137,7 +152,215 @@ components:
               type: ARMA
               lifecycleStatus: ACTIVE
               imageUrl: https://api.example.test/api/v1/catalog/product-assets/682a20f4-8375-4951-a345-842946d1de76/content
+
+    # Los dos mensajes siguientes NO estan asociados a ningun canal ni
+    # operacion: ver la nota de version 1.1.0 en `info.description`. Se
+    # registran aqui como componentes reutilizables para fijar el contrato del
+    # evento que Catalog #49 ya escribe en su outbox, sin proponer todavia un
+    # transporte ni un consumidor.
+    catalogProductSuspendedV1:
+      name: catalog.product.suspended
+      title: Producto suspendido V1
+      summary: Informa que Catalog aplicó un borrado lógico (HU-35) sobre un Producto.
+      contentType: application/json
+      correlationId:
+        location: $message.payload#/correlationId
+      payload:
+        $ref: '#/components/schemas/catalogProductLifecycleEnvelopeV1'
+      examples:
+        - name: Espada de Fuego suspendida
+          summary: Ejemplo de suspensión por rebalanceo.
+          payload:
+            eventId: 6a1f9c3e-2b8a-4e7a-9a0f-7d3c9b2e1a44
+            eventType: catalog.product.suspended
+            eventVersion: 1
+            aggregateId: f4b09d5f-a47d-43aa-98c0-dbe7a6bd35dd
+            occurredAt: '2026-09-06T15:00:00Z'
+            producer: catalog
+            correlationId: req-9f21ab34
+            data:
+              productId: f4b09d5f-a47d-43aa-98c0-dbe7a6bd35dd
+              sku: espada-de-fuego
+              name: Espada de Fuego
+              imageUrl: https://api.example.test/api/v1/catalog/product-assets/682a20f4-8375-4951-a345-842946d1de76/content
+              description: Espada de dos manos con daño de fuego.
+              type: ARMA
+              printRun: 150
+              printRunMode: LIMITED
+              availableUnits: 40
+              lifecycleStatus: SUSPENDED
+              creditsPrice: 40
+              premium: false
+              realMoneyPrice: null
+              createdAt: '2026-08-30T20:30:00.000Z'
+              updatedAt: '2026-09-06T15:00:00.000Z'
+              version: 2
+    catalogProductReactivatedV1:
+      name: catalog.product.reactivated
+      title: Producto reactivado V1
+      summary: Informa que Catalog revirtió un borrado lógico (HU-35) sobre un Producto.
+      contentType: application/json
+      correlationId:
+        location: $message.payload#/correlationId
+      payload:
+        $ref: '#/components/schemas/catalogProductLifecycleEnvelopeV1'
+      examples:
+        - name: Espada de Fuego reactivada
+          summary: Ejemplo de reactivación tras rebalanceo.
+          payload:
+            eventId: 0c2e4b7a-1d5f-4a9c-8e3b-5f7a2c9d0e11
+            eventType: catalog.product.reactivated
+            eventVersion: 1
+            aggregateId: f4b09d5f-a47d-43aa-98c0-dbe7a6bd35dd
+            occurredAt: '2026-09-06T15:10:00Z'
+            producer: catalog
+            correlationId: req-2c74fd10
+            data:
+              productId: f4b09d5f-a47d-43aa-98c0-dbe7a6bd35dd
+              sku: espada-de-fuego
+              name: Espada de Fuego
+              imageUrl: https://api.example.test/api/v1/catalog/product-assets/682a20f4-8375-4951-a345-842946d1de76/content
+              description: Espada de dos manos con daño de fuego.
+              type: ARMA
+              printRun: 150
+              printRunMode: LIMITED
+              availableUnits: 40
+              lifecycleStatus: ACTIVE
+              creditsPrice: 40
+              premium: false
+              realMoneyPrice: null
+              createdAt: '2026-08-30T20:30:00.000Z'
+              updatedAt: '2026-09-06T15:10:00.000Z'
+              version: 3
   schemas:
+    # Envelope reutilizado por los dos eventos de HU-35. Es identico en forma
+    # al de catalog.product.created (mismos campos comunes documentados en
+    # docs/contracts/event-catalog.md); solo cambian eventType y data.
+    catalogProductLifecycleEnvelopeV1:
+      type: object
+      additionalProperties: false
+      required:
+        - eventId
+        - eventType
+        - eventVersion
+        - aggregateId
+        - occurredAt
+        - producer
+        - correlationId
+        - data
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Identidad estable de outbox e idempotencia.
+        eventType:
+          type: string
+          enum:
+            - catalog.product.suspended
+            - catalog.product.reactivated
+        eventVersion:
+          type: integer
+          const: 1
+        aggregateId:
+          type: string
+          format: uuid
+          description: Igual al productId canónico.
+        occurredAt:
+          type: string
+          format: date-time
+          description: Instante UTC de la transición de estado, no de reintento.
+        producer:
+          type: string
+          const: catalog
+        correlationId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        data:
+          $ref: '#/components/schemas/catalogProductLifecycleDataV1'
+    catalogProductLifecycleDataV1:
+      type: object
+      description: >-
+        Snapshot completo del producto canónico tras la transición, tal y
+        como lo escribe literalmente `UpdateProductLifecycleStatus` en el
+        outbox (mismo objeto que `CanonicalProductDto`, sin el campo `reason`:
+        el motivo se conserva en `audit_log`, no en el evento). NO es la forma
+        reducida de `catalogProductCreatedDataV1`; se documenta tal como el
+        código la produce en vez de recortarla a un subconjunto supuesto.
+      additionalProperties: true
+      required:
+        - productId
+        - sku
+        - name
+        - imageUrl
+        - description
+        - type
+        - printRun
+        - printRunMode
+        - availableUnits
+        - lifecycleStatus
+        - creditsPrice
+        - premium
+        - realMoneyPrice
+        - createdAt
+        - updatedAt
+        - version
+      properties:
+        productId:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        name:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+        description:
+          type: string
+        type:
+          type: string
+          enum:
+            - HEROE
+            - HABILIDAD
+            - ARMA
+            - ARMADURA
+            - ITEM
+            - EPICA
+        printRun:
+          type: integer
+        printRunMode:
+          type: string
+          enum:
+            - UNIQUE
+            - LIMITED
+            - INFINITE
+        availableUnits:
+          type:
+            - integer
+            - 'null'
+        lifecycleStatus:
+          type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+        creditsPrice:
+          type: integer
+        premium:
+          type: boolean
+        realMoneyPrice:
+          type:
+            - object
+            - 'null'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          description: Contador de concurrencia optimista (ADR-015).
     catalogProductCreatedDataV1:
       type: object
       additionalProperties: false

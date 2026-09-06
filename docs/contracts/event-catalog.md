@@ -56,11 +56,25 @@ Ambos incluyen la cantidad de la operación **y la resultante**, de modo que un 
 | Evento | Cuándo | Campos propios |
 | --- | --- | --- |
 | `catalog.product.created` | **Propuesto externo V1:** se confirma un Producto canónico | envelope V1 + `productId`, `name`, `type`, `lifecycleStatus`, `imageUrl` |
+| `catalog.product.suspended` | **En outbox (HU-35, Catalog #49):** se suspende (borrado lógico) un Producto | envelope V1 + snapshot completo del producto (`catalogProductLifecycleDataV1`) |
+| `catalog.product.reactivated` | **En outbox (HU-35, Catalog #49):** se reactiva un Producto suspendido | envelope V1 + snapshot completo del producto (`catalogProductLifecycleDataV1`) |
 | `catalog.product.published` | **Interno heredado:** un producto pasa a estar disponible | `productName`, `category`, `priceAmount`, `priceCurrency` |
 | `catalog.product.price-changed` | Cambia el precio | `previousAmount`, `newAmount`, `currency` |
 | `catalog.product.archived` | Deja de estar disponible | — |
 
 `price-changed` incluye el importe anterior de forma deliberada: permite detectar la dirección del cambio sin consultar el servicio.
+
+`catalog.product.suspended` y `catalog.product.reactivated` **ya se escriben en
+el outbox de MongoDB de Catalog** (`UpdateProductLifecycleStatus`, ADR-015),
+igual que `catalog.product.created`, pero a diferencia de este **no tienen
+canal ni operación en el AsyncAPI**: ADR-017 -Proposed- cubre únicamente la
+cola de `catalog.product.created`, y este mismo documento ya establece que los
+demás eventos no deben enviarse por esa cola. Se documentan como componentes
+reutilizables en
+[catalog-events-v1.asyncapi.yaml](catalog-events-v1.asyncapi.yaml) para fijar
+el contrato exacto que Catalog produce. Definir transporte y consumidor es
+responsabilidad de HU-38 (no implementada); hasta entonces el evento no cruza
+ningún transporte real.
 
 ## Community
 
