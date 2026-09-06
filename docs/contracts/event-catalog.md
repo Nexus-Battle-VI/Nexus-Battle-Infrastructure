@@ -98,8 +98,7 @@ con Notifications:**
   Infrastructure**, y requiere un PR separado en ese repositorio.
 - **Transporte de `catalog.product.created`:** ADR-017 está `Accepted`
   (Management #284, merge de Infrastructure #65) y ahora **Provisioned in
-  IaC**: `infra/modules/catalog_events_queue` (rama
-  `feat/hu-38-catalog-created-sqs`) declara la cola Standard y su DLQ con los
+  IaC**: `infra/modules/catalog_events_queue` ([Infrastructure #93](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/93)) declara la cola Standard y su DLQ con los
   parámetros exactos de ADR-017, y el rol del nodo `app` recibe
   `sqs:SendMessage` (Catalog) y `sqs:ReceiveMessage`/`DeleteMessage`/
   `ChangeMessageVisibility`/`GetQueueAttributes` (Notifications). **No

@@ -243,7 +243,7 @@ Tres estados distintos, que no se deben confundir entre sí:
 | Estado | Significado | Vigente desde |
 | --- | --- | --- |
 | **Accepted** | El Tech Lead aprobó la decisión arquitectónica: SQS Standard, parámetros, envelope, ownership | [Management #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284#issuecomment-5519755749), merge de [Infrastructure #65](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/65) (2026-09-03) |
-| **Provisioned in IaC** | La cola y la DLQ existen como código Terraform reproducible (`infra/modules/catalog_events_queue`), con IAM de mínimo privilegio en el rol compartido del nodo `app` | rama `feat/hu-38-catalog-created-sqs` |
+| **Provisioned in IaC** | La cola y la DLQ existen como código Terraform reproducible (`infra/modules/catalog_events_queue`), con IAM de mínimo privilegio en el rol compartido del nodo `app` | [Infrastructure #93](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/93) |
 | **Applied/deployed** | `terraform apply` se ejecutó de verdad contra la cuenta real; la cola existe en AWS | **Todavía no** — requiere autorización explícita fuera de esta Task |
 
 Además, incluso una vez aplicado, faltarían dos piezas para que el evento fluya de extremo a extremo:
