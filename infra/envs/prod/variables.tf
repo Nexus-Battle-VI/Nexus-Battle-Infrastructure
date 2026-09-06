@@ -3,6 +3,24 @@ variable "region" {
   default = "us-east-1"
 }
 
+variable "environment" {
+  description = <<-DESC
+    Entorno de despliegue. Forma parte del nombre de la cola de
+    catalog.product.created (ADR-017) y coincide con el enum del contrato
+    AsyncAPI (`catalog-events-v1.asyncapi.yaml`).
+
+    "prod" por defecto porque hoy solo existe este entorno; separar Terraform
+    en varios entornos es un cambio futuro, no algo que esta variable decida.
+  DESC
+  type        = string
+  default     = "prod"
+
+  validation {
+    condition     = contains(["dev", "test", "prod"], var.environment)
+    error_message = "environment debe ser 'dev', 'test' o 'prod'."
+  }
+}
+
 variable "profile" {
   type    = string
   default = "nexus-battles"

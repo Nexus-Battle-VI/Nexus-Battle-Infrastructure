@@ -55,3 +55,22 @@ output "product_assets_bucket_arn" {
   description = "ARN del bucket S3 de assets de producto."
   value       = module.product_assets.bucket_arn
 }
+
+output "catalog_events_queue_url" {
+  description = "URL de la cola SQS de catalog.product.created (ADR-017). Es el mismo valor que recibe CATALOG_QUEUE_URL en Notifications."
+  value       = module.catalog_events_queue.queue_url
+}
+
+output "catalog_events_queue_arn" {
+  description = "ARN de la cola principal. Nombre recomendado para el futuro dispatcher de Catalog: CATALOG_EVENTS_QUEUE_URL (alias que Notifications ya acepta) para el valor de URL equivalente."
+  value       = module.catalog_events_queue.queue_arn
+}
+
+output "catalog_events_dlq_url" {
+  description = "URL de la DLQ. Su uso es administrativo (redrive), no algo que Catalog o Notifications deban configurar."
+  value       = module.catalog_events_queue.dlq_url
+}
+
+output "catalog_events_dlq_arn" {
+  value = module.catalog_events_queue.dlq_arn
+}

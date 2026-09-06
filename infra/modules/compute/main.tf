@@ -289,6 +289,52 @@ resource "aws_iam_role_policy" "product_assets" {
   policy = data.aws_iam_policy_document.product_assets_access[0].json
 }
 
+/**
+ * Ownership de ADR-017 (seccion 1) para catalog.product.created, aplicado al
+ * UNICO rol que existe para el nodo `app`.
+ *
+ * BLOCKER DE TOPOLOGIA, mismo patron que Cognito y SES arriba: ADR-011 pone
+ * Catalog y Notifications en la misma instancia EC2, asi que las dos
+ * concesiones -SendMessage para uno, Receive/Delete/ChangeMessageVisibility/
+ * GetQueueAttributes para el otro- viven en el mismo rol y cualquier
+ * contenedor del nodo `app` puede invocar cualquiera de las dos, no solo el
+ * servicio al que ADR-017 se las atribuye. No se concede `sqs:*`: cada verbo
+ * se lista porque ADR-017 lo aprobo para ese owner, no como conveniencia.
+ *
+ * NO incluye permisos de redrive ni de gestion de la DLQ: ADR-017 los declara
+ * una operacion administrativa separada, no algo que el rol de instancia deba
+ * poder hacer.
+ */
+data "aws_iam_policy_document" "catalog_events_queue_access" {
+  count = var.catalog_events_queue_arn != "" ? 1 : 0
+
+  statement {
+    sid       = "CatalogSendProductCreated"
+    effect    = "Allow"
+    actions   = ["sqs:SendMessage"]
+    resources = [var.catalog_events_queue_arn]
+  }
+
+  statement {
+    sid    = "NotificationsConsumeProductCreated"
+    effect = "Allow"
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:GetQueueAttributes",
+    ]
+    resources = [var.catalog_events_queue_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "catalog_events_queue" {
+  count  = var.catalog_events_queue_arn != "" ? 1 : 0
+  name   = "${var.name}-catalog-events-queue"
+  role   = aws_iam_role.node.name
+  policy = data.aws_iam_policy_document.catalog_events_queue_access[0].json
+}
+
 resource "aws_iam_instance_profile" "node" {
   name = "${var.name}-node"
   role = aws_iam_role.node.name
