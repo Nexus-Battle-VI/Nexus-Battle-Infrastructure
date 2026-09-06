@@ -256,9 +256,9 @@ services:
       # (Notifications#21, Player-Inventory#23). Nombre de servicio de
       # compose, red interna: no sale del nodo, no es TLS ni un secreto.
       PLAYER_INVENTORY_BASE_URL: http://inventory:3002
-      # SIN COLA REAL TODAVIA. ADR-017 sigue Proposed -sin Terraform SQS- y
-      # Catalog no tiene todavia un despachador que saque eventos del outbox
-      # (ver docs/contracts/event-catalog.md). Sin esta variable, el
+      # SIN COLA REAL TODAVIA. ADR-017 esta Accepted pero sin Terraform SQS
+      # provisionado, y Catalog no tiene todavia un despachador que saque
+      # eventos del outbox (ver docs/contracts/event-catalog.md). Sin esta variable, el
       # consumidor de ciclo de vida de Notifications se ejercita en memoria
       # local: no hay entrega cross-servicio real de
       # catalog.product.suspended/reactivated/inventory.adjusted/

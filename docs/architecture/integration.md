@@ -10,8 +10,8 @@ Una integración es **síncrona** cuando quien llama no puede continuar sin la r
 | --- | --- | --- |
 | Commerce → Catalog (precio) | Síncrono | Puerto definido, adaptador con catálogo local |
 | Catalog → Account (evidencia MFA) | Síncrono interno | Account integrado; promoción de Catalog en PR #27 y cierre funcional en Management #136 |
-| Catalog → Notifications (`catalog.product.created`) | Asíncrono | SQS Standard + outbox/inbox `Proposed` en ADR-017; no desplegado |
-| Catalog → Notifications (`suspended`/`reactivated`/`inventory.adjusted`/`premium.configured`, HU-38) | Asíncrono | Consumidor implementado en Notifications (#20/#21/#22); Catalog ya escribe los 4 eventos en su outbox, pero **no tiene ningún dispatcher/worker que los publique** (auditado en código: no existe); sin cola SQS provisionada (ADR-017 `Proposed`, sin Terraform). No desplegado -brecha de Catalog, no de Infrastructure- |
+| Catalog → Notifications (`catalog.product.created`) | Asíncrono | SQS Standard + outbox/inbox: ADR-017 `Accepted` ([Management #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284#issuecomment-5519755749), merge de [Infrastructure #65](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/65)); contrato y arquitectura aprobados, pero sin cola SQS provisionada (sin Terraform) ni dispatcher en Catalog. No desplegado |
+| Catalog → Notifications (`suspended`/`reactivated`/`inventory.adjusted`/`premium.configured`, HU-38) | Asíncrono | Consumidor implementado en Notifications (#20/#21/#22); Catalog ya escribe los 4 eventos en su outbox, pero **no tiene ningún dispatcher/worker que los publique** (auditado en código: no existe); sin cola SQS provisionada (Terraform ausente). ADR-017 `Accepted` cubre explícitamente `catalog.product.created`; el transporte de estos 4 eventos de ciclo de vida todavía no tiene una decisión/extensión arquitectónica propia. No desplegado -brecha de Catalog, no de Infrastructure- |
 | Notifications → Player/Inventory (resolución de propietarios, HU-38) | Síncrono interno | **Implementado** (Notifications#21, Player-Inventory#23): HMAC servicio-a-servicio, mismo mecanismo que Catalog→Account. Un fallo transitorio reintenta (Notifications#22); indisponible o sin configurar sigue la misma ruta de reintento/DLQ, nunca cae a un destinatario inventado |
 | Account → Notifications | Asíncrono | Puerto definido, adaptador de registro |
 | Commerce → Notifications | Asíncrono | Pendiente |
@@ -28,10 +28,11 @@ El razonamiento en cada caso:
 - **Reserva**: es un proceso de larga duración sin transacción común entre servicios.
 - **Resolución de propietarios (HU-38)**: sin saber qué jugadores poseen el producto suspendido/reactivado no hay a quién notificar; Notifications no puede continuar el procesamiento del evento sin esa respuesta. Ver [docs/contracts/product-owners.md](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/product-owners.md) de Player-Inventory para el contrato completo.
 
-### Flujo propuesto de creación de Producto
+### Flujo aprobado de creación de Producto
 
-ADR-017 propone que Catalog persista `catalog.product.created` en el outbox de
-la misma transacción de ADR-015 y lo despache después a una cola SQS Standard.
+ADR-017 (`Accepted`) decide que Catalog persista `catalog.product.created` en
+el outbox de la misma transacción de ADR-015 y lo despache después a una cola
+SQS Standard, todavía no provisionada.
 Notifications valida versión y deduplica por `eventId`. La cola es punto a
 punto para ese consumidor; no se envía un mensaje por jugador y no se promete
 orden ni exactly-once.
@@ -63,7 +64,7 @@ Los identificadores de plantilla forman parte del contrato: añadir o retirar un
 | `account.email-changed` | Account |
 | `inventory.item.added` | Player / Inventory |
 | `inventory.item.removed` | Player / Inventory |
-| `catalog.product.created` (externo V1 propuesto) | Catalog |
+| `catalog.product.created` (externo V1, ADR-017 `Accepted`) | Catalog |
 | `catalog.product.published` (interno heredado) | Catalog |
 | `catalog.product.price-changed` | Catalog |
 | `catalog.product.archived` | Catalog |

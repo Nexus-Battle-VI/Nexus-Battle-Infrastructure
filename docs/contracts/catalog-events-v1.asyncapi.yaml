@@ -3,9 +3,12 @@ info:
   title: Nexus Battle Catalog Product Events
   version: 1.2.0
   description: >-
-    Contrato propuesto para la entrega at-least-once de
-    catalog.product.created desde Catalog hacia Notifications mediante una
-    cola SQS Standard. No representa infraestructura provisionada.
+    Contrato aceptado y versionado conforme a ADR-017 (Accepted, Management
+    #284) para la entrega at-least-once de catalog.product.created desde
+    Catalog hacia Notifications mediante una cola SQS Standard. La aceptación
+    cubre el contrato y la arquitectura; no representa infraestructura
+    provisionada: no existe todavía cola SQS en Terraform ni dispatcher en
+    Catalog que la despache.
 
 
     version 1.1.0 documentó adicionalmente el envelope de
@@ -20,8 +23,10 @@ info:
 
     Los cuatro se documentan SOLO como componentes reutilizables
     (`components.messages`): no se declara un canal ni una operación
-    `send`/`receive` para ellos, porque ADR-017 -Proposed- cubre unicamente la
-    cola de `catalog.product.created` y docs/contracts/event-catalog.md es
+    `send`/`receive` para ellos, porque ADR-017 -Accepted- cubre unicamente la
+    cola de `catalog.product.created`; el transporte de estos cuatro eventos
+    de ciclo de vida todavía no tiene una decisión/extensión arquitectónica
+    propia, y docs/contracts/event-catalog.md es
     explícito en que los demás eventos "no deben enviarse por la cola de
     Producto". HU-38 (Management #46) ya consume los cuatro en Notifications
     (Notifications#20/#21/#22, mergeadas a `develop`), pero definir el

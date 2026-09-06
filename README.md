@@ -53,7 +53,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [014](docs/adr/ADR-014-privacy-data-governance.md) | Gobierno de privacidad y tratamiento de datos | Proposed |
 | [015](docs/adr/ADR-015-catalog-atomicity-audit-outbox.md) | Atomicidad de Producto, auditoría y outbox | Accepted |
 | [016](docs/adr/ADR-016-product-asset-storage.md) | Almacenamiento y ownership de recursos visuales de Producto | Accepted |
-| [017](docs/adr/ADR-017-catalog-events-sqs.md) | Entrega de eventos de Producto mediante SQS | Proposed |
+| [017](docs/adr/ADR-017-catalog-events-sqs.md) | Entrega de eventos de Producto mediante SQS | Accepted |
 
 El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 `Accepted` con evidencia de aprobación registrada.
