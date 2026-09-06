@@ -285,23 +285,32 @@ services:
       # falla con MailFromDomainNotVerifiedException, que el adaptador clasifica
       # —con razon— como NO reintentable: el correo se pierde sin reintento.
       EMAIL_FROM: no-reply@simuladorupbbga.app
-      # El adaptador SQS depende de ADR-006 (cola general de notificaciones
-      # transaccionales: account.registered/verified y demas). ADR-006 sigue
-      # `Proposed`, y activar `sqs` aqui exige tambien QUEUE_URL de esa cola
-      # general -sin ella `loadConfig` rechaza el arranque para TODO el
-      # worker, no solo para catalog.product.created-, asi que se deja en
-      # `memory` aunque la cola de catalog.product.created ya exista (ver
-      # CATALOG_QUEUE_URL mas abajo). Es una brecha de ADR-006, no de esta
-      # cola.
+      # El adaptador SQS de la cola GENERAL depende de ADR-006 (notificaciones
+      # transaccionales: account.registered/verified y demas), que sigue
+      # `Proposed` y sin cola provisionada. Se deja en `memory`.
+      #
+      # Esto YA NO acopla el transporte de catalog.product.created:
+      # Notifications#23 desacoplo CATALOG_QUEUE_DRIVER de QUEUE_DRIVER
+      # precisamente para que activar SQS aqui no exigiera tambien QUEUE_URL
+      # de la cola general (antes, antes de #23, `loadConfig` habria
+      # rechazado el arranque completo del worker sin ella). Ver
+      # CATALOG_QUEUE_DRIVER mas abajo.
       QUEUE_DRIVER: memory
       # Cola real de catalog.product.created (ADR-017 Accepted, Terraform en
-      # infra/modules/catalog_events_queue). Terraform la rellena con el
-      # output real del modulo; queda vacia si se ejecuta este compose sin
-      # pasar por Terraform. Notifications solo la usa cuando QUEUE_DRIVER es
-      # `sqs` (ver comentario de arriba): mientras tanto, tener la URL aqui no
-      # activa ningun consumo real, y Catalog sigue sin dispatcher que la
-      # publique.
+      # infra/modules/catalog_events_queue, Infrastructure#93). Terraform la
+      # rellena con el output real del modulo; queda vacia si se ejecuta este
+      # compose sin pasar por Terraform.
       CATALOG_QUEUE_URL: ${CATALOG_QUEUE_URL:-}
+      # Activa el consumo real de catalog.product.created por SQS,
+      # independientemente de QUEUE_DRIVER (Notifications#23). Hardcodeado a
+      # `sqs` -no `${VAR:-memory}`- porque en este nodo (a diferencia de
+      # compose.example.yml, que no pasa por Terraform) CATALOG_QUEUE_URL
+      # siempre la rellena un output real cuando el modulo esta aplicado; con
+      # `terraform apply` todavia sin ejecutar (Infrastructure#93 esta
+      # Provisioned in IaC, no Applied), CATALOG_QUEUE_URL llega vacia y
+      # Notifications rechaza el arranque -fail closed, no cae a memoria en
+      # silencio-, que es preferible a aparentar consumo real sin cola.
+      CATALOG_QUEUE_DRIVER: sqs
       # --- HU-38: notificaciones de catalogo in-app + banner (Notifications#20) ---
       CATALOG_NOTIFICATIONS_HTTP_ENABLED: 'true'
       CATALOG_NOTIFICATIONS_HTTP_PORT: 3004

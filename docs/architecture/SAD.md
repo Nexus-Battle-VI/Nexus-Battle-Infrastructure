@@ -213,3 +213,4 @@ Se dejan tachadas en lugar de borrarlas: quien haya leído una versión anterior
 | [015](../adr/ADR-015-catalog-atomicity-audit-outbox.md) | Atomicidad de Producto, auditoría y outbox | Accepted |
 | [016](../adr/ADR-016-product-asset-storage.md) | Almacenamiento y ownership de recursos visuales de Producto | Accepted |
 | [017](../adr/ADR-017-catalog-events-sqs.md) | Entrega de eventos de Producto mediante SQS | Accepted |
+| [018](../adr/ADR-018-catalog-lifecycle-events-transport.md) | Transporte de eventos de ciclo de vida de Producto | Proposed |
