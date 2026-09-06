@@ -24,12 +24,12 @@ Auditado explícitamente tras el merge de Infrastructure#93: no existía ningún
 - Notifications ya tiene una variable de configuración dedicada y ya reservada para este transporte: `CATALOG_LIFECYCLE_QUEUE_URL`, documentada en su `.env.example` y consumida en `catalog-notifications-application.ts`.
 - Notifications ya implementa idempotencia por `eventId` (`catalog:lifecycle:${eventType}:${eventId}`), reintento y camino a DLQ para los cuatro eventos (`HandleCatalogLifecycleEvent.ts`), con la misma disciplina que `catalog.product.created`.
 
-**Hallazgos adicionales, reportados como bloqueo real y no resueltos aquí** -auditando `catalog-notifications-application.ts` de Notifications-:
+**Hallazgos originales, ya resueltos en [Notifications#24](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/24)** -detectados auditando `catalog-notifications-application.ts` en el momento de esta aceptación-:
 
-1. La activación SQS de `lifecycleQueue` (línea 135) sigue condicionada a `config.queueDriver === QueueDriver.Sqs` -el interruptor de la cola **general**-, exactamente el mismo acoplamiento que [Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23) ya corrigió para `catalogQueue`/`catalog.product.created` mediante `CATALOG_QUEUE_DRIVER`. Nadie corrigió el equivalente para `lifecycleQueue`.
-2. `lifecycleQueue` (línea 139) sigue construyéndose con `deadLetterQueueUrl: config.deadLetterQueueUrl` -la DLQ **general** de notificaciones transaccionales-, exactamente el mismo problema que #23 corrigió para `catalogQueue` (que ya no reenvía a esa DLQ y confía en la redrive policy de su propia cola). Nadie corrigió el equivalente para `lifecycleQueue`.
+1. La activación SQS de `lifecycleQueue` dependía de `config.queueDriver === QueueDriver.Sqs` -el interruptor de la cola **general**-, exactamente el mismo acoplamiento que [Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23) había corregido para `catalogQueue`/`catalog.product.created` mediante `CATALOG_QUEUE_DRIVER`. **Corregido por Notifications#24** mediante `CATALOG_LIFECYCLE_QUEUE_DRIVER`, un driver propio e independiente.
+2. `lifecycleQueue` se construía con `deadLetterQueueUrl: config.deadLetterQueueUrl` -la DLQ **general** de notificaciones transaccionales-, el mismo problema que #23 había corregido para `catalogQueue`. **Corregido por Notifications#24**: ya no se le pasa `deadLetterQueueUrl`, y confía en la redrive policy de su propia cola dedicada.
 
-Esto significa que, aunque este ADR ya esté `Accepted` y su cola provisionada como código (ver Estado de despliegue, más abajo), **Notifications no puede consumirla correctamente todavía sin**: activar `QUEUE_DRIVER=sqs` general -que a su vez exige la cola general de ADR-006, todavía `Proposed`- **y** seguir mezclando su DLQ con la de notificaciones transaccionales, o sin un cambio de código en Notifications análogo a `#23` (p. ej. `CATALOG_LIFECYCLE_QUEUE_DRIVER`, y omitir `deadLetterQueueUrl` en `lifecycleQueue` para que su propia redrive policy sea quien mueva los mensajes a su DLQ dedicada). Esta Task no modifica Notifications; se documentan ambos bloqueos con precisión para que el PR de Notifications que implemente esto los resuelva junto con el consumo.
+Con Notifications#24 mergeado, y con esta misma Task inyectando `CATALOG_LIFECYCLE_QUEUE_DRIVER=sqs` en `compose/nodes/app.yml`, el wiring de configuración queda completo. Sigue faltando, para un flujo E2E real: `terraform apply` de la cola (ver Estado de despliegue, más abajo) y el dispatcher de Catalog que la alimente.
 
 ## Fuerzas de decisión
 
@@ -109,15 +109,16 @@ Mismos tres estados que ADR-017, y no deben confundirse entre sí:
 | Estado | Significado | Vigente desde |
 | --- | --- | --- |
 | **Accepted** | El Tech Lead aprobó la decisión arquitectónica: cola compartida, parámetros, ownership, condición de no-regresión sobre ADR-017 y la cola general | [Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960) (2026-09-06) |
-| **Provisioned in IaC** | La cola y la DLQ existen como código Terraform reproducible (`infra/modules/catalog_lifecycle_events_queue`, módulo separado del de ADR-017), con IAM de mínimo privilegio en una política propia sobre el rol compartido del nodo `app` | esta Task (rama `feat/hu-38-lifecycle-sqs`) |
+| **Provisioned in IaC** | La cola y la DLQ existen como código Terraform reproducible (`infra/modules/catalog_lifecycle_events_queue`, módulo separado del de ADR-017), con IAM de mínimo privilegio en una política propia sobre el rol compartido del nodo `app` | Infrastructure#95 |
 | **Applied/deployed** | `terraform apply` se ejecutó de verdad contra la cuenta real; la cola existe en AWS | **Todavía no** — requiere autorización explícita fuera de esta Task |
 
-Incluso una vez aplicado, faltarían dos piezas para que el evento fluya de extremo a extremo:
+**Wiring de configuración: completo.** [Notifications#24](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/24) agregó `CATALOG_LIFECYCLE_QUEUE_DRIVER` como driver independiente de `QUEUE_DRIVER`, y dejó de reenviar a la DLQ general (ver Contexto, arriba). Esta misma Task (rama `fix/hu-38-enable-lifecycle-sqs`) inyecta `CATALOG_LIFECYCLE_QUEUE_DRIVER=sqs` junto a `CATALOG_LIFECYCLE_QUEUE_URL` en `compose/nodes/app.yml`, con el mismo criterio fail-closed que `CATALOG_QUEUE_DRIVER`: si `terraform apply` no se ha ejecutado y la URL llega vacía, Notifications rechaza el arranque en vez de caer a memoria en silencio.
 
-- **dispatcher en Catalog** que lea el outbox y publique hacia esta cola (confirmado ausente en código, PR separado en `Nexus-Battle-Catalog`);
-- **driver lifecycle independiente en Notifications**: auditado `catalog-notifications-application.ts`, `lifecycleQueue` sigue activándose con `config.queueDriver` -el interruptor de la cola GENERAL, no uno propio- y sigue reenviando a `config.deadLetterQueueUrl` -la DLQ GENERAL-. Ambos son el mismo tipo de acoplamiento que [Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23) ya corrigió para `catalog.product.created`, pero nadie corrigió el equivalente para el ciclo de vida. Activar `QUEUE_DRIVER=sqs` para forzar el consumo repetiría exactamente el problema que #23 resolvió y exigiría además la cola general de ADR-006, todavía `Proposed` -por eso esta Task NO lo hace-. Requiere un PR de Notifications que agregue un driver propio (p. ej. `CATALOG_LIFECYCLE_QUEUE_DRIVER`) y deje de reenviar a la DLQ general.
+Falta una sola pieza para que el evento fluya de extremo a extremo:
 
-Mientras esas piezas no existan, los cuatro eventos de ciclo de vida permanecen sin transporte productivo real, aunque el contrato, la decisión arquitectónica y ahora la infraestructura como código ya estén en su lugar.
+- **dispatcher en Catalog** que lea el outbox y publique hacia esta cola (confirmado ausente en código, PR separado en `Nexus-Battle-Catalog`).
+
+Mientras esa pieza -y `terraform apply`- no existan, los cuatro eventos de ciclo de vida permanecen sin transporte productivo real, aunque el contrato, la decisión arquitectónica, la infraestructura como código y el wiring de configuración ya estén en su lugar.
 
 ## Consecuencias
 
@@ -129,5 +130,4 @@ Mientras esas piezas no existan, los cuatro eventos de ciclo de vida permanecen 
 
 **Lo que cuesta:**
 
-- una DLQ compartida entre cuatro `eventType` distintos, con la limitación de triage que eso implica frente a la Opción B;
-- persiste el hallazgo de acoplamiento en `catalog-notifications-application.ts` hasta que un PR de Notifications lo resuelva -no es una consecuencia de aceptar este ADR, sino una precondición para que aceptarlo tenga efecto real-.
+- una DLQ compartida entre cuatro `eventType` distintos, con la limitación de triage que eso implica frente a la Opción B.

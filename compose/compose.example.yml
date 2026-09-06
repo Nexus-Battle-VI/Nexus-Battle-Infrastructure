@@ -273,11 +273,19 @@ services:
       # Para local sin AWS, vacio: el consumidor de ciclo de vida se ejercita
       # en memoria. ADR-018 (Accepted, Management#314) ya provisiona la cola
       # real en infra/modules/catalog_lifecycle_events_queue para el entorno
-      # de Terraform (ver compose/nodes/app.yml), pero incluso alli el
-      # consumo real espera un PR de Notifications: `lifecycleQueue` sigue
-      # acoplada a QUEUE_DRIVER general y a la DLQ general (ver ADR-018).
-      # Catalog, ademas, sigue sin dispatcher que publique estos eventos.
+      # de Terraform, que ya activa el consumo real con
+      # CATALOG_LIFECYCLE_QUEUE_DRIVER=sqs (ver compose/nodes/app.yml,
+      # Notifications#24). Catalog, ademas, sigue sin dispatcher que publique
+      # estos eventos desde su outbox.
       CATALOG_LIFECYCLE_QUEUE_URL: ${CATALOG_LIFECYCLE_QUEUE_URL:-}
+      # A proposito NO se define CATALOG_LIFECYCLE_QUEUE_DRIVER aqui: su
+      # default en Notifications es `memory` (Notifications#24), que es
+      # exactamente lo que este compose local sin AWS necesita -sin el,
+      # `sqs` con CATALOG_LIFECYCLE_QUEUE_URL vacia haria que Notifications
+      # rechazara el arranque-. El nodo real de Terraform
+      # (compose/nodes/app.yml) si lo fija a `sqs`, porque ahi
+      # CATALOG_LIFECYCLE_QUEUE_URL siempre llega con un valor real cuando el
+      # modulo esta aplicado.
     depends_on:
       mailpit:
         condition: service_started
