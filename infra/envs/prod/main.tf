@@ -66,13 +66,25 @@ module "iam" {
 
 /**
  * Cola SQS de catalog.product.created (ADR-017, Accepted en Management #284,
- * merge de Infrastructure #65). NO incluye las colas de los eventos de ciclo
- * de vida (suspended/reactivated/inventory.adjusted/premium.configured):
- * ADR-017 cubre explicitamente solo `created`, y esos cuatro siguen BLOCKED
- * BY ARCHITECTURE DECISION -ver docs/contracts/event-catalog.md-.
+ * merge de Infrastructure #65). Cubre EXCLUSIVAMENTE ese evento.
  */
 module "catalog_events_queue" {
   source = "../../modules/catalog_events_queue"
+
+  environment = var.environment
+  tags        = local.tags
+}
+
+/**
+ * Cola SQS de los cuatro eventos de ciclo de vida de Producto (ADR-018,
+ * Accepted en Management #314): suspended/reactivated/inventory.adjusted/
+ * premium.configured. Modulo separado de `catalog_events_queue` a proposito
+ * -ver el comentario del modulo mismo-: la condicion de aprobacion de
+ * Management#314 exige no modificar ni arriesgar la cola de
+ * `catalog.product.created` ya existente.
+ */
+module "catalog_lifecycle_events_queue" {
+  source = "../../modules/catalog_lifecycle_events_queue"
 
   environment = var.environment
   tags        = local.tags
@@ -181,6 +193,27 @@ locals {
         # ADR-006, no de esta cola.
         CATALOG_QUEUE_URL = module.catalog_events_queue.queue_url
 
+        # Cola real de los cuatro eventos de ciclo de vida (ADR-018 Accepted,
+        # Management#314). Igual que CATALOG_QUEUE_URL arriba: tener esta
+        # variable puesta NO activa por si sola el consumo real.
+        #
+        # Notifications ya reconoce `CATALOG_LIFECYCLE_QUEUE_URL`, pero
+        # auditado su codigo (`catalog-notifications-application.ts`),
+        # `lifecycleQueue` sigue activandose con `config.queueDriver`
+        # -el interruptor GENERAL, no uno propio- y sigue reenviando a
+        # `config.deadLetterQueueUrl` -la DLQ GENERAL- en vez de confiar en la
+        # redrive policy de esta cola dedicada. Ambos son el mismo tipo de
+        # acoplamiento que Notifications#23 ya corrigio para
+        # `catalog.product.created`, pero nadie corrigio el equivalente para
+        # el ciclo de vida. Activar `QUEUE_DRIVER=sqs` para forzar el consumo
+        # aqui repetiria exactamente el problema que #23 resolvio -y ademas
+        # exigiria la cola general de ADR-006, todavia `Proposed`-, asi que
+        # deliberadamente NO se hace. `QUEUE_DRIVER` permanece `memory`. El
+        # consumo real de esta cola espera un PR de Notifications que agregue
+        # un driver lifecycle independiente (ver ADR-018 y
+        # docs/contracts/event-catalog.md).
+        CATALOG_LIFECYCLE_QUEUE_URL = module.catalog_lifecycle_events_queue.queue_url
+
         # Filtro automatico de contenido de Community (HU-41.7,
         # Management#29). Vacio por defecto: Community arranca igual y no
         # genera ninguna deteccion. Terraform NO define aqui la politica
@@ -222,20 +255,21 @@ module "compute" {
   # el nodo. Se activa sola en cuanto hay sitio publico configurado.
   stable_public_ip = var.public_site_address != ""
 
-  name                     = local.name
-  tags                     = local.tags
-  subnet_id                = module.network.subnet_id
-  security_group_ids       = module.network.security_group_ids
-  nodes                    = var.nodes
-  bootstrap                = local.bootstrap
-  arrancar_stack           = var.arrancar_stack
-  compose_plugin_url       = var.compose_plugin_url
-  compose_plugin_sha256    = var.compose_plugin_sha256
-  cognito_user_pool_arn    = module.identity.user_pool_arn
-  data_volume_gb           = var.data_volume_gb
-  mount_data_volume        = var.mount_data_volume
-  product_assets_bucket    = local.product_assets_bucket_name
-  catalog_events_queue_arn = module.catalog_events_queue.queue_arn
+  name                        = local.name
+  tags                        = local.tags
+  subnet_id                   = module.network.subnet_id
+  security_group_ids          = module.network.security_group_ids
+  nodes                       = var.nodes
+  bootstrap                   = local.bootstrap
+  arrancar_stack              = var.arrancar_stack
+  compose_plugin_url          = var.compose_plugin_url
+  compose_plugin_sha256       = var.compose_plugin_sha256
+  cognito_user_pool_arn       = module.identity.user_pool_arn
+  data_volume_gb              = var.data_volume_gb
+  mount_data_volume           = var.mount_data_volume
+  product_assets_bucket       = local.product_assets_bucket_name
+  catalog_events_queue_arn    = module.catalog_events_queue.queue_arn
+  catalog_lifecycle_queue_arn = module.catalog_lifecycle_events_queue.queue_arn
 
   # El presupuesto y las alertas existen antes que cualquier recurso de computo.
   # Esta dependencia lo convierte en una garantia del grafo, no en una costumbre.

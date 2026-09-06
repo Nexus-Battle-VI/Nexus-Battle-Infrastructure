@@ -52,9 +52,10 @@ transporte productivo hasta que esas Tasks se completen.
 
 Los cuatro eventos de ciclo de vida de Producto (`suspended`, `reactivated`,
 `inventory.adjusted`, `premium.configured`) no quedan cubiertos por ADR-017.
-[ADR-018](ADR-018-catalog-lifecycle-events-transport.md) propone -`Proposed`,
-no `Accepted`- extender el mismo patrón a esos cuatro eventos mediante una
-cola compartida.
+[ADR-018](ADR-018-catalog-lifecycle-events-transport.md) (`Accepted`,
+[Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960))
+extiende el mismo patrón a esos cuatro eventos mediante una cola compartida,
+ya provisionada como código Terraform pero todavía sin `terraform apply`.
 
 Esta propuesta no adopta automáticamente SQS para Account, Commerce, la saga de
 checkout ni futuros consumidores. Cada consumidor adicional necesita una cola

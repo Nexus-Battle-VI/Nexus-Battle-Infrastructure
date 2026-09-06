@@ -1,7 +1,8 @@
 # ADR-018 — Transporte de eventos de ciclo de vida de Producto
 
-- **Estado:** **Proposed** — requiere aprobación del Tech Lead. NO Accepted: no se provisiona ningún recurso mientras este documento no cambie de estado.
+- **Estado:** **Accepted** — condición de aceptación registrada en [Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960)
 - **Fecha:** 2026-09-06
+- **Fecha de aceptación:** 2026-09-06
 - **Decide:** Arquitectura, con validación de Catalog y Notifications
 - **Relacionado:** [ADR-006](ADR-006-messaging.md), [ADR-007](ADR-007-aws-cost-optimized-platform.md), [ADR-013](ADR-013-canonical-product-contract.md), [ADR-015](ADR-015-catalog-atomicity-audit-outbox.md), [ADR-017](ADR-017-catalog-events-sqs.md), [HU-34 #44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/44), [HU-35 #43](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/43), [HU-36 #45](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/45), [HU-38 #46](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/46)
 
@@ -14,7 +15,7 @@
 - `catalog.product.inventory.adjusted` (HU-34)
 - `catalog.product.premium.configured` (HU-36)
 
-Auditado explícitamente tras el merge de Infrastructure#93: no existe ningún ADR posterior, extensión Accepted, ni issue de Management que decida su transporte. Infrastructure#93 y `docs/contracts/event-catalog.md` ya declaran esta ausencia como `BLOCKED BY ARCHITECTURE DECISION`, no como un olvido. Este documento es esa decisión pendiente, propuesta y no aún aceptada.
+Auditado explícitamente tras el merge de Infrastructure#93: no existía ningún ADR posterior, extensión Accepted, ni issue de Management que decidiera su transporte. Infrastructure#93 y `docs/contracts/event-catalog.md` declararon esa ausencia como `BLOCKED BY ARCHITECTURE DECISION`, no como un olvido. Este documento fue esa decisión pendiente -Proposed al escribirse, registrada como Task de decisión en [Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314), y `Accepted` desde que el Tech Lead comunicó su aprobación (ver Evidencia de aceptación, más abajo)-.
 
 **Lo que ya existe y es un hecho verificable, no una suposición:**
 
@@ -28,7 +29,7 @@ Auditado explícitamente tras el merge de Infrastructure#93: no existe ningún A
 1. La activación SQS de `lifecycleQueue` (línea 135) sigue condicionada a `config.queueDriver === QueueDriver.Sqs` -el interruptor de la cola **general**-, exactamente el mismo acoplamiento que [Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23) ya corrigió para `catalogQueue`/`catalog.product.created` mediante `CATALOG_QUEUE_DRIVER`. Nadie corrigió el equivalente para `lifecycleQueue`.
 2. `lifecycleQueue` (línea 139) sigue construyéndose con `deadLetterQueueUrl: config.deadLetterQueueUrl` -la DLQ **general** de notificaciones transaccionales-, exactamente el mismo problema que #23 corrigió para `catalogQueue` (que ya no reenvía a esa DLQ y confía en la redrive policy de su propia cola). Nadie corrigió el equivalente para `lifecycleQueue`.
 
-Esto significa que, aunque este ADR se aceptara y se provisionara la cola descrita abajo, **Notifications no podría consumirla correctamente sin antes**: activar `QUEUE_DRIVER=sqs` general -que a su vez exige la cola general de ADR-006, todavía `Proposed`- **y** seguir mezclando su DLQ con la de notificaciones transaccionales, o sin un cambio de código en Notifications análogo a `#23` (p. ej. `CATALOG_LIFECYCLE_QUEUE_DRIVER`, y omitir `deadLetterQueueUrl` en `lifecycleQueue` para que su propia redrive policy sea quien mueva los mensajes a su DLQ dedicada). Esta Task no modifica Notifications; se documentan ambos bloqueos con precisión para que el PR de Notifications que implemente esto los resuelva junto con el consumo.
+Esto significa que, aunque este ADR ya esté `Accepted` y su cola provisionada como código (ver Estado de despliegue, más abajo), **Notifications no puede consumirla correctamente todavía sin**: activar `QUEUE_DRIVER=sqs` general -que a su vez exige la cola general de ADR-006, todavía `Proposed`- **y** seguir mezclando su DLQ con la de notificaciones transaccionales, o sin un cambio de código en Notifications análogo a `#23` (p. ej. `CATALOG_LIFECYCLE_QUEUE_DRIVER`, y omitir `deadLetterQueueUrl` en `lifecycleQueue` para que su propia redrive policy sea quien mueva los mensajes a su DLQ dedicada). Esta Task no modifica Notifications; se documentan ambos bloqueos con precisión para que el PR de Notifications que implemente esto los resuelva junto con el consumo.
 
 ## Fuerzas de decisión
 
@@ -71,11 +72,11 @@ Una única cola SQS Standard + una única DLQ, con los cuatro `eventType` como m
 
 Explícitamente descartada por instrucción directa de esta Task y por el propio ADR-017: esa cola fue aprobada para un `eventType` específico, y mezclar otros `eventType` cambiaría el contrato ya `Accepted` sin pasar por una nueva aprobación. Un defecto en el consumo de un evento de ciclo de vida podría además retrasar o poner en DLQ mensajes de `catalog.product.created` -el evento de mayor prioridad funcional, requerido por HU-33-, degradando una garantía ya aprobada por decisión ajena a esta.
 
-## Recomendación (Proposed, no Accepted)
+## Decisión
 
 **Opción A: una cola SQS Standard compartida para los cuatro eventos de ciclo de vida**, con los mismos parámetros que ADR-017 aprobó para `created`:
 
-| Parámetro | Valor propuesto |
+| Parámetro | Valor aceptado |
 | --- | --- |
 | Nombre de cola | `nexus-battle-<environment>-catalog-lifecycle-notifications` |
 | Nombre de DLQ | `nexus-battle-<environment>-catalog-lifecycle-notifications-dlq` |
@@ -91,21 +92,40 @@ Explícitamente descartada por instrucción directa de esta Task y por el propio
 
 Configuración en Notifications: `CATALOG_LIFECYCLE_QUEUE_URL` -variable que **ya existe**, sin necesidad de que Infrastructure invente un nombre nuevo ni de que Notifications agregue una variable-.
 
-## Condiciones para pasar a Accepted
+## Evidencia de aceptación
 
-- aprobación del Tech Lead de la topología (Opción A) y sus parámetros;
-- aprobación de coste dentro del techo de ADR-007 (estimación pendiente de elaborar, mismo formato que [catalog-events-sqs-estimate.md](../costs/catalog-events-sqs-estimate.md));
-- confirmación de Notifications de que `CATALOG_LIFECYCLE_QUEUE_URL` apuntando a una cola con los cuatro `eventType` mezclados es el contrato que su consumidor espera -ya lo es, según el código auditado, pero corresponde confirmarlo en la revisión de este documento, no asumirlo unilateralmente-;
-- **corrección previa o paralela en Notifications** del acoplamiento `lifecycleQueue`/`config.queueDriver` descrito en Contexto: sin ella, aceptar y provisionar esta cola no bastaría para activar el consumo real;
-- ningún `terraform apply` dentro de esta decisión.
+- aprobación del Tech Lead de la topología (Opción A) y sus parámetros: registrada en [Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960);
+- aprobación de coste dentro del techo de ADR-007: estimación en [catalog-lifecycle-sqs-estimate.md](../costs/catalog-lifecycle-sqs-estimate.md) (hasta USD 0,2542/mes en el escenario de demo, insignificante frente al techo de USD 100);
+- confirmación de que `CATALOG_LIFECYCLE_QUEUE_URL` apuntando a una cola con los cuatro `eventType` mezclados es el contrato que el consumidor de Notifications espera: verificado en código (`CatalogLifecycleEventParser`/`CatalogLifecycleEventsConsumer` ya tratan los cuatro como un único flujo) antes de esta aceptación.
+
+**Condición de aceptación registrada en Management #314** (no una cita textual del Tech Lead, sino la condición tal como quedó documentada en esa Task): la implementación no debe romper, reutilizar, reemplazar ni mezclar la cola SQS de `catalog.product.created` ya aprobada por ADR-017, ni la cola general de notificaciones transaccionales de Notifications, ni sus DLQ; debe preservarse la semántica at-least-once, la idempotencia por `eventId`, los reintentos basados en `ApproximateReceiveCount` y una DLQ propia para esta cola lifecycle.
+
+**Aceptar el ADR no equivale a desplegar.** Ningún `terraform apply` se ejecutó como parte de esta aceptación.
+
+## Estado de despliegue
+
+Mismos tres estados que ADR-017, y no deben confundirse entre sí:
+
+| Estado | Significado | Vigente desde |
+| --- | --- | --- |
+| **Accepted** | El Tech Lead aprobó la decisión arquitectónica: cola compartida, parámetros, ownership, condición de no-regresión sobre ADR-017 y la cola general | [Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960) (2026-09-06) |
+| **Provisioned in IaC** | La cola y la DLQ existen como código Terraform reproducible (`infra/modules/catalog_lifecycle_events_queue`, módulo separado del de ADR-017), con IAM de mínimo privilegio en una política propia sobre el rol compartido del nodo `app` | esta Task (rama `feat/hu-38-lifecycle-sqs`) |
+| **Applied/deployed** | `terraform apply` se ejecutó de verdad contra la cuenta real; la cola existe en AWS | **Todavía no** — requiere autorización explícita fuera de esta Task |
+
+Incluso una vez aplicado, faltarían dos piezas para que el evento fluya de extremo a extremo:
+
+- **dispatcher en Catalog** que lea el outbox y publique hacia esta cola (confirmado ausente en código, PR separado en `Nexus-Battle-Catalog`);
+- **driver lifecycle independiente en Notifications**: auditado `catalog-notifications-application.ts`, `lifecycleQueue` sigue activándose con `config.queueDriver` -el interruptor de la cola GENERAL, no uno propio- y sigue reenviando a `config.deadLetterQueueUrl` -la DLQ GENERAL-. Ambos son el mismo tipo de acoplamiento que [Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23) ya corrigió para `catalog.product.created`, pero nadie corrigió el equivalente para el ciclo de vida. Activar `QUEUE_DRIVER=sqs` para forzar el consumo repetiría exactamente el problema que #23 resolvió y exigiría además la cola general de ADR-006, todavía `Proposed` -por eso esta Task NO lo hace-. Requiere un PR de Notifications que agregue un driver propio (p. ej. `CATALOG_LIFECYCLE_QUEUE_DRIVER`) y deje de reenviar a la DLQ general.
+
+Mientras esas piezas no existan, los cuatro eventos de ciclo de vida permanecen sin transporte productivo real, aunque el contrato, la decisión arquitectónica y ahora la infraestructura como código ya estén en su lugar.
 
 ## Consecuencias
 
-**Lo que se gana, si se acepta:**
+**Lo que se gana:**
 
-- transporte real para los cuatro eventos de ciclo de vida de HU-38, cerrando la brecha que Infrastructure#93 dejó documentada como bloqueada;
-- reutilización total del patrón, el código y la disciplina operativa ya aprobados y probados en ADR-017;
-- ninguna variable nueva que inventar en Notifications.
+- transporte real para los cuatro eventos de ciclo de vida de HU-38, cerrando la decisión que Infrastructure#93 dejó documentada como bloqueada;
+- reutilización total del patrón, el código y la disciplina operativa ya aprobados y probados en ADR-017, sin arriesgar sus recursos existentes (módulo Terraform separado, política IAM separada);
+- ninguna variable nueva que inventar en Notifications para la URL de la cola (`CATALOG_LIFECYCLE_QUEUE_URL` ya existía).
 
 **Lo que cuesta:**
 

@@ -321,14 +321,24 @@ services:
       # (Notifications#21, Player-Inventory#23). Mismo nodo `app`, red interna
       # de compose: no sale del nodo, no es TLS ni un secreto.
       PLAYER_INVENTORY_BASE_URL: http://inventory:3002
-      # SIN COLA REAL TODAVIA. ADR-017 esta Accepted pero sin Terraform SQS
-      # provisionado, y Catalog no tiene todavia un despachador que saque
-      # eventos del outbox (ver docs/contracts/event-catalog.md). Sin esta variable, el
-      # consumidor de ciclo de vida de Notifications se ejercita en memoria
-      # local: no hay entrega cross-servicio real de
-      # catalog.product.suspended/reactivated/inventory.adjusted/
-      # premium.configured todavia. No se define un valor de relleno.
-      # CATALOG_LIFECYCLE_QUEUE_URL:
+      # Cola real de los cuatro eventos de ciclo de vida (ADR-018 Accepted,
+      # Management#314, Terraform en infra/modules/catalog_lifecycle_events_queue).
+      # Terraform la rellena con el output real del modulo; queda vacia si se
+      # ejecuta este compose sin pasar por Terraform.
+      #
+      # Tener esta variable puesta NO activa el consumo real todavia: auditado
+      # el codigo de Notifications (catalog-notifications-application.ts),
+      # `lifecycleQueue` sigue activandose con QUEUE_DRIVER -el interruptor
+      # GENERAL- y sigue reenviando a la DLQ general, el mismo acoplamiento
+      # que Notifications#23 ya corrigio para catalog.product.created pero no
+      # para el ciclo de vida. Por eso QUEUE_DRIVER permanece `memory` -no se
+      # fuerza a `sqs` para "activar" esto: repetiria el problema que #23
+      # resolvio y exigiria ademas la cola general de ADR-006, todavia
+      # `Proposed`-. El consumo real espera un PR de Notifications que agregue
+      # un driver lifecycle independiente (ver ADR-018 y
+      # docs/contracts/event-catalog.md). Catalog, ademas, sigue sin
+      # dispatcher que publique estos eventos desde su outbox.
+      CATALOG_LIFECYCLE_QUEUE_URL: ${CATALOG_LIFECYCLE_QUEUE_URL:-}
     # Ya no depende de Mailpit: el envio sale por la API de SES. Mailpit se
     # mantiene en el compose a proposito, para que revertir a
     # `EMAIL_DRIVER: smtp` sea un cambio de una linea si SES da problemas.

@@ -4,7 +4,7 @@
 
 **Ningún evento cruza todavía un transporte real entre procesos distintos.** Los eventos existentes se emiten dentro de sus agregados y se registran en observabilidad. [ADR-017](../adr/ADR-017-catalog-events-sqs.md) está `Accepted` ([Management #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284#issuecomment-5519755749), merge de [Infrastructure #65](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/65)) para SQS con `catalog.product.created`, su cola y DLQ ya están **Provisioned in IaC** (`infra/modules/catalog_events_queue`, Infrastructure#93), y Notifications ya sabe activarla de forma independiente de su cola general (`CATALOG_QUEUE_DRIVER`, [Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23)) -este mismo cambio ya inyecta `CATALOG_QUEUE_DRIVER=sqs` en `compose/nodes/app.yml`-. Nada de esto equivale a desplegado: no se ejecutó `terraform apply` y Catalog no tiene dispatcher que alimente la cola.
 
-Los eventos de ciclo de vida (`suspended`/`reactivated`/`inventory.adjusted`/`premium.configured`) siguen sin transporte: ADR-017 no los cubre. [ADR-018](../adr/ADR-018-catalog-lifecycle-events-transport.md) (`Proposed`, no `Accepted`) propone una cola compartida para los cuatro, pero **no se provisiona nada de ella en este cambio**. Auditando Notifications se encontró además que, incluso si ADR-018 se aceptara y se provisionara, su consumidor de ciclo de vida (`catalog-notifications-application.ts`) sigue activando SQS con el interruptor de la cola GENERAL (`QUEUE_DRIVER`), no con uno propio -el mismo acoplamiento que Notifications#23 ya corrigió para `catalog.product.created`-: haría falta un PR de Notifications equivalente antes de que esta cola, una vez aceptada y desplegada, sirviera de algo.
+Los eventos de ciclo de vida (`suspended`/`reactivated`/`inventory.adjusted`/`premium.configured`) ya tienen decisión de transporte: [ADR-018](../adr/ADR-018-catalog-lifecycle-events-transport.md) está `Accepted` ([Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960)) para una cola SQS compartida entre los cuatro, con su propia DLQ, **distinta** de la de `catalog.product.created` y de la cola general de Notifications. Su cola y DLQ ya están **Provisioned in IaC** (`infra/modules/catalog_lifecycle_events_queue`, módulo Terraform separado del de ADR-017 para no arriesgar esos recursos). Architecture Accepted; runtime pendiente de Notifications wiring y deployment: no se ejecutó `terraform apply`, Catalog no tiene dispatcher, y Notifications todavía activa su consumidor de ciclo de vida (`catalog-notifications-application.ts`) con el interruptor de la cola GENERAL (`QUEUE_DRIVER`) y reenvía a la DLQ general -el mismo acoplamiento que Notifications#23 ya corrigió para `catalog.product.created`, sin equivalente todavía para el ciclo de vida-: hace falta un PR de Notifications que lo resuelva antes de que esta cola, ya aceptada y provisionada en código, sirva de algo en tiempo de ejecución.
 
 El catálogo mezcla contratos internos ya implementados con un contrato externo ya aceptado pero sin transporte desplegado. Cada tabla indica la diferencia; no se presenta el AsyncAPI nuevo como runtime existente.
 
@@ -108,35 +108,43 @@ con Notifications:**
   existe todavía en AWS. Y aunque se aplicara, sigue faltando el dispatcher
   del lado de Catalog que la alimente -ver el punto anterior-, así que el
   evento no fluye.
-- **Transporte de los eventos de ciclo de vida: BLOCKED BY ARCHITECTURE
-  DECISION, ahora con una propuesta formal.** ADR-017 cubre explícitamente
-  solo `catalog.product.created`. Auditado tras el merge de Infrastructure#93:
-  no existe ninguna extensión Accepted ni ADR nuevo que decida el transporte
-  de `suspended`/`reactivated`/`inventory.adjusted`/`premium.configured`.
-  [ADR-018](../adr/ADR-018-catalog-lifecycle-events-transport.md) (`Proposed`,
-  no `Accepted`) documenta la decisión pendiente -una cola compartida para los
-  cuatro, con los mismos parámetros que ADR-017- pero **no provisiona nada**:
-  provisionar SQS sin una decisión aceptada sería inventar la decisión dentro
-  de un PR de infraestructura, que no es su lugar.
-- **Hallazgo adicional, bloqueo real para cuando ADR-018 se acepte:**
-  auditando `catalog-notifications-application.ts` de Notifications, su
-  `lifecycleQueue` sigue activándose con `config.queueDriver === 'sqs'` -el
-  interruptor de la cola GENERAL-, el mismo acoplamiento que
+- **Transporte de los eventos de ciclo de vida: Architecture Accepted;
+  runtime pendiente de Notifications wiring y deployment.**
+  [ADR-018](../adr/ADR-018-catalog-lifecycle-events-transport.md) está
+  `Accepted` ([Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960))
+  para una cola SQS compartida entre los cuatro eventos, con los mismos
+  parámetros que ADR-017 y una DLQ propia, **distinta** de la de
+  `catalog.product.created` y de la cola general de Notifications. Su cola y
+  DLQ ya están **Provisioned in IaC**:
+  `infra/modules/catalog_lifecycle_events_queue`, un módulo Terraform
+  **separado** del de ADR-017 -condición explícita de aprobación en
+  Management#314: no modificar ni arriesgar la cola de `created` ya
+  existente-. **No Applied/deployed**: ningún `terraform apply` se ejecutó.
+- **Hallazgo adicional, bloqueo real ya vigente ahora que ADR-018 está
+  Accepted:** auditando `catalog-notifications-application.ts` de
+  Notifications, su `lifecycleQueue` sigue activándose con
+  `config.queueDriver === 'sqs'` -el interruptor de la cola GENERAL- y sigue
+  reenviando a `config.deadLetterQueueUrl` -la DLQ GENERAL-. Son los mismos
+  dos acoplamientos que
   [Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23)
-  ya corrigió para `catalog.product.created` mediante `CATALOG_QUEUE_DRIVER`.
-  Nadie corrigió el equivalente para el ciclo de vida. Aceptar y desplegar
-  ADR-018 no bastaría para activar el consumo real sin un PR de Notifications
-  que desacople `lifecycleQueue` de `QUEUE_DRIVER` -documentado en ADR-018,
-  sección Contexto-.
+  ya corrigió para `catalog.product.created` mediante `CATALOG_QUEUE_DRIVER`
+  y la omisión de `deadLetterQueueUrl` en `catalogQueue`. Nadie corrigió el
+  equivalente para el ciclo de vida. Desplegar la cola de ADR-018 no bastaría
+  para activar el consumo real sin un PR de Notifications que desacople
+  `lifecycleQueue` de `QUEUE_DRIVER` y deje de reenviar a la DLQ general
+  -documentado en ADR-018, sección Estado de despliegue-.
 - **Consecuencia, resumen del estado real:** `catalog.product.created` tiene
   ADR `Accepted`, cola `Provisioned in IaC` (Infrastructure#93) y el wiring de
   Notifications ya desacoplado (`CATALOG_QUEUE_DRIVER=sqs` en
-  `compose/nodes/app.yml`, este cambio); le falta únicamente
-  `terraform apply` y el dispatcher de Catalog. Los cuatro eventos de ciclo de
-  vida tienen una propuesta de transporte (`ADR-018`, `Proposed`) y un
-  bloqueo adicional ya identificado en Notifications; no tienen nada
-  provisionado. La integración Notifications↔Player-Inventory (resolución de
-  destinatarios) sigue siendo real e independiente de todo esto.
+  `compose/nodes/app.yml`); le falta únicamente `terraform apply` y el
+  dispatcher de Catalog. Los cuatro eventos de ciclo de vida tienen ahora ADR
+  `Accepted` (ADR-018) y cola `Provisioned in IaC`
+  (`infra/modules/catalog_lifecycle_events_queue`), con `CATALOG_LIFECYCLE_QUEUE_URL`
+  ya inyectada en `compose/nodes/app.yml`; les falta `terraform apply`, el
+  dispatcher de Catalog, y el PR de Notifications que corrija el
+  acoplamiento descrito arriba. La integración Notifications↔Player-Inventory
+  (resolución de destinatarios) sigue siendo real e independiente de todo
+  esto.
 
 ### Nombre de variable recomendado para el dispatcher de Catalog
 
@@ -150,32 +158,34 @@ mismo nombre de variable para el mismo valor -el output `queue_url` de
 `infra/modules/catalog_events_queue`- sin que Infrastructure tenga que inventar
 un nombre distinto del que el consumidor ya reconoce.
 
-### DLQ de los eventos de ciclo de vida — decisión propuesta en ADR-018, no aceptada
+### DLQ de los eventos de ciclo de vida — ADR-018 Accepted, corrección de Notifications pendiente
 
 Notifications#22 ya implementa reintento/DLQ del lado del consumidor
 (`CatalogLifecycleEventsConsumer`: `Retry` reencola, `DeadLetter` va a la cola
-de fallidos), pero **auditado de nuevo tras Notifications#23**, su
-configuración (`deadLetterQueueUrl` en `catalog-notifications-application.ts`)
-sigue siendo la **DLQ general** de notificaciones transaccionales -Notifications#23
+de fallidos), pero **auditado de nuevo en esta Task**, su configuración
+(`deadLetterQueueUrl` en `catalog-notifications-application.ts`) sigue siendo
+la **DLQ general** de notificaciones transaccionales -Notifications#23
 corrigió esto para `catalogQueue`/`catalog.product.created` (ya no reenvía a
 esa DLQ general), pero no tocó `lifecycleQueue`, que sigue mezclando su DLQ
 con la de notificaciones transaccionales-.
 
-[ADR-018](../adr/ADR-018-catalog-lifecycle-events-transport.md) (`Proposed`)
-ya toma posición sobre esto: propone una DLQ propia de la cola lifecycle,
+[ADR-018](../adr/ADR-018-catalog-lifecycle-events-transport.md) está
+`Accepted` ([Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960))
+con exactamente esta topología: una DLQ propia de la cola lifecycle,
 compartida entre los cuatro `eventType` de ciclo de vida pero **distinta** de
-la DLQ de `created` y de la general. Sigue sin ser `Accepted`, así que:
+la DLQ de `created` y de la general. Esa DLQ ya está **Provisioned in IaC**
+(`infra/modules/catalog_lifecycle_events_queue`), pero:
 
-- **no se provisiona ninguna DLQ en este cambio**;
+- **no se ejecutó `terraform apply`**: no existe todavía en AWS;
 - el acoplamiento de `lifecycleQueue` con la DLQ general en Notifications
-  sigue vigente y sin corregir -ver el hallazgo en ADR-018, sección
-  Contexto-.
+  sigue vigente y sin corregir -ver el hallazgo en ADR-018, sección Estado de
+  despliegue-.
 
-Si ADR-018 se acepta con esa recomendación, Notifications necesitará un
-cambio de código (omitir `deadLetterQueueUrl` en `lifecycleQueue`, igual que
-#23 hizo para `catalogQueue`) y **no** una variable de configuración nueva:
-la redrive policy de la cola dedicada asumiría ese trabajo, tal como ya ocurre
-para `catalog.product.created`. **eso
+Notifications necesitará un cambio de código (omitir `deadLetterQueueUrl` en
+`lifecycleQueue`, igual que #23 hizo para `catalogQueue`) y **no** una
+variable de configuración nueva: la redrive policy de la cola dedicada ya
+provisionada asumiría ese trabajo, tal como ya ocurre para
+`catalog.product.created`. **Eso
 es un PR separado en `Nexus-Battle-Notifications`**, no un cambio que
 Infrastructure deba hacer por su cuenta en ese repositorio.
 

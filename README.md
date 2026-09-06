@@ -54,7 +54,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [015](docs/adr/ADR-015-catalog-atomicity-audit-outbox.md) | Atomicidad de Producto, auditoría y outbox | Accepted |
 | [016](docs/adr/ADR-016-product-asset-storage.md) | Almacenamiento y ownership de recursos visuales de Producto | Accepted |
 | [017](docs/adr/ADR-017-catalog-events-sqs.md) | Entrega de eventos de Producto mediante SQS | Accepted |
-| [018](docs/adr/ADR-018-catalog-lifecycle-events-transport.md) | Transporte de eventos de ciclo de vida de Producto | Proposed |
+| [018](docs/adr/ADR-018-catalog-lifecycle-events-transport.md) | Transporte de eventos de ciclo de vida de Producto | Accepted |
 
 El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 `Accepted` con evidencia de aprobación registrada.
