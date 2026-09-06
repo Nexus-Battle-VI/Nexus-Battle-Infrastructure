@@ -322,23 +322,25 @@ services:
       # de compose: no sale del nodo, no es TLS ni un secreto.
       PLAYER_INVENTORY_BASE_URL: http://inventory:3002
       # Cola real de los cuatro eventos de ciclo de vida (ADR-018 Accepted,
-      # Management#314, Terraform en infra/modules/catalog_lifecycle_events_queue).
-      # Terraform la rellena con el output real del modulo; queda vacia si se
-      # ejecuta este compose sin pasar por Terraform.
-      #
-      # Tener esta variable puesta NO activa el consumo real todavia: auditado
-      # el codigo de Notifications (catalog-notifications-application.ts),
-      # `lifecycleQueue` sigue activandose con QUEUE_DRIVER -el interruptor
-      # GENERAL- y sigue reenviando a la DLQ general, el mismo acoplamiento
-      # que Notifications#23 ya corrigio para catalog.product.created pero no
-      # para el ciclo de vida. Por eso QUEUE_DRIVER permanece `memory` -no se
-      # fuerza a `sqs` para "activar" esto: repetiria el problema que #23
-      # resolvio y exigiria ademas la cola general de ADR-006, todavia
-      # `Proposed`-. El consumo real espera un PR de Notifications que agregue
-      # un driver lifecycle independiente (ver ADR-018 y
-      # docs/contracts/event-catalog.md). Catalog, ademas, sigue sin
-      # dispatcher que publique estos eventos desde su outbox.
+      # Management#314, Terraform en infra/modules/catalog_lifecycle_events_queue,
+      # Infrastructure#95). Terraform la rellena con el output real del
+      # modulo; queda vacia si se ejecuta este compose sin pasar por
+      # Terraform.
       CATALOG_LIFECYCLE_QUEUE_URL: ${CATALOG_LIFECYCLE_QUEUE_URL:-}
+      # Activa el consumo real de los cuatro eventos de ciclo de vida por SQS,
+      # independientemente de QUEUE_DRIVER y de CATALOG_QUEUE_DRIVER
+      # (Notifications#24 agrego este driver propio, mismo patron que #23 uso
+      # para catalog.product.created). Hardcodeado a `sqs` -no
+      # `${VAR:-memory}`- por el mismo motivo que CATALOG_QUEUE_DRIVER arriba:
+      # en este nodo CATALOG_LIFECYCLE_QUEUE_URL siempre la rellena un output
+      # real cuando el modulo esta aplicado; con `terraform apply` todavia sin
+      # ejecutar (Infrastructure#95 esta Provisioned in IaC, no Applied),
+      # CATALOG_LIFECYCLE_QUEUE_URL llega vacia y Notifications rechaza el
+      # arranque -fail closed, no cae a memoria en silencio-, que es
+      # preferible a aparentar consumo real sin cola. Catalog, ademas, sigue
+      # sin dispatcher que publique estos eventos desde su outbox: el wiring
+      # queda listo para consumir en cuanto exista cola aplicada y productor.
+      CATALOG_LIFECYCLE_QUEUE_DRIVER: sqs
     # Ya no depende de Mailpit: el envio sale por la API de SES. Mailpit se
     # mantiene en el compose a proposito, para que revertir a
     # `EMAIL_DRIVER: smtp` sea un cambio de una linea si SES da problemas.
