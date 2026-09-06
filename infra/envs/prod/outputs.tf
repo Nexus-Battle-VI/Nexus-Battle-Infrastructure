@@ -74,3 +74,21 @@ output "catalog_events_dlq_url" {
 output "catalog_events_dlq_arn" {
   value = module.catalog_events_queue.dlq_arn
 }
+
+output "catalog_lifecycle_queue_url" {
+  description = "URL de la cola SQS de eventos de ciclo de vida de Producto (ADR-018). Es el mismo valor que recibe CATALOG_LIFECYCLE_QUEUE_URL en Notifications."
+  value       = module.catalog_lifecycle_events_queue.queue_url
+}
+
+output "catalog_lifecycle_queue_arn" {
+  value = module.catalog_lifecycle_events_queue.queue_arn
+}
+
+output "catalog_lifecycle_dlq_url" {
+  description = "URL de la DLQ lifecycle. Su uso es administrativo (redrive), no algo que Catalog o Notifications deban configurar."
+  value       = module.catalog_lifecycle_events_queue.dlq_url
+}
+
+output "catalog_lifecycle_dlq_arn" {
+  value = module.catalog_lifecycle_events_queue.dlq_arn
+}
