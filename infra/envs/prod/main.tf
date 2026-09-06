@@ -64,6 +64,20 @@ module "iam" {
   product_assets_bucket  = local.product_assets_bucket_name
 }
 
+/**
+ * Cola SQS de catalog.product.created (ADR-017, Accepted en Management #284,
+ * merge de Infrastructure #65). NO incluye las colas de los eventos de ciclo
+ * de vida (suspended/reactivated/inventory.adjusted/premium.configured):
+ * ADR-017 cubre explicitamente solo `created`, y esos cuatro siguen BLOCKED
+ * BY ARCHITECTURE DECISION -ver docs/contracts/event-catalog.md-.
+ */
+module "catalog_events_queue" {
+  source = "../../modules/catalog_events_queue"
+
+  environment = var.environment
+  tags        = local.tags
+}
+
 module "network" {
   source = "../../modules/network"
 
@@ -148,6 +162,25 @@ locals {
         # Notifications. arrancar_stack exige un valor no vacio.
         INTERNAL_SERVICE_AUTH_SECRET = var.internal_service_auth_secret
 
+        # Cola real de catalog.product.created (ADR-017 Accepted). El nombre
+        # coincide con lo que Notifications ya sabe leer
+        # (`CATALOG_QUEUE_URL`, ver Nexus-Battle-Notifications env.ts) y con
+        # lo que se documenta como recomendado para el futuro dispatcher de
+        # Catalog (`CATALOG_EVENTS_QUEUE_URL`, alias equivalente en el mismo
+        # env.ts).
+        #
+        # NO basta con definir esta variable para que Notifications consuma
+        # de verdad: su adaptador SQS es GLOBAL (`QUEUE_DRIVER=sqs`), y ese
+        # mismo interruptor exige tambien `QUEUE_URL` -la cola general de
+        # ADR-006, para account.registered/verified y demas notificaciones
+        # transaccionales-, que sigue sin provisionar porque ADR-006 sigue
+        # `Proposed`. Activar `QUEUE_DRIVER=sqs` sin esa cola general rompe el
+        # arranque del worker (`loadConfig` lo rechaza) para TODOS los
+        # consumidores, no solo el de catalog.product.created. Se deja
+        # `QUEUE_DRIVER=memory` en compose por esa razon: es una brecha de
+        # ADR-006, no de esta cola.
+        CATALOG_QUEUE_URL = module.catalog_events_queue.queue_url
+
         # Filtro automatico de contenido de Community (HU-41.7,
         # Management#29). Vacio por defecto: Community arranca igual y no
         # genera ninguna deteccion. Terraform NO define aqui la politica
@@ -189,19 +222,20 @@ module "compute" {
   # el nodo. Se activa sola en cuanto hay sitio publico configurado.
   stable_public_ip = var.public_site_address != ""
 
-  name                  = local.name
-  tags                  = local.tags
-  subnet_id             = module.network.subnet_id
-  security_group_ids    = module.network.security_group_ids
-  nodes                 = var.nodes
-  bootstrap             = local.bootstrap
-  arrancar_stack        = var.arrancar_stack
-  compose_plugin_url    = var.compose_plugin_url
-  compose_plugin_sha256 = var.compose_plugin_sha256
-  cognito_user_pool_arn = module.identity.user_pool_arn
-  data_volume_gb        = var.data_volume_gb
-  mount_data_volume     = var.mount_data_volume
-  product_assets_bucket = local.product_assets_bucket_name
+  name                     = local.name
+  tags                     = local.tags
+  subnet_id                = module.network.subnet_id
+  security_group_ids       = module.network.security_group_ids
+  nodes                    = var.nodes
+  bootstrap                = local.bootstrap
+  arrancar_stack           = var.arrancar_stack
+  compose_plugin_url       = var.compose_plugin_url
+  compose_plugin_sha256    = var.compose_plugin_sha256
+  cognito_user_pool_arn    = module.identity.user_pool_arn
+  data_volume_gb           = var.data_volume_gb
+  mount_data_volume        = var.mount_data_volume
+  product_assets_bucket    = local.product_assets_bucket_name
+  catalog_events_queue_arn = module.catalog_events_queue.queue_arn
 
   # El presupuesto y las alertas existen antes que cualquier recurso de computo.
   # Esta dependencia lo convierte en una garantia del grafo, no en una costumbre.

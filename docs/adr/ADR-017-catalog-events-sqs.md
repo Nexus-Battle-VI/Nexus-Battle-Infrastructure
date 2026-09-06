@@ -234,14 +234,24 @@ Rollback:
 - aceptación explícita de at-least-once, duplicados, falta de orden y de la limitación IAM del rol EC2 compartido: cubierta por este documento y aprobada sin objeciones en #284;
 - aprobación de coste dentro del techo: estimación de [catalog-events-sqs-estimate.md](../costs/catalog-events-sqs-estimate.md) aceptada en #284.
 
-**Aceptar el ADR no equivale a desplegar.** Ningún `terraform apply` ni cambio de runtime se ejecutó como parte de esta aceptación. Siguen pendientes, como Tasks separadas fuera de esta decisión:
+**Aceptar el ADR no equivale a desplegar.** Ningún `terraform apply` ni cambio de runtime se ejecutó como parte de esta aceptación.
 
-- provisión real de la cola y la DLQ en Terraform (no existe ningún recurso `aws_sqs_queue` en el repositorio a la fecha de esta ADR);
-- implementación del dispatcher/worker en Catalog que despache el outbox (Catalog escribe en su outbox pero no tiene ningún componente que lo publique, confirmado por auditoría de código);
-- consumidor/inbox en Notifications sobre la cola real (el consumidor HTTP de Notifications para HU-38 ya existe, pero no está conectado a SQS);
-- pruebas de duplicado, poison message, DLQ y redrive contra infraestructura real.
+## Estado de despliegue
 
-Mientras esas Tasks no se completen, `catalog.product.created` permanece sin transporte productivo, aunque el contrato y la decisión arquitectónica ya estén aprobados.
+Tres estados distintos, que no se deben confundir entre sí:
+
+| Estado | Significado | Vigente desde |
+| --- | --- | --- |
+| **Accepted** | El Tech Lead aprobó la decisión arquitectónica: SQS Standard, parámetros, envelope, ownership | [Management #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284#issuecomment-5519755749), merge de [Infrastructure #65](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/65) (2026-09-03) |
+| **Provisioned in IaC** | La cola y la DLQ existen como código Terraform reproducible (`infra/modules/catalog_events_queue`), con IAM de mínimo privilegio en el rol compartido del nodo `app` | rama `feat/hu-38-catalog-created-sqs` |
+| **Applied/deployed** | `terraform apply` se ejecutó de verdad contra la cuenta real; la cola existe en AWS | **Todavía no** — requiere autorización explícita fuera de esta Task |
+
+Además, incluso una vez aplicado, faltarían dos piezas para que el evento fluya de extremo a extremo:
+
+- **dispatcher/worker en Catalog** que lea el outbox y publique hacia esta cola (confirmado ausente en código, PR separado en `Nexus-Battle-Catalog`);
+- **`QUEUE_DRIVER=sqs` coherente en Notifications**, que es un interruptor global: activarlo exige también `QUEUE_URL` de la cola general de ADR-006 (notificaciones transaccionales), que sigue `Proposed` y sin provisionar. Sin esa cola general, activar `sqs` rompe el arranque de **todo** el worker de Notifications, no solo del consumidor de `catalog.product.created`.
+
+Mientras esas piezas no existan, `catalog.product.created` permanece sin transporte productivo real, aunque el contrato, la decisión arquitectónica y ahora la infraestructura como código ya estén en su lugar.
 
 ## Consecuencias
 

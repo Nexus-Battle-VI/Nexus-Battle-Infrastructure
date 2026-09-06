@@ -184,3 +184,22 @@ variable "product_assets_bucket" {
   type        = string
   default     = ""
 }
+
+variable "catalog_events_queue_arn" {
+  description = <<-DESC
+    ARN de la cola SQS de catalog.product.created (ADR-017). Si se
+    proporciona, habilita en el rol del nodo exactamente las acciones que
+    ADR-017 define por ownership: sqs:SendMessage para Catalog y
+    sqs:ReceiveMessage/DeleteMessage/ChangeMessageVisibility/
+    GetQueueAttributes para Notifications.
+
+    Las dos concesiones van al MISMO rol porque ADR-011 pone Catalog y
+    Notifications en la misma instancia EC2 del nodo `app`: es la misma
+    limitacion de topologia ya documentada para Cognito y SES mas abajo, no
+    una nueva. No se concede sqs:* ni acciones de redrive/gestion de la DLQ:
+    el redrive es una operacion administrativa separada (ADR-017, seccion 5),
+    no algo que el rol de instancia necesite.
+  DESC
+  type        = string
+  default     = ""
+}

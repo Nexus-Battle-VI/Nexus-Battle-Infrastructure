@@ -244,8 +244,16 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       EMAIL_FROM: no-reply@nexus-battles.local
-      # El adaptador SQS depende de ADR-006.
+      # El adaptador SQS depende de ADR-006 (cola general de notificaciones
+      # transaccionales), que sigue `Proposed`. Local sin AWS: se mantiene el
+      # mecanismo en memoria existente; no hay nada que provisionar aqui.
       QUEUE_DRIVER: memory
+      # Para local sin AWS, vacio: el consumidor de catalog.product.created
+      # se ejercita en memoria. En el entorno de Terraform esta variable la
+      # rellena el output real de infra/modules/catalog_events_queue
+      # (ADR-017 Accepted); aun asi no se activa el consumo real mientras
+      # QUEUE_DRIVER permanezca en `memory` (ver comentario de arriba).
+      CATALOG_QUEUE_URL: ${CATALOG_QUEUE_URL:-}
       # --- HU-38: notificaciones de catalogo in-app + banner (Notifications#20) ---
       CATALOG_NOTIFICATIONS_HTTP_ENABLED: 'true'
       CATALOG_NOTIFICATIONS_HTTP_PORT: 3004
