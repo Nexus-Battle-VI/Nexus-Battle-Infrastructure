@@ -112,6 +112,38 @@ unión cerrada y versionada para los seis tipos, rechaza propiedades desconocida
 y exige que el discriminador de atributos coincida con `type`. ADR-013 está
 aceptado; Catalog conserva la evidencia de implementación y despliegue en #136.
 
+#### Administración del catálogo — `/api/v1/admin/products`
+
+**Implementado e integrado en develop.** Requiere testimonio JWT, rol
+ADMINISTRATOR (SUPER_ADMINISTRATOR lo satisface mediante la jerarquía RBAC) y,
+salvo la lectura, evidencia TOTP vigente (`@RequiresMfaEvidence()`). El
+Moderador no está autorizado en ninguna de estas rutas.
+
+| Método | Ruta | Códigos | HU |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/admin/products/:id` | `200`, `401`, `403`, `404` | HU-34 |
+| `PATCH` | `/api/v1/admin/products/:id/inventory` | `200`, `400`, `401`, `403`, `404`, `409`, `422`, `503` | HU-34 |
+| `PATCH` | `/api/v1/admin/products/:id/premium` | `200`, `400`, `401`, `403`, `404`, `409`, `422`, `503` | HU-36 |
+| `PATCH` | `/api/v1/admin/products/:id/status` | `200`, `400`, `401`, `403`, `404`, `503` | HU-35 |
+
+`PATCH .../status` (HU-35, borrado lógico) suspende o reactiva un producto:
+`status` admite únicamente `ACTIVE` o `SUSPENDED`, y `reason` es obligatorio
+con un mínimo de 10 caracteres. Es idempotente: repetir el mismo estado
+destino responde `200` sin generar una nueva entrada de auditoría ni un nuevo
+evento de outbox. Su contrato HTTP completo está en
+[catalog-product-v1.openapi.yaml](catalog-product-v1.openapi.yaml). Publicada
+por [Caddy](../../compose/Caddyfile) mediante la regla ya existente
+`handle /api/v1/admin*`, compartida con el resto de esta superficie
+administrativa; no fue necesaria una regla nueva.
+
+Especificación: [Nexus-Battle-VI/Nexus-Battle-Management#43](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/43).
+Implementación de Catalog: [Nexus-Battle-VI/Nexus-Battle-Catalog#49](https://github.com/Nexus-Battle-VI/Nexus-Battle-Catalog/pull/49)
+(mergeada a `develop`). Interfaz de administración:
+[Nexus-Battle-VI/Nexus-Battle-Web#83](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/83)
+(mergeada a `develop`). Ninguna de las tres referencias afirma despliegue: no
+hay evidencia de que este contrato corra en un entorno desplegado, solo de que
+está implementado e integrado en `develop`.
+
 ### Community — `/api/threads`
 
 | Método | Ruta | Códigos |
