@@ -144,6 +144,21 @@ services:
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Vacias en local: sin AWS, el dispatcher del outbox (Catalog#51, HU-38)
+      # no tiene a donde publicar. Mismo mecanismo que CATALOG_QUEUE_URL de
+      # `notifications` mas abajo -en infra/envs/prod las rellena el mismo
+      # output real de infra/modules/catalog_events_queue /
+      # catalog_lifecycle_events_queue, y compose/nodes/app.yml activa el
+      # productor de verdad-.
+      CATALOG_EVENTS_QUEUE_URL: ${CATALOG_EVENTS_QUEUE_URL:-}
+      CATALOG_LIFECYCLE_QUEUE_URL: ${CATALOG_LIFECYCLE_QUEUE_URL:-}
+      # A proposito NO se define CATALOG_EVENT_DISPATCH_ENABLED aqui: su
+      # default en Catalog es `false` (Catalog#51), que es exactamente lo que
+      # este compose local sin AWS necesita -con `true` y las URLs vacias,
+      # Catalog rechazaria el arranque (fail closed, `ConfigurationError`)-.
+      # El nodo real de Terraform (compose/nodes/app.yml) si lo fija a
+      # `true`, porque ahi las dos URLs siempre llegan con un valor real
+      # cuando los modulos estan aplicados.
     depends_on:
       catalog-migrate:
         condition: service_completed_successfully

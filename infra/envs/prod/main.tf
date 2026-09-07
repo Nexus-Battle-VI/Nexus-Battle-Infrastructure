@@ -193,6 +193,15 @@ locals {
         # ADR-006, no de esta cola.
         CATALOG_QUEUE_URL = module.catalog_events_queue.queue_url
 
+        # MISMO output que CATALOG_QUEUE_URL arriba, no una cola distinta:
+        # Catalog#51 (dispatcher del outbox hacia SQS, HU-38) publica leyendo
+        # este nombre, mientras que Notifications consume leyendo
+        # CATALOG_QUEUE_URL. Ver la nota extensa arriba sobre por que definir
+        # esta variable tampoco activa por si sola el envio real -Catalog
+        # ademas exige CATALOG_EVENT_DISPATCH_ENABLED=true (compose/nodes/app.yml)
+        # y, como el resto, sigue sin `terraform apply`.
+        CATALOG_EVENTS_QUEUE_URL = module.catalog_events_queue.queue_url
+
         # Cola real de los cuatro eventos de ciclo de vida (ADR-018 Accepted,
         # Management#314). Igual que CATALOG_QUEUE_URL arriba: tener esta
         # variable puesta NO activa por si sola el consumo real.
