@@ -289,6 +289,101 @@ resource "aws_iam_role_policy" "product_assets" {
   policy = data.aws_iam_policy_document.product_assets_access[0].json
 }
 
+/**
+ * Ownership de ADR-017 (seccion 1) para catalog.product.created, aplicado al
+ * UNICO rol que existe para el nodo `app`.
+ *
+ * BLOCKER DE TOPOLOGIA, mismo patron que Cognito y SES arriba: ADR-011 pone
+ * Catalog y Notifications en la misma instancia EC2, asi que las dos
+ * concesiones -SendMessage para uno, Receive/Delete/ChangeMessageVisibility/
+ * GetQueueAttributes para el otro- viven en el mismo rol y cualquier
+ * contenedor del nodo `app` puede invocar cualquiera de las dos, no solo el
+ * servicio al que ADR-017 se las atribuye. No se concede `sqs:*`: cada verbo
+ * se lista porque ADR-017 lo aprobo para ese owner, no como conveniencia.
+ *
+ * NO incluye permisos de redrive ni de gestion de la DLQ: ADR-017 los declara
+ * una operacion administrativa separada, no algo que el rol de instancia deba
+ * poder hacer.
+ */
+data "aws_iam_policy_document" "catalog_events_queue_access" {
+  count = var.catalog_events_queue_arn != "" ? 1 : 0
+
+  statement {
+    sid       = "CatalogSendProductCreated"
+    effect    = "Allow"
+    actions   = ["sqs:SendMessage"]
+    resources = [var.catalog_events_queue_arn]
+  }
+
+  statement {
+    sid    = "NotificationsConsumeProductCreated"
+    effect = "Allow"
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:GetQueueAttributes",
+    ]
+    resources = [var.catalog_events_queue_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "catalog_events_queue" {
+  count  = var.catalog_events_queue_arn != "" ? 1 : 0
+  name   = "${var.name}-catalog-events-queue"
+  role   = aws_iam_role.node.name
+  policy = data.aws_iam_policy_document.catalog_events_queue_access[0].json
+}
+
+/**
+ * Ownership de ADR-018 (Accepted, Management#314) para los cuatro eventos de
+ * ciclo de vida de Producto, aplicado al MISMO rol compartido del nodo `app`
+ * -mismo blocker de topologia que `catalog_events_queue_access` arriba, por
+ * el mismo motivo (ADR-011)-.
+ *
+ * Politica SEPARADA de `catalog_events_queue_access` a proposito, aunque
+ * ambas vivan en el mismo rol: son recursos IAM distintos sobre ARN
+ * distintos, declarados en un `aws_iam_role_policy` propio para que anadir o
+ * quitar el acceso a esta cola no toque el recurso ya existente que protege
+ * `catalog.product.created` -la misma prioridad de "no tocar lo de ADR-017"
+ * que rige el modulo de la cola, aplicada aqui a IAM-.
+ *
+ * Mismos verbos que ADR-017, ninguno mas: `sqs:SendMessage` para Catalog,
+ * `sqs:ReceiveMessage`/`DeleteMessage`/`ChangeMessageVisibility`/
+ * `GetQueueAttributes` para Notifications. Sin `sqs:*`. Sin permisos de
+ * redrive ni de gestion de la DLQ lifecycle: sigue siendo una operacion
+ * administrativa separada.
+ */
+data "aws_iam_policy_document" "catalog_lifecycle_queue_access" {
+  count = var.catalog_lifecycle_queue_arn != "" ? 1 : 0
+
+  statement {
+    sid       = "CatalogSendLifecycleEvents"
+    effect    = "Allow"
+    actions   = ["sqs:SendMessage"]
+    resources = [var.catalog_lifecycle_queue_arn]
+  }
+
+  statement {
+    sid    = "NotificationsConsumeLifecycleEvents"
+    effect = "Allow"
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:GetQueueAttributes",
+    ]
+    resources = [var.catalog_lifecycle_queue_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "catalog_lifecycle_queue" {
+  count  = var.catalog_lifecycle_queue_arn != "" ? 1 : 0
+  name   = "${var.name}-catalog-lifecycle-queue"
+  role   = aws_iam_role.node.name
+  policy = data.aws_iam_policy_document.catalog_lifecycle_queue_access[0].json
+}
+
 resource "aws_iam_instance_profile" "node" {
   name = "${var.name}-node"
   role = aws_iam_role.node.name

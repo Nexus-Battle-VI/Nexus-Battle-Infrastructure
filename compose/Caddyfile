@@ -20,6 +20,44 @@
 		reverse_proxy inventory:3002
 	}
 
+	# Comentarios y calificaciones de producto (HU-40, Management #28). Son
+	# contratos PUBLICOS de Community, no de Catalog, aunque cuelguen bajo
+	# `/api/products/{id}/...`: comparten prefijo con el catalogo pero el
+	# servicio que los responde es otro.
+	#
+	# VAN ANTES QUE `/api/products*` EN EL FICHERO, y se comprobo con
+	# `caddy adapt` que tambien van antes en la ruta final compilada: el
+	# adaptador de Caddyfile reordena los bloques `handle` por especificidad de
+	# ruta y no se limita a copiar el orden textual, asi que la posicion en
+	# este fichero no es, por si sola, garantia de precedencia -por eso cada
+	# cambio de estas rutas debe revalidarse con `caddy adapt`, no solo leerse-.
+	# Si Catalog llegara a interceptar esta peticion, el sintoma seria un 404
+	# -o peor, un 200 equivocado- en vez de la respuesta real de Community.
+	# `GET /api/products/{id}` en si mismo NO coincide con ninguno de los dos
+	# matchers de aqui abajo, asi que sigue cayendo en el comodin de Catalog
+	# sin cambio.
+	# `path_regexp` y no el matcher `path` con comodines. Se probo primero con
+	# comodines contra un Caddy real (v2.11.4) y el resultado fue inconsistente
+	# y no documentado con precision: un `*` de segmento (`/*/comments*`) deja
+	# de cruzar `/` en cuanto el patron tiene mas de un comodin, y `**` en esta
+	# version solo cubre UN segmento adicional, no "cero o mas" como dice la
+	# documentacion -`GET /api/products/{id}/comments/x/y` no coincidia con
+	# `/api/products/*/comments/**`, solo `GET .../comments/x`-. Se descubrio
+	# probando peticiones reales contra un contenedor `caddy:2-alpine`, no
+	# leyendo la documentacion. La expresion regular no tiene esa ambiguedad:
+	# ancla el prefijo con `^` y no limita lo que sigue.
+	@community_comments path_regexp ^/api/products/[^/]+/comments
+	handle @community_comments {
+		reverse_proxy community:3004
+	}
+
+	# Incluye `GET /api/products/{id}/reviews/summary` y cualquier otra ruta
+	# anidada bajo `/reviews`, a cualquier profundidad.
+	@community_reviews path_regexp ^/api/products/[^/]+/reviews
+	handle @community_reviews {
+		reverse_proxy community:3004
+	}
+
 	handle /api/products* {
 		reverse_proxy catalog:3003
 	}
@@ -34,6 +72,29 @@
 		reverse_proxy catalog:3003
 	}
 
+	# Administracion del banner informativo (HU-38, Management #46). Es
+	# Notifications, NO Catalog, aunque cuelgue bajo el mismo prefijo
+	# `/api/v1/admin/...` que la administracion del catalogo.
+	#
+	# VA ANTES QUE `/api/v1/admin*` EN EL FICHERO -y tambien despues en la ruta
+	# final compilada, comprobado con `caddy adapt`-: Caddy ordena los bloques
+	# `handle` con matcher de ruta por ESPECIFICIDAD, no por posicion textual
+	# (mismo mecanismo ya documentado para `@community_comments` mas arriba),
+	# asi que `/api/v1/admin/banners*` gana sobre `/api/v1/admin*` sin
+	# depender de en que orden aparezcan aqui. Se deja primero solo por
+	# legibilidad humana; la garantia real es la especificidad del path, y
+	# cualquier cambio de estas rutas debe revalidarse con `caddy adapt`, no
+	# solo leerse.
+	#
+	# Sin esta entrada, `/api/v1/admin/banners` caeria en el comodin de
+	# Catalog de mas abajo: Catalog no tiene esa ruta, asi que respondería
+	# 404 -o peor, la administracion de banner "funcionaria" contra el
+	# servicio equivocado si algun dia Catalog definiera una ruta con el
+	# mismo sufijo-.
+	handle /api/v1/admin/banners* {
+		reverse_proxy notifications:3004
+	}
+
 	# Administracion del catalogo (HU-34). Incluye
 	# `PATCH /api/v1/admin/products/{id}/inventory` y los recursos visuales.
 	#
@@ -45,6 +106,20 @@
 	# que publicar la ruta no la deja abierta.
 	handle /api/v1/admin* {
 		reverse_proxy catalog:3003
+	}
+
+	# Notificaciones de catalogo al iniciar sesion y banner informativo
+	# (HU-38, Management #46). `CatalogNotificationsController` de
+	# Notifications exige testimonio JWT propio para `/notifications/me/*`
+	# (jugador autenticado, identidad tomada del token) y es PUBLICA para
+	# `GET /api/v1/banners` -la vista principal debe poder mostrar el banner
+	# vigente sin sesion-. Ninguna de las dos exige rol administrativo.
+	handle /api/v1/notifications* {
+		reverse_proxy notifications:3004
+	}
+
+	handle /api/v1/banners* {
+		reverse_proxy notifications:3004
 	}
 
 	handle /api/internal* {
@@ -61,6 +136,15 @@
 	# error.
 
 	handle /api/threads* {
+		reverse_proxy community:3004
+	}
+
+	# Reportes de comentario (HU-46, Management #40) y las operaciones de
+	# moderacion de Community bajo `/api/comments/...`. Sin esta entrada,
+	# `POST /api/comments/{id}/reports` caia en el comodin final y lo
+	# respondia Web con su `index.html`.
+	@community_comment_reports path_regexp ^/api/comments
+	handle @community_comment_reports {
 		reverse_proxy community:3004
 	}
 
