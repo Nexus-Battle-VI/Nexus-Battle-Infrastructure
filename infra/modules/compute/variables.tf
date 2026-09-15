@@ -184,3 +184,41 @@ variable "product_assets_bucket" {
   type        = string
   default     = ""
 }
+
+variable "catalog_events_queue_arn" {
+  description = <<-DESC
+    ARN de la cola SQS de catalog.product.created (ADR-017). Si se
+    proporciona, habilita en el rol del nodo exactamente las acciones que
+    ADR-017 define por ownership: sqs:SendMessage para Catalog y
+    sqs:ReceiveMessage/DeleteMessage/ChangeMessageVisibility/
+    GetQueueAttributes para Notifications.
+
+    Las dos concesiones van al MISMO rol porque ADR-011 pone Catalog y
+    Notifications en la misma instancia EC2 del nodo `app`: es la misma
+    limitacion de topologia ya documentada para Cognito y SES mas abajo, no
+    una nueva. No se concede sqs:* ni acciones de redrive/gestion de la DLQ:
+    el redrive es una operacion administrativa separada (ADR-017, seccion 5),
+    no algo que el rol de instancia necesite.
+  DESC
+  type        = string
+  default     = ""
+}
+
+variable "catalog_lifecycle_queue_arn" {
+  description = <<-DESC
+    ARN de la cola SQS de los cuatro eventos de ciclo de vida de Producto
+    (ADR-018, Accepted en Management#314). Si se proporciona, habilita en el
+    rol del nodo exactamente las acciones que ADR-018 define por ownership:
+    sqs:SendMessage para Catalog y sqs:ReceiveMessage/DeleteMessage/
+    ChangeMessageVisibility/GetQueueAttributes para Notifications.
+
+    Variable y politica SEPARADAS de catalog_events_queue_arn a proposito:
+    Management#314 condiciono la aprobacion de ADR-018 a no modificar ni
+    arriesgar la cola de catalog.product.created (ADR-017) ya existente.
+    Mismo blocker de topologia que esa otra variable (ADR-011, rol de nodo
+    compartido). No se concede sqs:* ni acciones de redrive/gestion de la
+    DLQ lifecycle: sigue siendo una operacion administrativa separada.
+  DESC
+  type        = string
+  default     = ""
+}

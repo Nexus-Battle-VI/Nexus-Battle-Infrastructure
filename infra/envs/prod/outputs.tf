@@ -55,3 +55,40 @@ output "product_assets_bucket_arn" {
   description = "ARN del bucket S3 de assets de producto."
   value       = module.product_assets.bucket_arn
 }
+
+output "catalog_events_queue_url" {
+  description = "URL de la cola SQS de catalog.product.created (ADR-017). Es el mismo valor que recibe CATALOG_QUEUE_URL en Notifications y CATALOG_EVENTS_QUEUE_URL en el dispatcher de Catalog (Catalog#51)."
+  value       = module.catalog_events_queue.queue_url
+}
+
+output "catalog_events_queue_arn" {
+  description = "ARN de la cola principal, para las politicas IAM de sqs:SendMessage (Catalog) y consumo (Notifications)."
+  value       = module.catalog_events_queue.queue_arn
+}
+
+output "catalog_events_dlq_url" {
+  description = "URL de la DLQ. Su uso es administrativo (redrive), no algo que Catalog o Notifications deban configurar."
+  value       = module.catalog_events_queue.dlq_url
+}
+
+output "catalog_events_dlq_arn" {
+  value = module.catalog_events_queue.dlq_arn
+}
+
+output "catalog_lifecycle_queue_url" {
+  description = "URL de la cola SQS de eventos de ciclo de vida de Producto (ADR-018). Es el mismo valor que recibe CATALOG_LIFECYCLE_QUEUE_URL en Notifications."
+  value       = module.catalog_lifecycle_events_queue.queue_url
+}
+
+output "catalog_lifecycle_queue_arn" {
+  value = module.catalog_lifecycle_events_queue.queue_arn
+}
+
+output "catalog_lifecycle_dlq_url" {
+  description = "URL de la DLQ lifecycle. Su uso es administrativo (redrive), no algo que Catalog o Notifications deban configurar."
+  value       = module.catalog_lifecycle_events_queue.dlq_url
+}
+
+output "catalog_lifecycle_dlq_arn" {
+  value = module.catalog_lifecycle_events_queue.dlq_arn
+}

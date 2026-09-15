@@ -3,7 +3,7 @@
 - **Estado:** Proposed
 - **Fecha:** 2026-08-21
 - **Decide:** Arquitectura
-- **Relacionado:** [ADR-001](ADR-001-repository-strategy.md), [ADR-007](ADR-007-aws-cost-optimized-platform.md), [ADR-017](ADR-017-catalog-events-sqs.md)
+- **Relacionado:** [ADR-001](ADR-001-repository-strategy.md), [ADR-007](ADR-007-aws-cost-optimized-platform.md), [ADR-017](ADR-017-catalog-events-sqs.md), [ADR-018](ADR-018-catalog-lifecycle-events-transport.md)
 
 ## Contexto
 
@@ -42,10 +42,20 @@ Una integración es **síncrona** cuando quien llama **no puede continuar** sin 
 
 ### Adopción acotada propuesta para eventos de Producto
 
-[ADR-017](ADR-017-catalog-events-sqs.md) propone adoptar SQS Standard
-exclusivamente para `catalog.product.created` desde Catalog hacia
-Notifications. Mientras ADR-017 permanezca en `Proposed`, no existe cola ni
-adaptador productivo.
+[ADR-017](ADR-017-catalog-events-sqs.md) adopta SQS Standard exclusivamente
+para `catalog.product.created` desde Catalog hacia Notifications; el Tech Lead
+ya lo aceptó en [EN-027.4 #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284#issuecomment-5519755749).
+La aceptación cubre el contrato y la arquitectura, no el despliegue: la cola ya
+está provisionada como código Terraform (Infrastructure#93), pero todavía no
+se aplicó, y Catalog no tiene dispatcher que publique el outbox, así que no hay
+transporte productivo hasta que esas Tasks se completen.
+
+Los cuatro eventos de ciclo de vida de Producto (`suspended`, `reactivated`,
+`inventory.adjusted`, `premium.configured`) no quedan cubiertos por ADR-017.
+[ADR-018](ADR-018-catalog-lifecycle-events-transport.md) (`Accepted`,
+[Management #314](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/314#issuecomment-5562149960))
+extiende el mismo patrón a esos cuatro eventos mediante una cola compartida,
+ya provisionada como código Terraform pero todavía sin `terraform apply`.
 
 Esta propuesta no adopta automáticamente SQS para Account, Commerce, la saga de
 checkout ni futuros consumidores. Cada consumidor adicional necesita una cola

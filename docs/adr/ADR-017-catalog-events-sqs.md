@@ -1,7 +1,8 @@
 # ADR-017 — Entrega de eventos de Producto mediante SQS
 
-- **Estado:** **Proposed** — requiere aprobación del Tech Lead y del coste en [EN-027.4 #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284)
+- **Estado:** **Accepted** — aprobación del Tech Lead registrada en [EN-027.4 #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284#issuecomment-5519755749), completada con el merge de [Infrastructure #65](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/65)
 - **Fecha:** 2026-09-02
+- **Fecha de aceptación:** 2026-09-03
 - **Decide:** Arquitectura, con validación de Catalog, Notifications y Tech Lead
 - **Relacionado:** [ADR-006](ADR-006-messaging.md), [ADR-007](ADR-007-aws-cost-optimized-platform.md), [ADR-013](ADR-013-canonical-product-contract.md), [ADR-015](ADR-015-catalog-atomicity-audit-outbox.md), [HU-33 #41](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/41), [HU-38 #46](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/46)
 
@@ -36,7 +37,7 @@ tanto, el transporte debe aceptar duplicados y no puede prometer exactly-once.
 - ejecución local y CI sin credenciales AWS;
 - posibilidad de añadir consumidores sin que compitan por el mismo mensaje.
 
-## Decisión propuesta
+## Decisión
 
 ### 1. Alcance y ownership
 
@@ -226,16 +227,31 @@ Rollback:
 | Publicar directamente sin outbox | Rechazada | Puede perder el evento entre commit Mongo y envío |
 | Kafka/RabbitMQ autoalojado | Rechazada | Operación y memoria desproporcionadas para la demo |
 
-## Condiciones para pasar a Accepted
+## Evidencia de aceptación
 
-- aprobación del Tech Lead de Standard, parámetros, envelope y semántica;
-- validación de Catalog como productor y Notifications como consumidor;
-- aprobación de coste dentro del techo;
-- AsyncAPI válido y diagrama renderizable;
-- aceptación explícita de at-least-once, duplicados y falta de orden;
-- aceptación de la limitación IAM del rol EC2 compartido;
-- Tasks separadas de IaC, productor/outbox, consumidor/inbox y pruebas;
-- ningún `terraform apply` ni cambio runtime dentro de esta decisión.
+- aprobación del Tech Lead de Standard, parámetros, envelope y semántica: registrada en [EN-027.4 #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284#issuecomment-5519755749);
+- AsyncAPI válido y diagrama renderizable: verificado en CI del PR [Infrastructure #65](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/65) (merged 2026-09-03);
+- aceptación explícita de at-least-once, duplicados, falta de orden y de la limitación IAM del rol EC2 compartido: cubierta por este documento y aprobada sin objeciones en #284;
+- aprobación de coste dentro del techo: estimación de [catalog-events-sqs-estimate.md](../costs/catalog-events-sqs-estimate.md) aceptada en #284.
+
+**Aceptar el ADR no equivale a desplegar.** Ningún `terraform apply` ni cambio de runtime se ejecutó como parte de esta aceptación.
+
+## Estado de despliegue
+
+Tres estados distintos, que no se deben confundir entre sí:
+
+| Estado | Significado | Vigente desde |
+| --- | --- | --- |
+| **Accepted** | El Tech Lead aprobó la decisión arquitectónica: SQS Standard, parámetros, envelope, ownership | [Management #284](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/284#issuecomment-5519755749), merge de [Infrastructure #65](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/65) (2026-09-03) |
+| **Provisioned in IaC** | La cola y la DLQ existen como código Terraform reproducible (`infra/modules/catalog_events_queue`), con IAM de mínimo privilegio en el rol compartido del nodo `app` | [Infrastructure #93](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/93) |
+| **Applied/deployed** | `terraform apply` se ejecutó de verdad contra la cuenta real; la cola existe en AWS | **Todavía no** — requiere autorización explícita fuera de esta Task |
+
+Las dos piezas que faltaban para que el evento fluyera de extremo a extremo ya están resueltas:
+
+- **dispatcher/worker en Catalog** que lee el outbox y publica hacia esta cola: implementado en [Catalog#51](https://github.com/Nexus-Battle-VI/Nexus-Battle-Catalog/pull/51);
+- **consumo de Notifications independiente de la cola general**: `CATALOG_QUEUE_DRIVER=sqs` propio ([Notifications#23](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/23)), sin depender de `QUEUE_DRIVER` (interruptor de la cola general de ADR-006, que sigue `Proposed`).
+
+El wiring de runtime de ambos extremos está completo (`CATALOG_QUEUE_DRIVER=sqs` en Notifications; `CATALOG_EVENT_DISPATCH_ENABLED=true` + `CATALOG_EVENTS_QUEUE_URL` en Catalog, `compose/nodes/app.yml`). Mientras `terraform apply` no se ejecute, `catalog.product.created` permanece sin transporte productivo real: la cola no existe todavía en AWS, aunque el contrato, la decisión arquitectónica, la infraestructura como código y el wiring de configuración ya estén en su lugar.
 
 ## Consecuencias
 

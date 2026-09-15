@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Nexus Battles VI - Catalog Product API
-  version: 1.1.0
+  version: 1.2.0
   license:
     name: Licensing pending project governance
     url: https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure#licencia
@@ -20,6 +20,13 @@ info:
     attributes.values es una unión cerrada para los seis tipos y rechaza
     propiedades desconocidas. imageUrl reserva la referencia requerida por
     HU-33, pero su almacenamiento depende de EN-027.3.
+
+    version 1.2.0 documenta adicionalmente `PATCH
+    /api/v1/admin/products/{id}/status` (HU-35, Management #43), implementada y
+    mergeada a develop en Catalog #49. Es contrato administrativo, no parte del
+    alta canónica que da nombre a este documento; se incluye aquí porque
+    reutiliza el mismo `Product` de respuesta y las mismas convenciones de
+    seguridad y error que el resto de este archivo.
   x-contract-status: accepted
   x-management-issue: https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/281
   x-functional-decision: https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/286
@@ -125,6 +132,79 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/admin/products/{id}/status:
+    patch:
+      operationId: updateCatalogProductStatusV1
+      tags:
+        - Catalog Products
+      summary: Suspende (borrado lógico) o reactiva un producto
+      description: |
+        Requiere testimonio JWT vigente, rol ADMINISTRATOR y evidencia TOTP
+        vigente. SUPER_ADMINISTRATOR satisface la misma comprobación mediante
+        la jerarquía RBAC (`RolesGuard`); el Moderador no está autorizado.
+
+        `status` admite únicamente ACTIVE o SUSPENDED; `reason` es obligatorio
+        con un mínimo de 10 caracteres. El cuerpo no admite propiedades
+        adicionales.
+
+        La operación es idempotente (HU-35): si el producto ya se encuentra en
+        el estado solicitado, Catalog responde 200 con el producto sin
+        registrar una nueva entrada de auditoría ni un nuevo evento de outbox.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identificador canónico del producto.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductStatusRequest'
+            examples:
+              suspender:
+                summary: Suspensión por rebalanceo
+                value:
+                  status: SUSPENDED
+                  reason: Rebalanceo pendiente de estadísticas
+              reactivar:
+                summary: Reactivación tras rebalanceo
+                value:
+                  status: ACTIVE
+                  reason: Rebalanceo completado, producto listo
+      responses:
+        '200':
+          description: Estado actualizado (o ya se encontraba en el estado solicitado)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: >-
+            Cuerpo o campos no declarados inválidos, o motivo ausente/menor a
+            10 caracteres
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                statusCode: 400
+                message: command.reason debe tener al menos 10 caracteres.
+                error: Bad Request
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
@@ -263,6 +343,26 @@ components:
           const: true
         realMoneyPrice:
           $ref: '#/components/schemas/RealMoneyPrice'
+
+    UpdateProductStatusRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - reason
+      properties:
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+          description: Estado destino del producto.
+        reason:
+          type: string
+          minLength: 10
+          description: Motivo de la suspensión o reactivación.
+          examples:
+            - Rebalanceo pendiente de estadísticas
 
     Product:
       type: object
@@ -1127,6 +1227,16 @@ components:
             message: Ya existe un producto activo de este tipo con el mismo nombre.
             error: Conflict
             code: CATALOG_PRODUCT_ALREADY_EXISTS
+    NotFound:
+      description: El producto no existe
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            statusCode: 404
+            message: El producto {id} no existe.
+            error: Not Found
     UnprocessableEntity:
       description: Regla de negocio incumplida por datos sintácticamente válidos
       content:

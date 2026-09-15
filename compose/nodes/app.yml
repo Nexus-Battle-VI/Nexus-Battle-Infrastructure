@@ -151,6 +151,28 @@ services:
       ASSETS_STORAGE_DRIVER: ${ASSETS_STORAGE_DRIVER:-memory}
       PRODUCT_ASSETS_BUCKET_NAME: ${PRODUCT_ASSETS_BUCKET_NAME:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
+      # HU-38: activa el productor real del outbox de Producto hacia las dos
+      # colas SQS ya provisionadas (ADR-017/ADR-018, Infrastructure#93/#95),
+      # implementado en Catalog#51. Hardcodeado a "true" -no `${VAR:-false}`-
+      # a proposito: Catalog#51 elige `false` como default de despliegue
+      # seguro (no publicar por accidente), pero en este nodo integrado
+      # queremos el productor explicitamente activo, no depender de ese
+      # default. Con esto en `true`, Catalog#51 exige tambien
+      # CATALOG_EVENTS_QUEUE_URL, CATALOG_LIFECYCLE_QUEUE_URL y AWS_REGION
+      # -fail closed, ConfigurationError si falta alguna- en vez de arrancar
+      # aparentando que publica.
+      CATALOG_EVENT_DISPATCH_ENABLED: "true"
+      # Alias de CATALOG_QUEUE_URL (mas abajo, servicio `notifications`):
+      # ambas variables resuelven al MISMO output de
+      # infra/modules/catalog_events_queue (ADR-017). Notifications consume
+      # con CATALOG_QUEUE_URL; Catalog#51 publica con este nombre. Una sola
+      # cola, dos variables porque cada servicio ya fijo la suya antes de que
+      # este PR las conectara.
+      CATALOG_EVENTS_QUEUE_URL: ${CATALOG_EVENTS_QUEUE_URL:-}
+      # Misma cola que CATALOG_LIFECYCLE_QUEUE_URL de `notifications` (ADR-018,
+      # infra/modules/catalog_lifecycle_events_queue): aqui ambos servicios ya
+      # usaban el mismo nombre, asi que no hace falta alias.
+      CATALOG_LIFECYCLE_QUEUE_URL: ${CATALOG_LIFECYCLE_QUEUE_URL:-}
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
@@ -182,6 +204,25 @@ services:
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Empuja el promedio y el conteo de calificaciones hacia el producto
+      # canonico de Catalog tras cada calificacion nueva (HU-40, CA-03).
+      # Nombre de servicio de compose, red interna del nodo: no sale de la
+      # maquina, no es un secreto -mismo patron que `CATALOG_INTERNAL_URL` en
+      # `commerce`-. A diferencia de `commerce`, es OPCIONAL para Community:
+      # sin secreto, calificar sigue funcionando y Catalog simplemente no
+      # recibe el agregado.
+      CATALOG_INTERNAL_URL: http://catalog:3003
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      INTERNAL_SERVICE_NAME: community
+      INTERNAL_TIMEOUT_MS: ${INTERNAL_TIMEOUT_MS:-2000}
+      # Filtro automatico de contenido (HU-41.7, Management#29): solo genera
+      # una senal de revision humana en la cola de moderacion existente -NUNCA
+      # oculta, elimina ni sanciona por si solo-. Sin `:?`, a proposito: son
+      # vocabulario OPCIONAL, y vacio es una configuracion valida que Community
+      # ya sabe interpretar como "sin reglas configuradas, cero detecciones".
+      # Infrastructure NO define aqui la politica funcional -ver `.env.example`-.
+      COMMENT_MODERATION_FORBIDDEN_TERMS: ${COMMENT_MODERATION_FORBIDDEN_TERMS:-}
+      COMMENT_MODERATION_SUSPICIOUS_PATTERNS: ${COMMENT_MODERATION_SUSPICIOUS_PATTERNS:-}
     depends_on:
       community-migrate:
         condition: service_completed_successfully
@@ -266,8 +307,62 @@ services:
       # falla con MailFromDomainNotVerifiedException, que el adaptador clasifica
       # —con razon— como NO reintentable: el correo se pierde sin reintento.
       EMAIL_FROM: no-reply@simuladorupbbga.app
-      # El adaptador SQS depende de ADR-006.
+      # El adaptador SQS de la cola GENERAL depende de ADR-006 (notificaciones
+      # transaccionales: account.registered/verified y demas), que sigue
+      # `Proposed` y sin cola provisionada. Se deja en `memory`.
+      #
+      # Esto YA NO acopla el transporte de catalog.product.created:
+      # Notifications#23 desacoplo CATALOG_QUEUE_DRIVER de QUEUE_DRIVER
+      # precisamente para que activar SQS aqui no exigiera tambien QUEUE_URL
+      # de la cola general (antes, antes de #23, `loadConfig` habria
+      # rechazado el arranque completo del worker sin ella). Ver
+      # CATALOG_QUEUE_DRIVER mas abajo.
       QUEUE_DRIVER: memory
+      # Cola real de catalog.product.created (ADR-017 Accepted, Terraform en
+      # infra/modules/catalog_events_queue, Infrastructure#93). Terraform la
+      # rellena con el output real del modulo; queda vacia si se ejecuta este
+      # compose sin pasar por Terraform.
+      CATALOG_QUEUE_URL: ${CATALOG_QUEUE_URL:-}
+      # Activa el consumo real de catalog.product.created por SQS,
+      # independientemente de QUEUE_DRIVER (Notifications#23). Hardcodeado a
+      # `sqs` -no `${VAR:-memory}`- porque en este nodo (a diferencia de
+      # compose.example.yml, que no pasa por Terraform) CATALOG_QUEUE_URL
+      # siempre la rellena un output real cuando el modulo esta aplicado; con
+      # `terraform apply` todavia sin ejecutar (Infrastructure#93 esta
+      # Provisioned in IaC, no Applied), CATALOG_QUEUE_URL llega vacia y
+      # Notifications rechaza el arranque -fail closed, no cae a memoria en
+      # silencio-, que es preferible a aparentar consumo real sin cola.
+      CATALOG_QUEUE_DRIVER: sqs
+      # --- HU-38: notificaciones de catalogo in-app + banner (Notifications#20) ---
+      CATALOG_NOTIFICATIONS_HTTP_ENABLED: 'true'
+      CATALOG_NOTIFICATIONS_HTTP_PORT: 3004
+      CATALOG_NOTIFICATIONS_REPOSITORY_DRIVER: mongo
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Resolucion de propietarios para suspension/reactivacion
+      # (Notifications#21, Player-Inventory#23). Mismo nodo `app`, red interna
+      # de compose: no sale del nodo, no es TLS ni un secreto.
+      PLAYER_INVENTORY_BASE_URL: http://inventory:3002
+      # Cola real de los cuatro eventos de ciclo de vida (ADR-018 Accepted,
+      # Management#314, Terraform en infra/modules/catalog_lifecycle_events_queue,
+      # Infrastructure#95). Terraform la rellena con el output real del
+      # modulo; queda vacia si se ejecuta este compose sin pasar por
+      # Terraform.
+      CATALOG_LIFECYCLE_QUEUE_URL: ${CATALOG_LIFECYCLE_QUEUE_URL:-}
+      # Activa el consumo real de los cuatro eventos de ciclo de vida por SQS,
+      # independientemente de QUEUE_DRIVER y de CATALOG_QUEUE_DRIVER
+      # (Notifications#24 agrego este driver propio, mismo patron que #23 uso
+      # para catalog.product.created). Hardcodeado a `sqs` -no
+      # `${VAR:-memory}`- por el mismo motivo que CATALOG_QUEUE_DRIVER arriba:
+      # en este nodo CATALOG_LIFECYCLE_QUEUE_URL siempre la rellena un output
+      # real cuando el modulo esta aplicado; con `terraform apply` todavia sin
+      # ejecutar (Infrastructure#95 esta Provisioned in IaC, no Applied),
+      # CATALOG_LIFECYCLE_QUEUE_URL llega vacia y Notifications rechaza el
+      # arranque -fail closed, no cae a memoria en silencio-, que es
+      # preferible a aparentar consumo real sin cola. Catalog, ademas, sigue
+      # sin dispatcher que publique estos eventos desde su outbox: el wiring
+      # queda listo para consumir en cuanto exista cola aplicada y productor.
+      CATALOG_LIFECYCLE_QUEUE_DRIVER: sqs
     # Ya no depende de Mailpit: el envio sale por la API de SES. Mailpit se
     # mantiene en el compose a proposito, para que revertir a
     # `EMAIL_DRIVER: smtp` sea un cambio de una linea si SES da problemas.
