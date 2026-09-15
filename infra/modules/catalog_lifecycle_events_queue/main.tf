@@ -28,7 +28,10 @@ locals {
 
   common_tags = merge(var.tags, {
     Component = "catalog-lifecycle-events"
-    EventTypes = join(",", [
+    # Espacio y no coma: AWS solo admite letras, digitos, espacio en blanco y
+    # `_ . : / = + - @` en un VALOR de tag. Una coma aqui no es cosmetica,
+    # tira abajo la creacion entera de la cola con `InvalidParameterValue`.
+    EventTypes = join(" ", [
       "catalog.product.suspended",
       "catalog.product.reactivated",
       "catalog.product.inventory.adjusted",

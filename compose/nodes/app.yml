@@ -150,6 +150,11 @@ services:
       # composicion manual sin ese almacenamiento conserva el adaptador memory.
       ASSETS_STORAGE_DRIVER: ${ASSETS_STORAGE_DRIVER:-memory}
       PRODUCT_ASSETS_BUCKET_NAME: ${PRODUCT_ASSETS_BUCKET_NAME:-}
+      # Origen publico que antepone a la referencia de un asset -nunca la URL
+      # firmada de S3 directamente-. Obligatorio cuando ASSETS_STORAGE_DRIVER
+      # es "s3": vacio, el servicio rechaza arrancar en vez de fabricar una
+      # URL de producto que nadie externo podria resolver.
+      API_BASE_URL: ${API_BASE_URL:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       # HU-38: activa el productor real del outbox de Producto hacia las dos
       # colas SQS ya provisionadas (ADR-017/ADR-018, Infrastructure#93/#95),
