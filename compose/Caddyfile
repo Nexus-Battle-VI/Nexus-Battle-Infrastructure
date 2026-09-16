@@ -91,6 +91,26 @@
 	# 404 -o peor, la administracion de banner "funcionaria" contra el
 	# servicio equivocado si algun dia Catalog definiera una ruta con el
 	# mismo sufijo-.
+	# Contextos de Sprint 2 (ADR-019). Prefijos propios bajo `/api/v1/` que no
+	# se solapan con `/api/v1/admin*` (Catalog) ni con `/api/v1/catalog*`. El
+	# WebSocket de Combat (ADR-020) viajara por `/api/v1/combat/realtime`:
+	# `reverse_proxy` atiende la actualizacion sin configuracion adicional.
+	handle /api/v1/combat* {
+		reverse_proxy combat:3006
+	}
+
+	handle /api/v1/missions* {
+		reverse_proxy missions:3007
+	}
+
+	handle /api/v1/auctions* {
+		reverse_proxy auction:3008
+	}
+
+	handle /api/v1/wallet* {
+		reverse_proxy wallet:3009
+	}
+
 	handle /api/v1/admin/banners* {
 		reverse_proxy notifications:3004
 	}

@@ -240,6 +240,100 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
 
+  # ---------------------------------------------------------------------
+  # Contextos de Sprint 2 (ADR-019): Combat, Missions, Auction y Wallet.
+  #
+  # Andamiaje: arrancan, verifican identidad y exponen sondas, pero todavia
+  # no tienen rutas de negocio. Cada uno con base propia en el nodo de datos.
+  # ---------------------------------------------------------------------
+  combat:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    mem_limit: 160m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      PORT: 3006
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: mongo
+      MONGODB_URI: mongodb://combat:${DB_PASSWORD:-cambiar}@mongo:27017/combat?authSource=combat&replicaSet=rs0
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Sin `:?`: sin secreto, las rutas internas del servicio responden 503
+      # y el resto sigue funcionando. Lo exigen con `:?` otros servicios de
+      # este fichero, asi que en la practica ya esta definido.
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+    depends_on:
+      combat-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  missions:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-missions:latest
+    mem_limit: 160m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      PORT: 3007
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://missions:${DB_PASSWORD:-cambiar}@postgres:5432/missions
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Sin `:?`: sin secreto, las rutas internas del servicio responden 503
+      # y el resto sigue funcionando. Lo exigen con `:?` otros servicios de
+      # este fichero, asi que en la practica ya esta definido.
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+    depends_on:
+      missions-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  auction:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-auction:latest
+    mem_limit: 160m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      PORT: 3008
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://auction:${DB_PASSWORD:-cambiar}@postgres:5432/auction
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Sin `:?`: sin secreto, las rutas internas del servicio responden 503
+      # y el resto sigue funcionando. Lo exigen con `:?` otros servicios de
+      # este fichero, asi que en la practica ya esta definido.
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+    depends_on:
+      auction-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  wallet:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-wallet:latest
+    mem_limit: 160m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      PORT: 3009
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://wallet:${DB_PASSWORD:-cambiar}@postgres:5432/wallet
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Sin `:?`: sin secreto, las rutas internas del servicio responden 503
+      # y el resto sigue funcionando. Lo exigen con `:?` otros servicios de
+      # este fichero, asi que en la practica ya esta definido.
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+    depends_on:
+      wallet-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
   notifications:
     image: ghcr.io/nexus-battle-vi/nexus-battle-notifications:latest
     mem_limit: 128m
@@ -423,6 +517,66 @@ services:
     # codigo 0, y reiniciarlo volveria a ejecutar las migraciones en bucle.
     restart: 'no'
 
+  combat-migrate:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    command: ['node', 'dist/infrastructure/persistence/migrate.js']
+    mem_limit: 128m
+    pids_limit: 64
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: mongo
+      MONGODB_URI: mongodb://combat:${DB_PASSWORD:-cambiar}@mongo:27017/combat?authSource=combat&replicaSet=rs0
+    depends_on:
+      mongo-rs-init:
+        condition: service_completed_successfully
+    restart: 'no'
+
+  missions-migrate:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-missions:latest
+    command: ['node', 'dist/infrastructure/persistence/migrate.js']
+    mem_limit: 128m
+    pids_limit: 64
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://missions:${DB_PASSWORD:-cambiar}@postgres:5432/missions
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  auction-migrate:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-auction:latest
+    command: ['node', 'dist/infrastructure/persistence/migrate.js']
+    mem_limit: 128m
+    pids_limit: 64
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://auction:${DB_PASSWORD:-cambiar}@postgres:5432/auction
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  wallet-migrate:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-wallet:latest
+    command: ['node', 'dist/infrastructure/persistence/migrate.js']
+    mem_limit: 128m
+    pids_limit: 64
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://wallet:${DB_PASSWORD:-cambiar}@postgres:5432/wallet
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
   # ---------------------------------------------------------------------
   # Persistencia
   #
@@ -444,6 +598,9 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./init-postgres.sh:/docker-entrypoint-initdb.d/init.sh:ro
+      # Bases de Sprint 2 (ADR-019), en fichero aparte para no tocar el
+      # `user_data` del nodo `data`. Idempotente: el orden entre ambos da igual.
+      - ./init-postgres-sprint-2.sh:/docker-entrypoint-initdb.d/init-sprint-2.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U nexus']
       interval: 10s
@@ -470,6 +627,7 @@ services:
       - mongo-data:/data/db
       - mongo-secrets:/secrets:ro
       - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./init-mongo-sprint-2.js:/docker-entrypoint-initdb.d/init-mongo-sprint-2.js:ro
     healthcheck:
       test:
         [

@@ -235,6 +235,16 @@ locals {
         # el proxy no sirve nada util.
         SITIO_PUBLICO = var.public_site_address
         TLS_CONTACTO  = var.tls_contact_email
+
+        # Origen publico que Catalog antepone a la referencia de un asset de
+        # producto (HU-37.7, EN-027.9): `${API_BASE_URL}/api/v1/catalog/product-assets/{id}/content`,
+        # nunca la URL firmada de S3 directamente. Mismo derivado de
+        # `public_site_address` que SITIO_PUBLICO -imposible que ambos queden
+        # desincronizados-. Catalog exige esta variable en el arranque cuando
+        # ASSETS_STORAGE_DRIVER es "s3" (ver src/infrastructure/config/env.ts);
+        # vacia, el servicio rechaza arrancar en vez de fabricar una URL de
+        # producto que nadie externo podria resolver.
+        API_BASE_URL = var.public_site_address == "" ? "" : "https://${var.public_site_address}"
       }
     }
 

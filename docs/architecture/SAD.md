@@ -214,3 +214,5 @@ Se dejan tachadas en lugar de borrarlas: quien haya leído una versión anterior
 | [016](../adr/ADR-016-product-asset-storage.md) | Almacenamiento y ownership de recursos visuales de Producto | Accepted |
 | [017](../adr/ADR-017-catalog-events-sqs.md) | Entrega de eventos de Producto mediante SQS | Accepted |
 | [018](../adr/ADR-018-catalog-lifecycle-events-transport.md) | Transporte de eventos de ciclo de vida de Producto | Accepted |
+| [019](../adr/ADR-019-sprint-2-bounded-contexts.md) | Contextos acotados de Sprint 2: Combat, Missions, Auction y Wallet | Accepted |
+| [020](../adr/ADR-020-realtime-combat.md) | Tiempo real para Jugar Online | Accepted |
