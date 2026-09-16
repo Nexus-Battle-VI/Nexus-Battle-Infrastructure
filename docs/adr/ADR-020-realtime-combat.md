@@ -1,6 +1,6 @@
 # ADR-020 — Tiempo real para Jugar Online
 
-- **Estado:** Proposed
+- **Estado:** **Accepted** el 2026-09-16 — validado por Product Owners y Scrum Masters junto con ADR-019
 - **Fecha:** 2026-09-16
 - **Decide:** Arquitectura, con validación de Combat y Web
 - **Relacionado:** [ADR-004](ADR-004-identity-directory.md), [ADR-006](ADR-006-messaging.md), [ADR-007](ADR-007-aws-cost-optimized-platform.md), [ADR-010](ADR-010-reverse-proxy.md), [ADR-019](ADR-019-sprint-2-bounded-contexts.md), [EPIC-06 #6](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/6), [HU-13 #22](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/22), [HU-15 #24](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/24), [HU-17 #26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/26)
@@ -127,8 +127,11 @@ posterior puede declarar otro jugador.
 | Sondeo periódico | Latencia visible en turnos y chat, y carga constante sin actividad |
 | JWT en la cadena de consulta | Queda en registros de Caddy y del servicio |
 
-## Pendiente de aprobación
+## Evidencia de aceptación
 
-Permanece en `Proposed` hasta su validación por el Team propietario de Combat y
-por Web. HU-13 debe fijar retención y moderación del chat antes de persistirlo
-más allá de la sala.
+- Validado por Product Owners y Scrum Masters el 2026-09-16 e integrado en
+  [Infrastructure#101](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/101).
+- **Aceptar no es implementar:** Combat todavía no tiene WebSocket. Se añade con
+  la primera Historia de Usuario que lo necesite (HU-13, HU-15 o HU-17).
+- HU-13 debe fijar retención y moderación del chat antes de persistirlo más allá
+  de la sala.
