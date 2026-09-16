@@ -27,9 +27,13 @@ cambia a público en *Package settings* de la organización.
 
 ## 1. Crear bases y usuarios en el nodo de datos existente
 
-`init-postgres.sh` e `init-mongo.js` **solo se ejecutan sobre un volumen vacío**. El nodo
-de datos ya está inicializado, así que las bases nuevas se crean aparte. Los comandos son
-idempotentes y **no contienen la contraseña**: la leen del entorno de cada contenedor.
+`init-postgres.sh` e `init-mongo.js` **solo se ejecutan sobre un volumen vacío** y además
+viajan en el `user_data` del nodo `data`: tocarlos reemplaza ese nodo sin crear ninguna
+base. Por eso las bases de Sprint 2 están en ficheros aparte e idempotentes,
+[`compose/init-postgres-sprint-2.sh`](../../compose/init-postgres-sprint-2.sh) y
+[`compose/init-mongo-sprint-2.js`](../../compose/init-mongo-sprint-2.js), que se ejecutan
+dentro de cada contenedor. **La contraseña no aparece en ningún comando**: los scripts la
+leen del entorno del contenedor.
 
 Obtener el identificador del nodo sin fijarlo en ningún documento:
 
@@ -37,28 +41,29 @@ Obtener el identificador del nodo sin fijarlo en ningún documento:
 terraform -chdir=infra/envs/prod output -json nodes
 ```
 
-Parámetros de `ssm send-command` (`AWS-RunShellScript`) contra el nodo `data`:
-
-```json
-{
-  "commands": [
-    "set -eu",
-    "p=$(docker ps -qf name=postgres)",
-    "docker exec -i $p sh -c 'psql -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -v clave=\"$DB_PASSWORD\"' <<'EOSQL'\nSELECT format('CREATE USER %I WITH PASSWORD %L', u, :'clave') FROM unnest(ARRAY['missions','auction','wallet']) AS u WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = u)\\gexec\nSELECT format('CREATE DATABASE %I OWNER %I', u, u) FROM unnest(ARRAY['missions','auction','wallet']) AS u WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = u)\\gexec\nSELECT format('REVOKE ALL ON DATABASE %I FROM PUBLIC', u) FROM unnest(ARRAY['missions','auction','wallet']) AS u\\gexec\nEOSQL",
-    "m=$(docker ps -qf name=mongo)",
-    "docker exec $m sh -c 'mongosh --quiet -u root -p \"$DB_PASSWORD\" --authenticationDatabase admin --eval \"const d = db.getSiblingDB(\\\"combat\\\"); if (d.getUser(\\\"combat\\\") === null) { d.createUser({ user: \\\"combat\\\", pwd: process.env.DB_PASSWORD, roles: [{ role: \\\"readWrite\\\", db: \\\"combat\\\" }, { role: \\\"dbAdmin\\\", db: \\\"combat\\\" }] }) } print(JSON.stringify(d.getUser(\\\"combat\\\").roles))\"'"
-  ]
-}
-```
-
-**Comprobación**, en el mismo nodo:
+Construir los parámetros de `ssm send-command` desde los ficheros del repositorio, para que
+lo que se ejecuta sea exactamente lo revisado:
 
 ```bash
-docker exec $(docker ps -qf name=postgres) sh -c 'psql -U "$POSTGRES_USER" -At -c "select datname from pg_database where datname in (\$\$missions\$\$,\$\$auction\$\$,\$\$wallet\$\$) order by 1"'
+python - <<'PY' > "$TEMP/ssm-sprint-2.json"
+import base64, json
+pg = base64.b64encode(open('compose/init-postgres-sprint-2.sh', 'rb').read()).decode()
+mg = base64.b64encode(open('compose/init-mongo-sprint-2.js', 'rb').read()).decode()
+mongo = ("cat > /tmp/sprint2.js && mongosh --quiet -u \"$MONGO_INITDB_ROOT_USERNAME\" "
+         "-p \"$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin /tmp/sprint2.js; "
+         "rc=$?; rm -f /tmp/sprint2.js; exit $rc")
+print(json.dumps({'commands': [
+    'set -eu',
+    f'echo {pg} | base64 -d | docker exec -i $(docker ps -qf name=postgres) bash -s',
+    f"echo {mg} | base64 -d | docker exec -i $(docker ps -qf name=mongo) sh -c '{mongo}'",
+]}))
+PY
+aws ssm send-command --profile nexus-battles --instance-ids <id-del-nodo-data>   --document-name AWS-RunShellScript --parameters "file://$TEMP/ssm-sprint-2.json"
 ```
 
-Debe listar las tres bases. Para MongoDB, la salida del propio comando imprime los dos
-roles de `combat` acotados a su base. **El resultado es la comprobación; que el comando
+**Comprobación**: la salida del propio comando lista `auction`, `missions` y `wallet` con su
+dueño, y los roles `readWrite` y `dbAdmin` de `combat` sobre su base. Ejecutarlo dos veces
+debe dar la misma salida sin errores. **El resultado es la comprobación; que el comando
 termine sin error, no.**
 
 ## 2. Revisar el plan por nodo
@@ -71,7 +76,10 @@ terraform -chdir=infra/envs/prod plan -out sprint2.plan
 ```
 
 - `module.compute...["app"]`: reemplazo esperado.
-- `module.compute...["data"]`: **ningún cambio**. Si aparece, se detiene aquí.
+- `module.compute...["data"]` y su `aws_volume_attachment`: **ningún cambio**. Si aparecen, se
+  detiene aquí: algo cambió el `user_data` del nodo de datos.
+- `aws_s3_bucket_cors_configuration`: sin cambios. Si quita orígenes, el último `apply` usó
+  un `-var` que no está en `terraform.tfvars`; se añade ahí antes de seguir.
 - La IP elástica `54.83.38.198` se conserva asociada.
 - `terraform.tfvars` es local y está ignorado por git: el tipo `t4g.medium` se cambia ahí,
   no solo en el ejemplo. Terraform no recuerda las banderas `-var`.

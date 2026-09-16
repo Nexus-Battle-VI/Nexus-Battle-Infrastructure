@@ -598,6 +598,9 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./init-postgres.sh:/docker-entrypoint-initdb.d/init.sh:ro
+      # Bases de Sprint 2 (ADR-019), en fichero aparte para no tocar el
+      # `user_data` del nodo `data`. Idempotente: el orden entre ambos da igual.
+      - ./init-postgres-sprint-2.sh:/docker-entrypoint-initdb.d/init-sprint-2.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U nexus']
       interval: 10s
@@ -624,6 +627,7 @@ services:
       - mongo-data:/data/db
       - mongo-secrets:/secrets:ro
       - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./init-mongo-sprint-2.js:/docker-entrypoint-initdb.d/init-mongo-sprint-2.js:ro
     healthcheck:
       test:
         [

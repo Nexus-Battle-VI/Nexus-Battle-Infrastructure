@@ -27,8 +27,6 @@ const servicios = [
   { base: 'player-inventory', usuario: 'inventory' },
   { base: 'catalog', usuario: 'catalog' },
   { base: 'notifications', usuario: 'notifications' },
-  // Combat (ADR-019).
-  { base: 'combat', usuario: 'combat' },
 ]
 
 for (const servicio of servicios) {
