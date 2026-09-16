@@ -39,11 +39,26 @@ CREATE DATABASE community OWNER community;
 CREATE USER commerce WITH PASSWORD :'clave';
 CREATE DATABASE commerce OWNER commerce;
 
+-- Missions (ADR-019)
+CREATE USER missions WITH PASSWORD :'clave';
+CREATE DATABASE missions OWNER missions;
+
+-- Auction (ADR-019)
+CREATE USER auction WITH PASSWORD :'clave';
+CREATE DATABASE auction OWNER auction;
+
+-- Wallet (ADR-019)
+CREATE USER wallet WITH PASSWORD :'clave';
+CREATE DATABASE wallet OWNER wallet;
+
 -- Se retira el permiso por defecto que permitiria a cualquier usuario crear
 -- objetos en el esquema publico de las bases ajenas.
 REVOKE ALL ON DATABASE account FROM PUBLIC;
 REVOKE ALL ON DATABASE community FROM PUBLIC;
 REVOKE ALL ON DATABASE commerce FROM PUBLIC;
+REVOKE ALL ON DATABASE missions FROM PUBLIC;
+REVOKE ALL ON DATABASE auction FROM PUBLIC;
+REVOKE ALL ON DATABASE wallet FROM PUBLIC;
 EOSQL
 
-echo "init-postgres: tres bases y tres usuarios creados."
+echo "init-postgres: seis bases y seis usuarios creados."
