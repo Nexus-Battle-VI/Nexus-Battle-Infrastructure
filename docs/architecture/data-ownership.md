@@ -16,6 +16,12 @@ Cada servicio posee su almacén **en exclusiva**. Ningún otro accede a él, ni 
 | Community | PostgreSQL | Hilo, título, estado, mensajes | `AuthorId` (Account) |
 | Commerce | PostgreSQL | Pedido, líneas, estado | `CustomerId` (Account), `Sku` (Catalog) |
 | Notifications | Sin base obligatoria | Registro de idempotencia de vida corta | — |
+| Combat | MongoDB | Salas, batallas, semillas y simulaciones, chat | `PlayerId` (Account), `HeroId` y `ProductId` (Player/Inventory, Catalog) |
+| Missions | PostgreSQL | Misiones, matrículas, rotaciones, progreso de dificultad, reportes, logros | `PlayerId` (Account), `HeroId` (Player/Inventory) |
+| Auction | PostgreSQL | Subastas, pujas, seguimiento, liquidaciones, pendientes de reclamo | `PlayerId` (Account), `ProductId` (Catalog) |
+| Wallet | PostgreSQL | Saldos, reservas y libro de movimientos de créditos | `PlayerId` (Account) |
+
+Las cuatro últimas filas son la propuesta de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md): el saldo de créditos tiene un único dueño (Wallet) y la disponibilidad del héroe también (Player/Inventory, mediante compromisos).
 
 El criterio de motor no es preferencia: Player/Inventory y Catalog usan documentos porque sus agregados se leen y escriben enteros y tienen atributos variables; Account, Community y Commerce usan relacional porque sus consultas atraviesan relaciones claras y Commerce necesita integridad transaccional entre pedido y líneas.
 

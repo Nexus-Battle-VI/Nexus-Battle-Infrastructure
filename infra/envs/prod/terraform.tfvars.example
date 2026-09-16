@@ -40,7 +40,9 @@ internal_service_auth_secret = ""
 # automatico.
 nodes = {
   app = {
-    instance_type = "t4g.small" # 1340 MiB necesarios de 2048
+    # t4g.medium desde ADR-019: con Combat, Missions, Auction y Wallet la suma
+    # de `mem_limit` en marcha llega a 1 744 MiB, sin margen en 2 GiB.
+    instance_type = "t4g.medium"
     role          = "app"
     volume_gb     = 20
     # Direccion FIJA: el plano de aplicacion necesita saber donde esta el de
