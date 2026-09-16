@@ -1,6 +1,6 @@
 # ADR-019 — Contextos acotados de Sprint 2: Combat, Missions, Auction y Wallet
 
-- **Estado:** Proposed
+- **Estado:** **Accepted** el 2026-09-16 — validado por Product Owners y Scrum Masters; integrado en #101, #102 y #103
 - **Fecha:** 2026-09-16
 - **Decide:** Arquitectura, con validación obligatoria de Product Owners y Scrum Masters (nombre, alcance y Team de cada repositorio, conforme a [ADR-001](ADR-001-repository-strategy.md))
 - **Relacionado:** [ADR-001](ADR-001-repository-strategy.md), [ADR-002](ADR-002-backend-stack.md), [ADR-005](ADR-005-data-strategy.md), [ADR-006](ADR-006-messaging.md), [ADR-007](ADR-007-aws-cost-optimized-platform.md), [ADR-011](ADR-011-deployment-topology.md), [ADR-020](ADR-020-realtime-combat.md), [EPIC-06 #6](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/6), [EPIC-07 #7](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/7), [EPIC-08 #8](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/8), [EN-012 #198](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/198)
@@ -235,9 +235,6 @@ la ingesta HTTP existente.
 
 ## Lo que este ADR no hace
 
-- No crea repositorios: ADR-001 exige que nombre, alcance y Team estén
-  aprobados antes.
-- No aplica Terraform ni cambia la composición desplegada.
 - No define los contratos detallados: se publicarán como OpenAPI en
   `docs/contracts/` antes de implementar.
 - No decide la retención ni la moderación del chat: es decisión de producto
@@ -245,7 +242,23 @@ la ingesta HTTP existente.
 - No decide cómo recibe un jugador sus primeros créditos: no hay Historia de
   Usuario que lo defina.
 
-## Pendiente de aprobación
+## Evidencia de aceptación
 
-Permanece en `Proposed` hasta que Product Owners y Scrum Masters aprueben los
-cuatro nombres, su alcance y su Team propietario.
+- Validado por Product Owners y Scrum Masters el 2026-09-16: nombres, alcance y
+  existencia de los cuatro repositorios.
+- Integración de la decisión y de su despliegue por Dabji:
+  [Infrastructure#101](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/101),
+  [#102](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/102) y
+  [#103](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/103).
+- **Pendiente tras la aceptación:** asignar el Team propietario de cada
+  repositorio. Hasta entonces la revisión de código recae en `scrum-master`.
+- Las Tasks HU-65.x de Management deben realinearse de Commerce a Auction.
+
+## Estado de despliegue
+
+| Estado | Vigente desde |
+| --- | --- |
+| **Accepted** | 2026-09-16 |
+| Repositorios creados con CI verde, imagen publicada y `main`/`develop` protegidas | 2026-09-16 |
+| Bases y usuarios creados en el nodo `data`, con acceso y aislamiento comprobados | 2026-09-16 |
+| `terraform apply`: nodo `app` en `t4g.medium` con los cuatro servicios | 2026-09-16 |
