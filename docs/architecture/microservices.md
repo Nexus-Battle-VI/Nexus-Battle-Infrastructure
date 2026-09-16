@@ -13,12 +13,12 @@ Diagrama en [microservices-component.puml](../diagrams/microservices-component.p
 | `Nexus-Battle-Catalog` | 3003 | API NestJS | Gama | `node:24-alpine` |
 | `Nexus-Battle-Community` | 3004 | API NestJS | Gama | `node:24-alpine` |
 | `Nexus-Battle-Commerce` | 3005 | API NestJS | Beta | `node:24-alpine` |
-| `Nexus-Battle-Combat` | 3006 | API NestJS | Por asignar | `node:24-alpine` |
-| `Nexus-Battle-Missions` | 3007 | API NestJS | Por asignar | `node:24-alpine` |
-| `Nexus-Battle-Auction` | 3008 | API NestJS | Por asignar | `node:24-alpine` |
-| `Nexus-Battle-Wallet` | 3009 | API NestJS | Por asignar | `node:24-alpine` |
+| `Nexus-Battle-Combat` | 3006 | API NestJS | Alfa | `node:24-alpine` |
+| `Nexus-Battle-Missions` | 3007 | API NestJS | Beta | `node:24-alpine` |
+| `Nexus-Battle-Auction` | 3008 | API NestJS | Gama | `node:24-alpine` |
+| `Nexus-Battle-Wallet` | 3009 | API NestJS | Gama | `node:24-alpine` |
 
-Los cuatro últimos son los contextos de Sprint 2 propuestos en [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md). Hoy son **andamiaje**: arrancan, verifican identidad y exponen sondas, sin rutas de negocio.
+Los cuatro últimos son los contextos de Sprint 2 propuestos en [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md). Están desplegados desde el 2026-09-16 como **andamiaje**: arrancan, verifican identidad y exponen sondas, sin rutas de negocio.
 
 El puerto 3001 de Notifications expone **únicamente** las sondas de salud: el worker no tiene API de negocio, su entrada es la cola de mensajes.
 

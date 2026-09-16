@@ -47,10 +47,10 @@ Cinco hechos verificados condicionan la decisión:
 
 | Contexto | Repositorio | Datos que posee en exclusiva | Motor | Puerto | Team |
 | --- | --- | --- | --- | ---: | --- |
-| Combat | `Nexus-Battle-Combat` | Salas y lobby, batallas (participantes, orden de turnos, vida, Poder, efectos, bitácora), semillas y simulaciones, mensajes de chat | MongoDB | 3006 | Por asignar |
-| Missions | `Nexus-Battle-Missions` | Definiciones y tablón de misiones, matrículas, rotaciones, progreso de dificultad, reportes, logros | PostgreSQL | 3007 | Por asignar |
-| Auction | `Nexus-Battle-Auction` | Subastas, pujas, pujas automáticas, seguimiento, liquidaciones, productos pendientes de reclamo | PostgreSQL | 3008 | Por asignar |
-| Wallet | `Nexus-Battle-Wallet` | Saldos de créditos, reservas, libro de movimientos insert-only | PostgreSQL | 3009 | Por asignar |
+| Combat | `Nexus-Battle-Combat` | Salas y lobby, batallas (participantes, orden de turnos, vida, Poder, efectos, bitácora), semillas y simulaciones, mensajes de chat | MongoDB | 3006 | Team Alfa |
+| Missions | `Nexus-Battle-Missions` | Definiciones y tablón de misiones, matrículas, rotaciones, progreso de dificultad, reportes, logros | PostgreSQL | 3007 | Team Beta |
+| Auction | `Nexus-Battle-Auction` | Subastas, pujas, pujas automáticas, seguimiento, liquidaciones, productos pendientes de reclamo | PostgreSQL | 3008 | Team Gama |
+| Wallet | `Nexus-Battle-Wallet` | Saldos de créditos, reservas, libro de movimientos insert-only | PostgreSQL | 3009 | Team Gama |
 
 Los cuatro heredan íntegro el arquetipo de [ADR-002](ADR-002-backend-stack.md):
 NestJS 11.2.1, TypeScript 5.9.3, Clean + Hexagonal con `no-restricted-imports`,
@@ -250,8 +250,9 @@ la ingesta HTTP existente.
   [Infrastructure#101](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/101),
   [#102](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/102) y
   [#103](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/103).
-- **Pendiente tras la aceptación:** asignar el Team propietario de cada
-  repositorio. Hasta entonces la revisión de código recae en `scrum-master`.
+- Team propietario asignado por Product Owners y Scrum Masters el 2026-09-16:
+  Combat → Team Alfa (Jugar Online), Missions → Team Beta (Misiones), Auction y
+  Wallet → Team Gama (Subasta y créditos).
 - Las Tasks HU-65.x de Management deben realinearse de Commerce a Auction.
 
 ## Estado de despliegue
