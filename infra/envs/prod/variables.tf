@@ -376,7 +376,7 @@ variable "product_assets_bucket_name" {
 }
 
 variable "product_assets_cors_origins" {
-  description = "Origenes que pueden leer imagenes privadas mediante la URL firmada de Catalog."
+  description = "Origenes que pueden leer imagenes privadas mediante la URL firmada de Catalog y cargarlas con el POST firmado."
   type        = list(string)
   default     = ["https://nexus.simuladorupbbga.app"]
 }
