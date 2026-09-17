@@ -1,0 +1,58 @@
+@startuml hu-75-sequence
+!theme plain
+title HU-75 — Secuencia de desbloqueo y matrícula
+
+skinparam defaultFontName sans-serif
+skinparam sequence {
+  LifeLineBorderColor #999999
+}
+
+actor "Jugador" as player
+participant "Web" as web
+participant "Missions\nDifficultyPolicy" as missions
+database "PostgreSQL\nclears / enrollments" as db
+participant "Combat" as combat
+participant "Wallet / Inventory" as pay
+
+player -> web : abrir detalle de misión
+web -> missions : consultar niveles del jugador
+missions -> db : clears(player, mission)
+db --> missions : NORMAL? HEROIC? LEGENDARY? MYTHIC?
+missions --> web : cuatro niveles + unlocked + lockReason
+web --> player : selector (bloqueados con motivo)
+
+alt CA-03 progresión insuficiente
+  player -> web : elige nivel superior bloqueado
+  web -> missions : POST matrícula + difficulty
+  missions -> db : clears
+  missions --> web : 422 PROGRESSION_LOCKED
+  web --> player : mensaje explicativo
+else CA-01 / CA-02 nivel desbloqueado
+  player -> web : elige nivel libre y confirma
+  web -> missions : POST matrícula + difficulty + héroe
+  missions -> missions : DifficultyPolicy.acepta()
+  missions -> db : guardar Enrollment(difficulty, rewardTier)
+  missions --> web : 201 matrícula
+
+  opt cuando exista HU-72
+    missions -> combat : simular(difficulty, multiplier?)
+    note right of combat
+      Heroico: 1.5
+      Legendario: 2.0
+      Mítico: código, sin
+      multiplicador inventado
+    end note
+    combat --> missions : resultado + bitácora
+    alt SUCCESS
+      missions -> db : insert MissionDifficultyClear
+      missions -> pay : grant según HU-10 / operationId
+    end
+  end
+end
+
+note over missions, combat
+  Missions decide elegibilidad.
+  Combat no relaja ni revalida la progresión.
+end note
+
+@enduml
