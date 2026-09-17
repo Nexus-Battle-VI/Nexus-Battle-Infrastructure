@@ -18,7 +18,8 @@ el SKU y nombre se conservan como presentación.
 
 Las imágenes pueden requerir JWT en Catalog y redirigir a una URL S3 temporal.
 Web descarga el recurso autenticado y muestra un object URL; S3 permite GET/HEAD
-desde el origen configurado mediante CORS. El bucket sigue siendo privado.
+desde el origen configurado mediante CORS, y POST para la carga firmada del
+Web administrativo (catalog-product-assets-v1). El bucket sigue siendo privado.
 
 `POST /api/orders/cart` obtiene o crea el único carrito DRAFT/PROCESSING del titular.
 Las rutas `/api/orders`, `/api/wishlist` y `/api/saved-cart` usan la identidad del JWT.
