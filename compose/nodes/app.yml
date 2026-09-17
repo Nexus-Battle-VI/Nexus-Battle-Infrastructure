@@ -220,6 +220,11 @@ services:
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
       INTERNAL_SERVICE_NAME: community
       INTERNAL_TIMEOUT_MS: ${INTERNAL_TIMEOUT_MS:-2000}
+      # Existencia de producto al comentar (Community#39): contrato publico de
+      # Catalog `GET /api/v1/catalog/products/:reference`. Sin ella Community usa
+      # el catalogo de demostracion y rechaza los productos reales con 404.
+      # Red interna del nodo, no es un secreto -mismo patron que `inventory`-.
+      CATALOG_BASE_URL: http://catalog:3003
       # Filtro automatico de contenido (HU-41.7, Management#29): solo genera
       # una senal de revision humana en la cola de moderacion existente -NUNCA
       # oculta, elimina ni sanciona por si solo-. Sin `:?`, a proposito: son
