@@ -30,6 +30,19 @@ resource "aws_s3_bucket_cors_configuration" "web_images" {
     expose_headers  = ["ETag"]
     max_age_seconds = 600
   }
+
+  # Carga directa del Web administrativo (catalog-product-assets-v1, paso 2):
+  # el navegador envia un POST firmado `multipart/form-data` contra el bucket.
+  # Sin esta regla S3 guarda el objeto en `staging/`, pero responde sin
+  # `Access-Control-Allow-Origin`: el navegador no puede leer el 204, `fetch`
+  # falla con "Failed to fetch" y la finalizacion nunca se invoca. Solo POST:
+  # la politica firmada por Catalog sigue limitando clave, MIME, checksum y
+  # tamano; CORS no concede permisos, solo deja leer la respuesta.
+  cors_rule {
+    allowed_methods = ["POST"]
+    allowed_origins = var.allowed_web_origins
+    max_age_seconds = 600
+  }
 }
 
 resource "aws_s3_bucket_ownership_controls" "this" {
