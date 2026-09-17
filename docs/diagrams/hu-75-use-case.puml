@@ -1,0 +1,39 @@
+@startuml hu-75-use-case
+!theme plain
+title HU-75 — Caso de uso de dificultad escalonada
+
+skinparam defaultFontName sans-serif
+left to right direction
+
+actor "Jugador autenticado" as player
+actor "Combat\n(colaborador)" as combat
+actor "Player/Inventory\nWallet (HU-10)" as rewards
+
+rectangle "Missions" {
+  usecase "Consultar niveles\ny su desbloqueo" as list
+  usecase "Matricular eligiendo\ndificultad" as enroll
+  usecase "Validar progresión\nmisma misión" as policy
+  usecase "Registrar clear\nal éxito" as clear
+  usecase "Rechazar con\nmensaje explicativo" as deny
+}
+
+player --> list
+player --> enroll
+enroll ..> policy : <<include>>
+policy ..> deny : <<extend>>\nfalta nivel anterior
+enroll ..> combat : <<include>>\nsolo si HU-72 existe
+clear --> rewards : entrega según rewardTier\n(no se inventan montos)
+
+note bottom of policy
+  Normal → Heroico → Legendario → Mítico.
+  Un clear es de ESA misión y ESE nivel.
+  Missions no calcula daño.
+end note
+
+note right of deny
+  Sin testimonio: 401.
+  Vocabulario inválido: 400.
+  Progresión insuficiente: 422.
+end note
+
+@enduml
