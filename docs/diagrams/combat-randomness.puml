@@ -1,0 +1,60 @@
+@startuml combat-randomness
+!theme plain
+title ADR-021 — Aleatoriedad de Combat: de la semilla al efecto (HU-24, HU-25, HU-26)
+
+skinparam shadowing false
+skinparam defaultFontName sans-serif
+skinparam rectangle {
+  BackgroundColor<<hu24>> #E3F2FD
+  BackgroundColor<<hu25>> #E8F5E9
+  BackgroundColor<<externo>> #FFF3E0
+}
+
+package "Combat (única autoridad de aleatoriedad, ADR-019)" {
+
+  rectangle "Semilla (*)\n3.000.000 = validada por HU-26\nentero sin signo de 32 bits" <<hu24>> as seed
+  rectangle "MT19937\nPRNG con estado" <<hu24>> as mt
+  rectangle "Box-Müller\nZ ~ N(0,1)" <<hu24>> as bm
+  rectangle "Φ(Z) — CDF normal estándar\nU ~ Uniforme(0,1)" <<hu24>> as cdf
+  rectangle "RandomIndex\nentero uniforme 1..8000\nfloor(U × 8000) + 1, acotado" <<hu24>> as idx
+
+  rectangle "EffectControlTable\ntabla vigente (rangos contiguos\nequivalentes a 8000 filas, en memoria)" <<hu25>> as table
+  rectangle "ResolveRandomEffect\nnextIndex() → table.resolve(index)" <<hu25>> as resolve
+  rectangle "ResolvedRandomEffect\nefecto + magnitud" <<hu25>> as effect
+
+  rectangle "BuildHeroEffectTable\ntabla base por subtype\n+ modificadores soportados\n(CRITICAL_CHANCE: 100 pb = +1 pp = +80 filas)" <<hu25>> as build
+}
+
+rectangle "Validación estadística\n(HU-26: KS, Ljung-Box, Q-Q,\nmedia, desviación, asimetría, curtosis)" <<externo>> as study
+
+package "Player-Inventory (dueño del héroe y su equipamiento)" {
+  rectangle "Héroe equipado\nsubtype + activeEffects\n(contrato interno HMAC)" <<externo>> as hero
+}
+
+package "Missions (no genera números)" {
+  rectangle "Simulación de misión\ncontrato con Combat: PREVISTO,\nno formalizado" <<externo>> as missions
+}
+
+seed --> mt : inicializa
+mt --> bm : uniformes
+bm --> cdf : Z
+cdf --> idx : U
+idx --> resolve : un índice por resolución
+table --> resolve
+resolve --> effect
+
+bm ..> study : normalidad de la\nvariable intermedia
+
+hero --> build : subtype + activeEffects
+build --> table : tabla vigente
+
+missions ..> resolve : mismo motor,\nsolicitado a Combat
+
+legend right
+  (*) 3.000.000 es la semilla seleccionada y validada por HU-26.
+  NO implica que cada batalla reinicie MT19937 con ella: la política
+  de semilla por Battle/Simulation está PENDIENTE DE IMPLEMENTACIÓN RUNTIME.
+  La semilla no es un índice ni se envía al cliente.
+  La normalidad pertenece a Z; el índice que consulta la tabla es uniforme.
+endlegend
+@enduml
