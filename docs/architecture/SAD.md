@@ -52,7 +52,7 @@ Detalle en [microservices.md](microservices.md) y [data-ownership.md](data-owner
 
 ### Combat / aleatoriedad
 
-Combat (Sprint 2, [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md)) posee las salas, la batalla, el motor, **la aleatoriedad** y las tablas de efectos. El tiempo real de las salas se decide en [ADR-020](../adr/ADR-020-realtime-combat.md) y el generador pseudoaleatorio, su relación con la tabla de 8000 posiciones y la semilla validada en [ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md) (`Proposed`).
+Combat (Sprint 2, [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md)) posee las salas, la batalla, el motor, **la aleatoriedad** y las tablas de efectos. El tiempo real de las salas se decide en [ADR-020](../adr/ADR-020-realtime-combat.md) y el generador pseudoaleatorio, su relación con la tabla de 8000 posiciones y la semilla validada en [ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md) (`Accepted`).
 
 ```text
 semilla -> MT19937 -> Box-Müller -> Z ~ N(0,1) -> Φ(Z) -> indice uniforme 1..8000 -> tabla vigente (HU-25) -> efecto
@@ -229,4 +229,4 @@ Se dejan tachadas en lugar de borrarlas: quien haya leído una versión anterior
 | [018](../adr/ADR-018-catalog-lifecycle-events-transport.md) | Transporte de eventos de ciclo de vida de Producto | Accepted |
 | [019](../adr/ADR-019-sprint-2-bounded-contexts.md) | Contextos acotados de Sprint 2: Combat, Missions, Auction y Wallet | Accepted |
 | [020](../adr/ADR-020-realtime-combat.md) | Tiempo real para Jugar Online | Accepted |
-| [021](../adr/ADR-021-combat-randomness-and-effect-table.md) | Aleatoriedad de Combat y mapeo uniforme a la tabla de efectos | Proposed |
+| [021](../adr/ADR-021-combat-randomness-and-effect-table.md) | Aleatoriedad de Combat y mapeo uniforme a la tabla de efectos | Accepted |
