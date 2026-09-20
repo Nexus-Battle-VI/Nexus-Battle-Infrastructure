@@ -57,6 +57,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [018](docs/adr/ADR-018-catalog-lifecycle-events-transport.md) | Transporte de eventos de ciclo de vida de Producto | Accepted |
 | [019](docs/adr/ADR-019-sprint-2-bounded-contexts.md) | Contextos acotados de Sprint 2: Combat, Missions, Auction y Wallet | Accepted |
 | [020](docs/adr/ADR-020-realtime-combat.md) | Tiempo real para Jugar Online | Accepted |
+| [021](docs/adr/ADR-021-combat-randomness-and-effect-table.md) | Aleatoriedad de Combat y mapeo uniforme a la tabla de efectos | Proposed |
 
 El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 `Accepted` con evidencia de aprobación registrada.

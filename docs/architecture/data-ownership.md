@@ -23,6 +23,8 @@ Cada servicio posee su almacén **en exclusiva**. Ningún otro accede a él, ni 
 
 Las cuatro últimas filas son la propuesta de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md): el saldo de créditos tiene un único dueño (Wallet) y la disponibilidad del héroe también (Player/Inventory, mediante compromisos).
 
+**Combat: propiedad prevista frente a persistencia implementada.** Combat es dueño del estado de batalla, de la aleatoriedad y de su resolución; Player/Inventory, del héroe y su equipamiento (incluidos los `activeEffects`); Missions, del progreso de misión. Hoy Combat persiste **salas** en MongoDB. Las **batallas, semillas y simulaciones** de la fila de Combat son propiedad **prevista**: la persistencia runtime de la semilla y la política de semilla por batalla o simulación están **pendientes de implementación**. La tabla de probabilidades de HU-25 **no se persiste**: es una estructura de dominio en memoria ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)). La semilla 3.000.000 validada por HU-26 no es un dato almacenado.
+
 El criterio de motor no es preferencia: Player/Inventory y Catalog usan documentos porque sus agregados se leen y escriben enteros y tienen atributos variables; Account, Community y Commerce usan relacional porque sus consultas atraviesan relaciones claras y Commerce necesita integridad transaccional entre pedido y líneas.
 
 ### Evolución propuesta de la referencia de Producto
