@@ -25,7 +25,7 @@ package "Combat (única autoridad de aleatoriedad, ADR-019)" {
   rectangle "BuildHeroEffectTable\ntabla base por subtype\n+ modificadores soportados\n(CRITICAL_CHANCE: 100 pb = +1 pp = +80 filas)" <<hu25>> as build
 }
 
-rectangle "Validación estadística\n(HU-26: KS, Ljung-Box, Q-Q,\nmedia, desviación, asimetría, curtosis)" <<externo>> as study
+rectangle "Estudio HU-26 (aceptado, no runtime)\nrepresentación normal escalada:\nKS, Ljung-Box, Q-Q, momentos\n→ selección de la semilla 3.000.000" <<externo>> as study
 
 package "Player-Inventory (dueño del héroe y su equipamiento)" {
   rectangle "Héroe equipado\nsubtype + activeEffects\n(contrato interno HMAC)" <<externo>> as hero
@@ -43,7 +43,7 @@ idx --> resolve : un índice por resolución
 table --> resolve
 resolve --> effect
 
-bm ..> study : normalidad de la\nvariable intermedia
+bm ..> study : procedimiento estudiado\n(representación escalada,\nno la Z cruda)
 
 hero --> build : subtype + activeEffects
 build --> table : tabla vigente
@@ -56,5 +56,7 @@ legend right
   de semilla por Battle/Simulation está PENDIENTE DE IMPLEMENTACIÓN RUNTIME.
   La semilla no es un índice ni se envía al cliente.
   La normalidad pertenece a Z; el índice que consulta la tabla es uniforme.
+  El estudio de HU-26 no es una prueba de paridad numérica exacta con la Z
+  ~ N(0,1) que genera hoy la implementación TypeScript.
 endlegend
 @enduml

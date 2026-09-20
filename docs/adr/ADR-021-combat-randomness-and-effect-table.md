@@ -37,23 +37,27 @@ El estudio de HU-26 lo midió: una zona configurada con el 60 % de las filas (`1
 
 | Concepto | Distribución | Para qué sirve |
 | --- | --- | --- |
-| Variable intermedia `Z` (salida de Box-Müller) | Normal estándar, `Z ~ N(0,1)` | Cumple el requisito de MT19937 + Box-Müller; es lo que se valida estadísticamente (HU-26) |
+| Variable intermedia `Z` (salida de Box-Müller en Combat) | Normal estándar, `Z ~ N(0,1)` | Cumple el requisito de MT19937 + Box-Müller y es la entrada de la CDF `Φ` |
+| Representación normal escalada de la variable (estudio HU-26) | Normal con media ≈ 4000 y desviación ≈ 1333, sobre el rango del índice | Es sobre la que trabajó el estudio estadístico aceptado de HU-26 ([#363](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/363), [#364](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/364)) para seleccionar la semilla |
 | Índice `RandomIndex` | **Uniforme** discreta sobre `1..8000` | Selecciona una fila de la tabla de HU-25; cada fila pesa `1/8000` |
 
-Esta separación es una **decisión arquitectónica consciente**, no un detalle de implementación: es lo que permite que HU-24 (normal), HU-25 (filas como probabilidad) y HU-26 (validación de la normal) sean ciertas a la vez.
+Esta separación es una **decisión arquitectónica consciente**, no un detalle de implementación: es lo que permite que HU-24 (normal), HU-25 (filas como probabilidad) y HU-26 (estudio estadístico aceptado sobre la representación normal escalada) sean ciertas a la vez.
 
 ## Flujo de generación
 
 ```text
-semilla ──► MT19937 ──► Box-Müller ──► Z ~ N(0,1) ──► U = Φ(Z) ──► índice 1..8000 ──► tabla vigente (HU-25) ──► efecto
-                                          │
-                                          └── variable que valida HU-26
+runtime actual:
+  semilla ──► MT19937 ──► Box-Müller ──► Z ~ N(0,1) ──► U = Φ(Z) ──► índice 1..8000 ──► tabla vigente (HU-25) ──► efecto
+
+HU-26 (estudio aceptado, no es código runtime):
+  MT19937 + Box-Müller ──► variable normal escalada ──► media, desviación, asimetría, curtosis, KS, Ljung-Box, Q-Q
+                                                    ──► selección de la semilla 3.000.000
 ```
 
 1. Una **semilla** inicializa MT19937.
 2. MT19937 aporta los uniformes que necesita Box-Müller.
 3. Box-Müller produce valores aproximadamente `N(0,1)`.
-4. Esa variable normal es la que se somete a la validación estadística de HU-26.
+4. Ese procedimiento (MT19937 + Box-Müller) es el que analizó el estudio estadístico aceptado de HU-26, sobre su **representación normal escalada** al rango del índice; el runtime actual usa `Z ~ N(0,1)` en este paso. Ver [Semilla validada HU-26](#semilla-validada-hu-26) y sus límites.
 5. Se aplica la función de distribución acumulada de la normal estándar: `U = Φ(Z)`.
 6. Por la transformación integral de probabilidad, `U ~ Uniforme(0,1)`.
 7. El índice funcional es, conceptualmente, `floor(U × 8000) + 1`.
@@ -124,7 +128,8 @@ Esta semántica es **local** a `CRITICAL_CHANCE` y a la tabla de HU-25. **No red
 - **Estudio aceptado** ([#362](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/362), [#363](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/363), [#364](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/364)): 11 candidatas; 100 000 observaciones por candidata; MT19937 + Box-Müller; media, desviación estándar, asimetría, exceso de curtosis, Kolmogorov-Smirnov, Ljung-Box (lags 10, 20, 30, 40 y 50) y gráfico Q-Q.
 - **Criterio experimental documentado:** α = 0,05; se conservan las candidatas con KS *p* > 0,05 y mínimo de Ljung-Box *p* > 0,05, y entre ellas se elige la de menor KS *D*. Son decisiones experimentales del estudio, no requisitos funcionales.
 - **Resultado registrado para 3.000.000** (aprox., según #363/#364): media 4000,909071; desviación 1312,287244; asimetría 0,001692; exceso de curtosis −0,179680; KS *D* 0,001678; KS *p* 0,940408; mínimo Ljung-Box *p* 0,565086; Q-Q alineado con la referencia.
-- **Escala de esas cifras:** son las del estudio, expresadas sobre la variable escalada al rango del índice (media ≈ 4000, desviación ≈ 1333), no sobre `Z ~ N(0,1)` (media 0, desviación 1) que emite la implementación productiva. No son comparables en valor absoluto con las de `Z`.
+- **Escala de esas cifras:** son las del estudio, expresadas sobre la variable normal escalada al rango del índice (media ≈ 4000, desviación ≈ 1333), no sobre la `Z ~ N(0,1)` (media 0, desviación 1) que genera hoy la implementación TypeScript. No son comparables en valor absoluto con las de `Z`.
+- **Alcance de la evidencia:** el estudio aceptado valida el comportamiento normal del procedimiento y selecciona la semilla `3.000.000`, pero **no constituye una prueba de paridad numérica exacta** entre las muestras históricas del cuaderno y la secuencia `Z ~ N(0,1)` de la implementación TypeScript actual. HU-26 se acepta como estudio de selección y validación, no como verificación de la `Z` productiva.
 
 > Se realizó posteriormente una re-ejecución exploratoria que no fue adoptada ni integrada y, por tanto, no sustituye la selección vigente de HU-26 ([Combat #19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/19), cerrado sin merge).
 
@@ -178,8 +183,8 @@ Así hay una sola implementación de la aleatoriedad y las reglas; un generador 
 | Alternativa | Decisión | Motivo |
 | --- | --- | --- |
 | **A. Normal directa sobre el índice `1..8000`** | Descartada | Deforma las probabilidades que representan las filas: el 60 % de filas recibe ≈ 72,6 % de las ocurrencias |
-| **B. Uniforme directo, sin Box-Müller** | Descartada | El requisito exige MT19937 + Box-Müller y la normal forma parte de HU-24 y de la validación de HU-26 |
-| **C. Normal → CDF → uniforme → índice** | **Seleccionada** | Conserva la normal intermedia y su validación, y da un índice uniforme por fila |
+| **B. Uniforme directo, sin Box-Müller** | Descartada | El requisito exige MT19937 + Box-Müller y la normal forma parte de HU-24 y del estudio de HU-26 |
+| **C. Normal → CDF → uniforme → índice** | **Seleccionada** | Conserva la normal intermedia (y el estudio de HU-26 sobre ella) y da un índice uniforme por fila |
 | **D. Microservicio Random independiente** | Descartada | Combat ya es dueño de la batalla, las simulaciones y el motor; un servicio RNG sin datos propios incumple [ADR-001](ADR-001-repository-strategy.md), añade un salto de red y contradice [ADR-019](ADR-019-sprint-2-bounded-contexts.md) |
 | **E. Generador duplicado en Missions** | Descartada | Duplica reglas y permite que los resultados diverjan de los de Combat |
 
@@ -191,7 +196,7 @@ Son evolución posterior del motor o de las historias consumidoras, **no incumpl
 
 - **Política de semilla por Battle/Simulation:** creación, persistencia, repetición y rotación. Pendiente de implementación runtime; no existe agregado de batalla que la aloje.
 - **Persistencia de semilla:** [ADR-019](ADR-019-sprint-2-bounded-contexts.md) la describe como diseño objetivo («cada batalla y simulación guarda su semilla»); no está implementada en Combat.
-- **Equivalencia con el estudio:** que la implementación TypeScript de Combat reproduzca exactamente las muestras del estudio aceptado no forma parte de la evidencia aceptada; depende de cómo inicializó el estudio el MT19937. La ratificación de 3.000.000 se apoya en #362–#364.
+- **Paridad con el estudio:** el estudio aceptado de HU-26 valida el comportamiento normal del procedimiento y selecciona `3.000.000`, pero no prueba paridad numérica exacta entre las muestras históricas del cuaderno y la secuencia `Z ~ N(0,1)` de la implementación TypeScript actual (depende, entre otras cosas, de cómo inicializó el estudio el MT19937 y de la escala de la variable). La ratificación de 3.000.000 se apoya en #362–#364. Una validación estadística directa sobre la `Z` productiva sería una evolución posterior, no un requisito pendiente de HU-26.
 - **Rango de semilla:** la implementación usa entero sin signo de 32 bits; una candidata histórica del estudio (7.294.967.295) excede ese rango. No afecta a la seleccionada (3.000.000).
 - **Crítico 120–180 %:** sin selector formal de un valor concreto dentro del rango.
 - **Chamán y Médico:** la Tabla 21 les da 0 % en todo; no tienen tabla válida y Combat lo rechaza de forma explícita, sin inventar una.

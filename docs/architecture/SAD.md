@@ -58,7 +58,7 @@ Combat (Sprint 2, [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md)) posee 
 semilla -> MT19937 -> Box-Müller -> Z ~ N(0,1) -> Φ(Z) -> indice uniforme 1..8000 -> tabla vigente (HU-25) -> efecto
 ```
 
-- La normal pertenece a la variable intermedia `Z` (es lo que valida HU-26); el índice que consulta la tabla es **uniforme**, para que «4800 filas de 8000» sea realmente el 60 %.
+- La normal pertenece a la variable intermedia `Z`; el índice que consulta la tabla es **uniforme**, para que «4800 filas de 8000» sea realmente el 60 %. HU-26 aportó un estudio estadístico aceptado sobre la representación normal escalada de ese procedimiento y la selección de la semilla; no es una prueba de paridad numérica con la `Z ~ N(0,1)` que genera hoy Combat.
 - Player/Inventory entrega el héroe equipado (`subtype`, `activeEffects`) por contrato interno; Combat construye la tabla vigente. Missions no genera números: pedirá simulaciones a Combat (contrato **previsto**).
 - **Implementado** en Combat: motor HU-24, tabla y resolución HU-25, `CRITICAL_CHANCE` sobre la tabla y salas/lobby. **Pendiente:** política de semilla por batalla o simulación (la semilla 3.000.000 es la validada por HU-26, no una semilla global), Missions → Combat y el consumo por HU-20.
 - Diagrama: [combat-randomness.puml](../diagrams/combat-randomness.puml).
