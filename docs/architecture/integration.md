@@ -16,6 +16,9 @@ Una integración es **síncrona** cuando quien llama no puede continuar sin la r
 | Account → Notifications | Asíncrono | Puerto definido, adaptador de registro |
 | Commerce → Notifications | Asíncrono | Pendiente |
 | Commerce → Player/Inventory (reserva) | Asíncrono con saga | **No implementado** |
+| Combat → Player/Inventory (héroe equipado: `subtype`, estadísticas efectivas y `activeEffects`) | Síncrono interno | **Implementado** (Player-Inventory [#35](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/35), Combat [#22](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/22)): `GET /api/internal/v1/players/:playerId/equipped-hero`, HMAC |
+| Combat → Account (perfil de batalla) | Síncrono interno | **Implementado**: cliente en Combat, ruta interna `GET /api/internal/accounts/:subject/battle-profile` en Account, HMAC |
+| Missions → Combat (simulación autoritativa) | Síncrono | **Previsto**: `POST /api/internal/v1/combat/simulations` figura en la documentación de Combat y Missions, pero el contrato **no está formalizado ni implementado** |
 
 El razonamiento en cada caso:
 
@@ -26,6 +29,8 @@ El razonamiento en cada caso:
   responde `503`. En ambos casos se niega antes de escribir.
 - **Notificación**: una cuenta creada es válida aunque el correo de bienvenida tarde. Bloquear el registro por un correo sería peor que retrasar el correo.
 - **Reserva**: es un proceso de larga duración sin transacción común entre servicios.
+- **Héroe equipado (Combat)**: Combat no puede construir la tabla de efectos sin el `subtype` y los `activeEffects` del héroe, y no debe duplicar reglas de equipamiento: los pide a Player/Inventory, su dueño.
+- **Simulación de Missions**: Missions no puede continuar sin el resultado y no implementa aleatoriedad ni reglas de combate; la simulación autoritativa es de Combat ([ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md), [ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)).
 - **Resolución de propietarios (HU-38)**: sin saber qué jugadores poseen el producto suspendido/reactivado no hay a quién notificar; Notifications no puede continuar el procesamiento del evento sin esa respuesta. Ver [docs/contracts/product-owners.md](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/product-owners.md) de Player-Inventory para el contrato completo.
 
 ### Flujo aprobado de creación de Producto
@@ -38,6 +43,16 @@ punto para ese consumidor; no se envía un mensaje por jugador y no se promete
 orden ni exactly-once.
 
 Contrato: [catalog-events-v1.asyncapi.yaml](../contracts/catalog-events-v1.asyncapi.yaml).
+
+### Combat: héroe equipado y aleatoriedad
+
+```text
+Player/Inventory --(subtype + activeEffects, HMAC)--> Combat: BuildHeroEffectTable -> tabla vigente
+Combat: sequence.nextIndex() (HU-24) + tabla vigente -> ResolveRandomEffect -> efecto y magnitud (HU-25)
+Missions --(previsto)--> Combat: simulación con el mismo motor
+```
+
+Player/Inventory es dueño del héroe, del equipamiento y de los `activeEffects`; Combat, de la tabla probabilística, su aplicación y la aleatoriedad. Ningún cliente aporta semilla, índice ni `activeEffects`. Detalle y decisión en [ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md) y [combat-randomness.puml](../diagrams/combat-randomness.puml).
 
 ## Contrato del mensaje de notificación
 
@@ -81,6 +96,8 @@ Los identificadores de plantilla forman parte del contrato: añadir o retirar un
 ## Estado real
 
 **Los servicios no se comunican entre sí todavía.** Los puertos existen con implementaciones locales completas; el transporte depende de [ADR-006](../adr/ADR-006-messaging.md).
+
+> Esta descripción es del cierre de Sprint 1. Las integraciones síncronas internas con HMAC que ya existen (p. ej. Notifications → Player/Inventory, Combat → Player/Inventory y Combat → Account) figuran en la tabla del principio.
 
 Es la limitación funcional más visible del Sprint 1, y está declarada como tal en el README de cada servicio afectado.
 

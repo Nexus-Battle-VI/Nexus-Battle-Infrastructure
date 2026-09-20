@@ -16,7 +16,7 @@
 | Auction | [Nexus-Battle-Auction](https://github.com/Nexus-Battle-VI/Nexus-Battle-Auction) | 3008 | Gama | `/api/docs` | PostgreSQL |
 | Wallet | [Nexus-Battle-Wallet](https://github.com/Nexus-Battle-VI/Nexus-Battle-Wallet) | 3009 | Gama | `/api/docs` | PostgreSQL |
 
-Combat, Missions, Auction y Wallet salen de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md) (`Accepted`). Son andamiaje sin rutas de negocio; Caddy les reserva `/api/v1/combat*`, `/api/v1/missions*`, `/api/v1/auctions*` y `/api/v1/wallet*`. Sus contratos se añadirán aquí cuando cada Historia de Usuario los defina.
+Combat, Missions, Auction y Wallet salen de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md) (`Accepted`). Missions, Auction y Wallet son andamiaje sin rutas de negocio; **Combat ya expone rutas de salas y un canal WebSocket** (ver su sección). Caddy reserva `/api/v1/combat*`, `/api/v1/missions*`, `/api/v1/auctions*` y `/api/v1/wallet*`. Los contratos de los demás se añadirán aquí cuando cada Historia de Usuario los defina.
 
 La especificación OpenAPI **se genera desde el código** con `@nestjs/swagger`, por lo que no puede quedar desincronizada de la implementación. Está deshabilitada en producción salvo decisión explícita.
 
@@ -199,6 +199,21 @@ La lectura **omite los mensajes ocultos**. La persistencia los conserva.
 **El `422` es deliberado**: un producto que no está a la venta no es un `404`, porque el recurso de la petición —el pedido— sí existe. Lo que no se puede procesar es el contenido.
 
 **El contrato de alta de línea no acepta el precio.** Lo determina el catálogo.
+
+### Combat — `/api/v1/combat`
+
+| Método | Ruta | Códigos de éxito |
+| --- | --- | --- |
+| `POST` | `/api/v1/combat/rooms` | `201` |
+| `GET` | `/api/v1/combat/rooms` | `200` |
+| `POST` | `/api/v1/combat/rooms/:roomId/cancel` | `200` |
+| `POST` | `/api/v1/combat/rooms/:roomId/join` | `200` |
+| `POST` | `/api/v1/combat/rooms/:roomId/leave` | `200` |
+| WebSocket | `/api/v1/combat/realtime` (ticket de un solo uso, [ADR-020](../adr/ADR-020-realtime-combat.md)) | — |
+
+Errores y esquemas: OpenAPI de Combat (`/api/docs`). Combat consume, con HMAC, rutas internas de Player/Inventory (`GET /api/internal/v1/players/:playerId/equipped-hero`) y de Account (`GET /api/internal/accounts/:subject/battle-profile`).
+
+**La aleatoriedad no tiene ruta pública ni interna**: el generador (HU-24) y la tabla de efectos (HU-25) los consume Combat internamente ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)). No existen `/random`, `/rng` ni `/seed`. El contrato interno de simulaciones para Missions (`POST /api/internal/v1/combat/simulations`) está **previsto y sin formalizar**, por eso no se documenta aquí.
 
 ### Notifications
 

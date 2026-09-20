@@ -18,7 +18,7 @@ Diagrama en [microservices-component.puml](../diagrams/microservices-component.p
 | `Nexus-Battle-Auction` | 3008 | API NestJS | Gama | `node:24-alpine` |
 | `Nexus-Battle-Wallet` | 3009 | API NestJS | Gama | `node:24-alpine` |
 
-Los cuatro últimos son los contextos de Sprint 2 propuestos en [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md). Están desplegados desde el 2026-09-16 como **andamiaje**: arrancan, verifican identidad y exponen sondas, sin rutas de negocio.
+Los cuatro últimos son los contextos de Sprint 2 de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md). Se desplegaron el 2026-09-16 como **andamiaje**: arrancan, verifican identidad y exponen sondas. **Combat ya no es solo andamiaje** (ver su sección más abajo); Missions, Auction y Wallet siguen sin rutas de negocio en este documento.
 
 El puerto 3001 de Notifications expone **únicamente** las sondas de salud: el worker no tiene API de negocio, su entrada es la cola de mensajes.
 
@@ -96,6 +96,23 @@ Agregado `Thread` con sus mensajes dentro. Los mensajes no son agregado propio p
 Agregado `Order`. El total se calcula, no se almacena. El precio se congela al añadir la línea. Un pedido confirmado es inmutable.
 
 **El contrato de alta de línea no acepta el precio**: lo determina el catálogo, no quien compra.
+
+### Combat — bounded context Combat
+
+**Implementado** (integrado en `develop` de Combat):
+
+| Capacidad | Superficie |
+| --- | --- |
+| Salas / lobby (crear, listar, cancelar, unirse, salir) | `POST/GET /api/v1/combat/rooms`, `POST /api/v1/combat/rooms/:roomId/{cancel,join,leave}` |
+| Tiempo real de las salas ([ADR-020](../adr/ADR-020-realtime-combat.md)) | WebSocket `/api/v1/combat/realtime` |
+| Motor pseudoaleatorio (HU-24) | Interno: MT19937 → Box-Müller → normal → CDF → índice uniforme 1..8000. **Sin endpoint** |
+| Tabla de efectos (HU-25) | Interno: `EffectControlTable`, `BuildHeroEffectTable`, `ResolveRandomEffect`. `CRITICAL_CHANCE` del equipamiento modifica la tabla. **Sin endpoint** |
+| Héroe equipado y perfil de batalla | Clientes internos hacia Player/Inventory y Account (HMAC) |
+| Validación estadística de la semilla (HU-26) | Evidencia documental en Management (#362–#364); no es código runtime |
+
+**Previsto, no implementado:** política de semilla por batalla o simulación y su persistencia; el agregado de batalla; el consumo de la tabla por HU-20 (Ataque > Defensa, en desarrollo); el contrato interno de simulaciones para Missions; Chamán/Médico sin tabla válida.
+
+La decisión de aleatoriedad está en [ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md) (`Proposed`). **No existe un endpoint de números aleatorios ni un microservicio de aleatoriedad.**
 
 ### Notifications
 
