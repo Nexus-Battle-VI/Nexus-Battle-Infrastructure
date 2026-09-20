@@ -66,7 +66,9 @@ services:
     environment:
       NODE_ENV: development
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:?Define el secreto interno en .env}
-      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog
+      # `combat` se suma para HU-15: consume `/internal/accounts/:subject/battle-profile`
+      # al resolver el ingreso a una sala de batalla.
+      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat
       PORT: 3000
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: postgres
@@ -268,6 +270,10 @@ services:
       # y el resto sigue funcionando. Lo exigen con `:?` otros servicios de
       # este fichero, asi que en la practica ya esta definido.
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      # HU-15: Combat resuelve displayName/avatar y heroId equipado consultando
+      # estos dos servicios internos antes de aceptar un ingreso a sala.
+      ACCOUNT_SERVICE_BASE_URL: http://account:3000
+      PLAYER_INVENTORY_SERVICE_BASE_URL: http://inventory:3002
     depends_on:
       combat-migrate:
         condition: service_completed_successfully

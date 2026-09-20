@@ -95,7 +95,9 @@ services:
       # abierta: el guard interno responde 503 en lugar de dejar pasar, para que
       # un despliegue incompleto no se convierta en un endpoint sin proteger.
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
-      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog
+      # `combat` se suma para HU-15: consume `/internal/accounts/:subject/battle-profile`
+      # al resolver el ingreso a una sala de batalla.
+      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat
     # El avatar es obligatorio en el registro (HU-01), asi que sin un lugar
     # donde escribirlo NINGUNA cuenta puede crearse: el caso de uso guarda el
     # avatar antes que nada y respondia 500. La imagen ya trae el directorio
@@ -297,6 +299,10 @@ services:
       # y el resto sigue funcionando. Lo exigen con `:?` otros servicios de
       # este fichero, asi que en la practica ya esta definido.
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      # HU-15: Combat resuelve displayName/avatar y heroId equipado consultando
+      # estos dos servicios internos antes de aceptar un ingreso a sala.
+      ACCOUNT_SERVICE_BASE_URL: http://account:3000
+      PLAYER_INVENTORY_SERVICE_BASE_URL: http://inventory:3002
     depends_on:
       combat-migrate:
         condition: service_completed_successfully
