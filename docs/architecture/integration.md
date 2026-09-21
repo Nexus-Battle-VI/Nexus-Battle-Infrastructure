@@ -54,6 +54,15 @@ Missions --(previsto)--> Combat: simulación con el mismo motor
 
 Player/Inventory es dueño del héroe, del equipamiento y de los `activeEffects`; Combat, de la tabla probabilística, su aplicación y la aleatoriedad. Ningún cliente aporta semilla, índice ni `activeEffects`. Detalle y decisión en [ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md) y [combat-randomness.puml](../diagrams/combat-randomness.puml).
 
+### Combat: inicio de batalla y orden de turnos (HU-17, diseño)
+
+```text
+Web A/B --POST /rooms/{id}/start--> Combat: revalida HU-16 (Player/Inventory) -> orden con HU-24 -> persiste -> battleStarted (WebSocket, seq)
+Web A/B <--WebSocket ticket + resume/seq-- Combat: misma cola y mismo turno para ambos
+```
+
+Combat es la única autoridad de la cola y del turno; Web solo lo representa. Contrato, mensajes y decisiones pendientes en el [contrato HU-17](../contracts/hu-17-battle-turn-order-v1.md) y sus diagramas de [secuencia](../diagrams/hu-17-sequence-battle-start.puml), [actividades](../diagrams/hu-17-activity-turn-order.puml) y [estados](../diagrams/hu-17-state-battle-room.puml). El transporte es el WebSocket ya aceptado en [ADR-020](../adr/ADR-020-realtime-combat.md); no hay ADR nuevo.
+
 ## Contrato del mensaje de notificación
 
 ```json

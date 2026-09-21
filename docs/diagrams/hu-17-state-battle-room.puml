@@ -1,0 +1,26 @@
+@startuml hu-17-state-battle-room
+!theme plain
+title HU-17 — Estados de la sala hasta el turno activo
+
+skinparam defaultFontName sans-serif
+skinparam shadowing false
+
+[*] --> WAITING_FOR_PLAYERS : crear sala (HU-14)
+WAITING_FOR_PLAYERS --> PREPARING : último cupo ocupado (HU-15)
+PREPARING --> WAITING_FOR_PLAYERS : un participante abandona
+WAITING_FOR_PLAYERS --> CANCELLED : cancelar (creador)
+PREPARING --> IN_BATTLE : start\nHU-16 superada por todos\nCola generada, persistida, battleStarted
+
+state IN_BATTLE {
+  [*] --> TurnoActivo : turnsCompleted = 0
+  TurnoActivo --> TurnoActivo : fin de turno válido (servidor)\nturnsCompleted + 1 · turnAdvanced
+  note right of TurnoActivo
+    posición activa = turnsCompleted mod n
+    la cola no cambia nunca
+    solo el participante activo puede actuar
+  end note
+}
+
+IN_BATTLE --> [*] : fin de batalla (HU-21, fuera de HU-17)
+CANCELLED --> [*]
+@enduml
