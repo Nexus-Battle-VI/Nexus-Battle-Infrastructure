@@ -1,0 +1,29 @@
+@startuml hu-19-state-power-cooldown
+title HU-19 — Poder y recarga de una habilidad de un participante (N = chargeTurns)
+skinparam shadowing false
+
+[*] --> Disponible : StartBattle congela el estado\nPoder = máximo · recarga = 0
+
+state "Disponible\ncooldownRemaining = 0" as Disponible
+state "En recarga\ncooldownRemaining = k  (1 ≤ k ≤ N)" as Recarga
+
+Disponible --> Recarga : useSkill válido y Poder ≥ costo\nPoder − costo · recarga = N
+Disponible --> Disponible : Poder < costo\n(se degrada a ataque básico:\nPoder y recarga intactos)
+Recarga --> Recarga : useSkill\n(SKILL_ON_COOLDOWN, sin cambios)
+Recarga --> Recarga : cierra un turno propio y k > 1\nk = k − 1
+Recarga --> Disponible : cierra un turno propio y k = 1\nk = 0
+
+note right of Recarga
+  Con N = 1: usada en T → bloqueada en T + 1 → disponible en T + 2.
+  Con N = 2 (épica, v2): bloqueada en T + 1 y T + 2 → disponible en T + 3.
+  Cuenta turnos PROPIOS del participante.
+end note
+
+state "Poder del participante" as P {
+  [*] --> Pleno
+  state "0 ≤ Poder ≤ máximo" as Pleno
+  Pleno --> Pleno : +2 al comenzar el turno propio (tope: máximo)
+  Pleno --> Pleno : habilidad ejecutada: Poder − costo (FIXED)\no − todo el saldo (ALL_AVAILABLE, mínimo 1)
+  Pleno --> Pleno : ataque básico: sin cambios
+}
+@enduml

@@ -1,0 +1,51 @@
+@startuml hu-19-activity-skill
+title HU-19 — Decisión de Combat ante un comando useSkill
+skinparam shadowing false
+
+start
+:Llega {"type":"useSkill", commandId, roomId, abilityId, target};
+if (¿Forma exacta y roomId/abilityId UUID?) then (no)
+  :command.rejected MALFORMED_COMMAND;
+  stop
+endif
+if (¿commandId ya procesado?) then (sí)
+  :Devolver el evento guardado SOLO al remitente\n(sin sorteos, sin Poder, sin recarga, sin turno);
+  stop
+endif
+if (¿Sala IN_BATTLE y es el turno del solicitante?) then (no)
+  :BATTLE_NOT_ACTIVE / NOT_YOUR_TURN;
+  stop
+endif
+if (¿Objetivo existente, enemigo y con Vida?\n¿Actor con perfil y Vida?) then (no)
+  :INVALID_TARGET / SAME_TEAM_TARGET /\nTARGET_UNAVAILABLE / ACTOR_UNAVAILABLE /\nUNSUPPORTED_COMBAT_PROFILE;
+  stop
+endif
+if (¿La batalla tiene estado de habilidades?) then (no)
+  :SKILLS_NOT_AVAILABLE;
+  stop
+endif
+if (¿abilityId es una habilidad del héroe del actor?) then (no)
+  :UNKNOWN_SKILL  (CA-02);
+  stop
+endif
+if (¿Todos los efectos están soportados?) then (no)
+  :UNSUPPORTED_SKILL_EFFECT\n(no se ejecuta ni se degrada);
+  stop
+endif
+if (¿Sigue en recarga?) then (sí)
+  :SKILL_ON_COOLDOWN  (CA-04, CA-07);
+  stop
+endif
+if (¿Poder actual ≥ costo?) then (no)
+  :Degradar a ataque básico (HU-11):\nPoder y recarga INTACTOS;
+  :Resolver como HU-18 y emitir\nbasicAttackResolved + degradedFrom;
+else (sí)
+  :Sortear bono de Ataque → dado de Ataque (HU-20)\n→ efecto (HU-25) → daño + bono de Daño;
+  :Poder = Poder − costo (CA-01, CA-03, CA-05);
+  :Recarga = N turnos propios (CA-04, CA-06);
+  :Emitir skillUsed;
+endif
+:UNA transición atómica: Vida + Poder + recarga +\nevento seq + commandId + turno avanzado\n(cierra recargas del actor, +2 de Poder al siguiente);
+:Persistir y SOLO después difundir;
+stop
+@enduml
