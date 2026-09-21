@@ -1,16 +1,17 @@
 # ADR-021 — Aleatoriedad de Combat y mapeo uniforme a la tabla de efectos
 
-- **Estado:** Proposed — la decisión funcional está implementada y aceptada en los cierres de HU-24, HU-25 y HU-26 (Management), pero no hay evidencia registrada de aprobación arquitectónica formal de este ADR; ver [Evidencia](#evidencia)
+- **Estado:** Accepted — aceptación explícita registrada por José David Mora Patiño, responsable solicitante de esta decisión, en [Infrastructure PR #114](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/114#issuecomment-5753612006); ver [Evidencia](#evidencia)
 - **Fecha:** 2026-09-20
 - **Decide:** Arquitectura, con validación de Product Owners y Scrum Masters cuando corresponda
 - **Relacionado:** [ADR-001](ADR-001-repository-strategy.md), [ADR-019](ADR-019-sprint-2-bounded-contexts.md), [ADR-020](ADR-020-realtime-combat.md), [HU-24 #71](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/71), [HU-25 #72](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/72), [HU-26 #73](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/73), [EPIC-06 #6](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/6)
 
 ## Estado
 
-**Proposed.** No se afirma una aprobación que no está registrada.
+**Accepted.** La decisión funcional ya estaba implementada y aceptada en los cierres de [HU-24](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/71), [HU-25](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/72) y [HU-26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/73). Su aceptación arquitectónica queda registrada explícitamente por **José David Mora Patiño**, responsable solicitante de esta decisión, en [Infrastructure PR #114](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/114#issuecomment-5753612006).
 
-- **Lo que sí está decidido y en `develop`:** el mecanismo funcional descrito abajo. Los cierres de [HU-24](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/71), [HU-25](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/72) y [HU-26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/73) lo declaran «decisión técnica vigente del proyecto», y el de HU-24 anuncia que se registraría en este repositorio como ADR.
-- **Lo que falta para `Accepted`:** validación de este texto por quien el gobierno del proyecto exige para un ADR (ver [Evidencia](#evidencia)). Cuando exista, se actualiza este encabezado y el índice, sin cambiar el contenido.
+La aceptación cubre la decisión «MT19937 → Box-Müller → variable normal intermedia → CDF → índice uniforme 1..8000 → tabla HU-25», la semilla de referencia **3.000.000**, el ownership de Combat y los límites/pedientes declarados en este ADR. No convierte en implementadas las evoluciones runtime que el documento marca como pendientes.
+
+Esta evidencia no atribuye al firmante un rol adicional de Product Owner o Scrum Master que no esté documentado. Si el gobierno del proyecto exige una validación complementaria de otro rol para este tipo de ADR, deberá añadirse como evidencia adicional sin invalidar esta aceptación registrada.
 
 ## Contexto
 
@@ -174,7 +175,7 @@ Así hay una sola implementación de la aleatoriedad y las reglas; un generador 
 **Lo que cuesta**
 
 - Una transformación adicional (la CDF `Φ`) entre la normal y el índice.
-- El requisito textual («distribución normal» para un valor `1..8000`) debe leerse distinguiendo variable normal e índice. La interpretación está registrada en los cierres de HU-24/25/26; no fue ratificada por escrito por el Product Owner o el profesor como aclaración del requisito.
+- El requisito textual («distribución normal» para un valor `1..8000`) debe leerse distinguiendo variable normal e índice. La interpretación está registrada en los cierres de HU-24/25/26 y cuenta con aceptación explícita del responsable solicitante en Infrastructure PR #114; no se atribuye una ratificación adicional del Product Owner o del profesor si no existe evidencia separada.
 - MT19937 no es un CSPRNG.
 - Cambiar esta interpretación exige **otro ADR o un ADR que supere a este**, no editar la historia en silencio.
 
@@ -224,4 +225,4 @@ Son evolución posterior del motor o de las historias consumidoras, **no incumpl
 
 **Diagrama:** [combat-randomness.puml](../diagrams/combat-randomness.puml).
 
-**Aprobación de este ADR:** no existe registro de validación arquitectónica. Para pasar a `Accepted` se necesita, como mínimo, la revisión de quien haya de validarlo según el gobierno del proyecto y la confirmación de los puntos de [Limitaciones](#limitaciones--decisiones-aún-pendientes) que dependan de ella (en particular, la lectura «variable normal / índice uniforme» del requisito).
+**Aceptación de este ADR:** registrada explícitamente por **José David Mora Patiño**, responsable solicitante de la decisión, en [Infrastructure PR #114 — comentario de validación y aceptación](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/114#issuecomment-5753612006). La aceptación confirma la lectura «variable normal / índice uniforme», la semilla de referencia 3.000.000 y el resto de la decisión documentada, manteniendo como pendientes únicamente las evoluciones runtime declaradas en este ADR. Si el gobierno del proyecto requiere posteriormente una validación complementaria de otro rol, deberá anexarse aquí como evidencia adicional.
