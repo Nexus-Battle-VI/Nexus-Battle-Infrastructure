@@ -133,5 +133,10 @@ posterior puede declarar otro jugador.
   [Infrastructure#101](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/101).
 - **Aceptar no es implementar:** Combat todavía no tiene WebSocket. Se añade con
   la primera Historia de Usuario que lo necesite (HU-13, HU-15 o HU-17).
+- **Actualización de estado (2026-09-21, sin cambiar la decisión):** HU-15.2 añadió un
+  vertical mínimo del gateway (autenticación con el JWT en el primer mensaje, sin ticket,
+  `seq`, `resume` ni latido) y HU-17 lo completa según este ADR; ver el
+  [contrato HU-17](../contracts/hu-17-battle-turn-order-v1.md). Mientras ese cambio no esté
+  integrado, el esquema con ticket sigue sin implementar.
 - HU-13 debe fijar retención y moderación del chat antes de persistirlo más allá
   de la sala.
