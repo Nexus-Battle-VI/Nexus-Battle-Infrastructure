@@ -256,7 +256,7 @@ Un `commandId` repetido **no es un error** (§8).
 
 ## 12. Persistencia y migración
 
-- `battle-rooms` amplía el validador `$jsonSchema` con una migración **aditiva**: `battle.combatants` (opcional) y el tipo de evento `basicAttackResolved`. El número de migración es el **siguiente libre** al implementar (a la fecha de este contrato, la `006` la usa el chat de HU-13); no se asume.
+- `battle-rooms` amplía el validador `$jsonSchema` con una migración **aditiva**: `battle.combatants` (opcional) y el tipo de evento `basicAttackResolved`. El número de migración es el **siguiente libre** al implementar (a la fecha de este contrato, la `006` la usa el chat de HU-13); no se asume. _Implementada en Combat (PR #29) como `007-battle-rooms-combat-snapshot`; el contrato no cambia._
 - Documentos sin `combatants` siguen siendo válidos y se restauran sin batalla atacable (§5). No hay *backfill*: no existe una fuente segura de las estadísticas de una batalla ya iniciada y no se consulta Player-Inventory al restaurar.
 - Los eventos de HU-17 ya persistidos (sin `combatants` en su `battle`) se reenvían tal cual en un `resume`; Web trata la ausencia como «sin información de Vida».
 
@@ -292,6 +292,7 @@ Un `commandId` repetido **no es un error** (§8).
 | Eliminación, ganador y fin de batalla | HU-21 |
 | Fuego amigo con excepciones | HU-12 / HU-19 |
 | Combat en una sola réplica (serialización y difusión en memoria) | ADR-020 |
+| Validación con dos sesiones reales de navegador (Task #412) | procedimiento en `docs/runbooks/hu-18-aceptacion-manual.md` (PR #120); **pendiente de ejecutar** tras el merge |
 
 ## 15. Compatibilidad y orden de despliegue
 
