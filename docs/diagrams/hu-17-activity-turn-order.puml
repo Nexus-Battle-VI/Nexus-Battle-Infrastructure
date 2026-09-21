@@ -1,0 +1,47 @@
+@startuml hu-17-activity-turn-order
+!theme plain
+title HU-17 — Actividades: iniciar la batalla y generar el orden de turnos
+
+skinparam defaultFontName sans-serif
+skinparam shadowing false
+
+start
+:Recibir POST /rooms/{id}/start\n(identidad = sub verificado);
+if (¿la sala existe?) then (no)
+  :404;
+  stop
+endif
+if (¿el solicitante es participante HUMAN?) then (no)
+  :403;
+  stop
+endif
+if (¿la sala ya está IN_BATTLE?) then (sí)
+  :200 con el estado vigente\n(sin nueva cola ni evento);
+  stop
+endif
+if (¿la sala está PREPARING con cupo completo?) then (no)
+  :409;
+  stop
+endif
+if (¿los dos equipos tienen el mismo número\nde participantes?) then (no)
+  :422 UNSUPPORTED_TEAM_COMPOSITION\n(sin revalidar, sin sorteo, sin cola);
+  stop
+endif
+:Revalidar cada participante HUMAN (HU-16):\nhéroe equipado, elegibilidad y versión de loadout;
+if (¿todos superan la validación?) then (no)
+  :422 con blockers[]\n(no hay cola, no hay battleStarted);
+  stop
+endif
+:Sortear el equipo inicial\n(entero uniforme {0,1}, muestreo por rechazo sobre HU-24);
+:Barajar cada equipo\n(Fisher-Yates con enteros uniformes acotados);
+:Intercalar equipos empezando por el equipo inicial;
+:Cola inmutable; posición activa = 0\n(turnsCompleted = 0);
+:Persistir con bloqueo optimista\nstatus IN_BATTLE + battle + evento battleStarted (seq 1);
+if (¿conflicto de versión?) then (sí)
+  :409 (sin difusión);
+  stop
+endif
+:Difundir battleStarted a los participantes;
+:200 con la sala y la batalla;
+stop
+@enduml

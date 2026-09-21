@@ -1,0 +1,70 @@
+@startuml hu-17-sequence-battle-start
+!theme plain
+title HU-17 — Secuencia: de la sala preparada al primer turno visible
+
+skinparam defaultFontName sans-serif
+skinparam sequenceMessageAlign center
+skinparam shadowing false
+
+actor "Jugador A" as ua
+participant "Web A" as wa
+participant "Web B" as wb
+actor "Jugador B" as ub
+participant "Combat\n(HTTP + WebSocket)" as combat
+participant "Player-Inventory\n(contrato interno HMAC)" as pi
+participant "Motor HU-24\nRandomSequencePort" as rng
+database "MongoDB\nbattle-rooms" as mongo
+
+== Sala completa (HU-15) ==
+ub -> wb : unirse
+wb -> combat : POST /rooms/{id}/join
+combat -> mongo : guardar (status PREPARING)
+combat --> wa : WS battle-room.updated (PREPARING)
+combat --> wb : WS battle-room.updated (PREPARING)
+
+== Inicio (idempotente: A y B pueden invocarlo) ==
+wa -> combat : POST /rooms/{id}/start
+combat -> combat : ¿sala PREPARING y solicitante participante?
+loop cada participante HUMAN
+  combat -> pi : GET equipped-hero (HU-16: elegibilidad, versión de loadout)
+  pi --> combat : héroe equipado
+end
+alt algún participante no supera HU-16
+  combat --> wa : 422 blockers[] (sin cola, sin battleStarted)
+else todos superan HU-16
+  combat -> rng : nextIndex() (muestreo por rechazo)
+  rng --> combat : índices uniformes
+  combat -> combat : equipo inicial + orden (Queue inmutable)
+  combat -> mongo : replaceOne(version esperada)\nstatus IN_BATTLE + battle + evento seq=1
+  mongo --> combat : ok
+  combat --> wa : 200 sala con battle
+  combat --> wa : WS battleStarted (seq 1)
+  combat --> wb : WS battleStarted (seq 1)
+end
+wb -> combat : POST /rooms/{id}/start
+combat --> wb : 200 sala con battle (sin nueva cola ni evento)
+
+== Turno activo ==
+note over wa, wb : Ambos muestran la misma cola y el mismo turno.\nSolo el participante activo puede actuar (HU-18/19).
+
+== Fin de turno (lo invoca el servidor, no Web) ==
+combat -> mongo : replaceOne: turnsCompleted+1 + evento seq=2
+combat --> wa : WS turnAdvanced (seq 2)
+combat --> wb : WS turnAdvanced (seq 2)
+
+== Reconexión ==
+wb -> combat : POST /realtime/tickets (JWT)
+combat --> wb : ticket (30 s, un uso)
+wb -> combat : WS abrir sin credenciales; {"type":"auth","ticket"}
+combat --> wb : auth.ok
+wb -> combat : {"type":"resume","roomId","lastSeq":1}
+note right of combat
+  Antes de leer el estado, Combat pone la conexión en
+  "recuperando" y RETIENE los eventos que se publiquen
+  mientras tanto. Después entrega, en un bloque síncrono:
+  replay/snapshot + lo retenido con seq posterior
+  + suscripción, y por último resume.ok con el último
+  seq realmente entregado (sin pérdida de eventos).
+end note
+combat --> wb : turnAdvanced (seq 2) ... turnAdvanced (seq N) ... resume.ok (seq N)
+@enduml
