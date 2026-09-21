@@ -1,0 +1,94 @@
+@startuml hu-18-activity-basic-attack
+title HU-18 — Ataque básico: comando → validar → resolver → aplicar daño → avanzar → persistir → publicar
+skinparam shadowing false
+
+start
+:Comando attack {commandId, roomId, target};
+
+if (¿forma válida?\n(4 claves, target = un objeto)) then (no)
+  :command.rejected MALFORMED_COMMAND\n(0 sorteos);
+  stop
+endif
+if (¿commandId válido\n(1..100 caracteres)?) then (no)
+  :command.rejected INVALID_COMMAND_ID;
+  stop
+endif
+
+:Serializar por sala\ny leer la sala;
+if (¿la sala existe?) then (no)
+  :command.rejected ROOM_NOT_FOUND;
+  stop
+endif
+if (¿quien envía es participante HUMAN?) then (no)
+  :command.rejected NOT_A_PARTICIPANT;
+  stop
+endif
+
+if (¿commandId ya procesado?) then (sí)
+  :Devolver el evento persistido\nsolo al remitente\n(0 sorteos, sin guardar, sin difundir);
+  stop
+endif
+
+if (¿sala IN_BATTLE?) then (no)
+  :command.rejected BATTLE_NOT_ACTIVE;
+  stop
+endif
+if (¿es la posición activa de la cola?) then (no)
+  :command.rejected NOT_YOUR_TURN;
+  stop
+endif
+if (¿el objetivo existe en la batalla?) then (no)
+  :command.rejected INVALID_TARGET;
+  stop
+endif
+if (¿objetivo de otro equipo?) then (no)
+  :command.rejected SAME_TEAM_TARGET\n(incluye a sí mismo);
+  stop
+endif
+if (¿ambos con perfil y Vida > 0?) then (no)
+  :command.rejected UNSUPPORTED_COMBAT_PROFILE /\nACTOR_UNAVAILABLE / TARGET_UNAVAILABLE;
+  stop
+endif
+if (¿Ataque numérico y Daño soportado\n(DICE o FIXED)?) then (no)
+  :command.rejected UNSUPPORTED_COMBAT_PROFILE\n(sanador, AI, PERCENTAGE);
+  stop
+endif
+
+partition "Resolución (HU-20 / HU-24 / HU-25)" {
+  :prepareAttack(atacante, objetivo);
+  :Sortear el dado de Ataque;
+  if (¿Ataque > Defensa?) then (no)
+    :effective = false\ndaño = 0;
+  else (sí)
+    :Sortear el efecto (1 índice)\n→ efecto + porcentaje;
+    if (¿porcentaje > 0\ny daño DICE?) then (sí)
+      :Sortear el dado de Daño\n(baseDamage);
+    else (no)
+      :baseDamage = FIXED, o no se tira;
+    endif
+    :calculatedDamage =\nfloor(baseDamage × porcentaje / 100);
+  endif
+  :appliedDamage = min(calculatedDamage, Vida actual);
+}
+
+partition "Una sola transición del agregado" {
+  :Vida del objetivo -= appliedDamage;
+  :Registrar el evento basicAttackResolved (seq);
+  :Registrar el commandId como procesado;
+  :Avanzar el turno (BattleState.completeTurn, HU-17);
+}
+
+:Persistir con bloqueo optimista\n(UNA escritura);
+if (¿conflicto de versión?) then (sí)
+  :Releer (NO volver a sortear);
+  if (¿commandId ya procesado?) then (sí)
+    :Devolver el resultado guardado;
+  else (no)
+    :command.rejected COMMAND_CONFLICT\n(reintentar con el mismo commandId);
+  endif
+  stop
+endif
+
+:Publicar basicAttackResolved\na los participantes;
+stop
+@enduml
