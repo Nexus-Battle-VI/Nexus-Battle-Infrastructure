@@ -1,0 +1,73 @@
+@startuml hu-19-sequence-skill
+title HU-19 — Habilidad especial: Web → Combat → HU-20 → estado → Web A y Web B
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+
+actor "Jugador A\n(tiene el turno)" as ua
+participant "Web A" as wa
+participant "Gateway\nWebSocket" as gw
+participant "UseSkill\n(caso de uso)" as uc
+participant "BattleRoom\n(agregado)" as room
+participant "HU-20\nprepareAttack + ResolveAttack" as hu20
+participant "RandomSequence\n(HU-24 / HU-25)" as rng
+database "MongoDB\nbattle-rooms" as db
+participant "Publicador" as pub
+participant "Web B" as wb
+
+== Intención (el cliente solo envía la habilidad y el objetivo) ==
+ua -> wa : elige una habilidad y a B como objetivo
+wa -> wa : commandId nuevo (UUID); bloquea el doble envío
+wa -> gw : {"type":"useSkill","commandId","roomId","abilityId","target":{"teamLabel","seat"}}
+note right of gw
+  Actor = sub autenticado de la conexión.
+  No viajan Poder, costo, recarga, efectos ni turno.
+end note
+gw -> uc : execute(roomId, sub, commandId, abilityId, target)
+uc -> uc : serializa por sala (una réplica)
+
+== Validación: 0 sorteos ==
+uc -> db : findById(roomId)
+db --> uc : sala + battle.combatants (Vida, Poder, habilidades y recargas congeladas)
+uc -> room : planSkill(sub, commandId, abilityId, target)
+alt commandId ya procesado
+  room --> uc : resultado guardado (evento con su seq)
+  uc --> gw : evento persistido (sin sortear, sin guardar, sin difundir)
+  gw --> wa : skillUsed / basicAttackResolved (solo al remitente)
+else rechazo (turno, objetivo, habilidad ajena, efecto no soportado, recarga)
+  room --> uc : DomainError
+  gw --> wa : command.rejected {command:"useSkill", commandId, code}
+else Poder insuficiente (HU-11)
+  room --> uc : degradar a ataque básico (Poder y recarga intactos)
+  uc -> uc : mismo flujo que HU-18 (attack) con degradedFrom
+else válido
+  room --> uc : plan de habilidad (actor, objetivo, bonos)
+end
+
+== Resolución (habilidad = ataque mejorado) ==
+uc -> rng : dados del bono de Ataque (si los hay)
+uc -> hu20 : prepareAttack + ResolveAttack (Ataque + bono)
+hu20 -> rng : dado de Ataque
+hu20 -> hu20 : Ataque final > Defensa ?
+opt golpe efectivo
+  hu20 -> rng : índice de efecto (HU-25)
+  opt porcentaje > 0
+    uc -> rng : dado(s) de Daño + dados del bono de Daño
+  end
+end
+uc -> uc : dañoBase = daño del héroe + bono\ndaño calculado = floor(dañoBase × % / 100)
+
+== Una sola transición atómica ==
+uc -> room : applySkill(plan, resultado, commandId, ahora)
+room --> uc : nueva versión: Vida del objetivo, Poder − costo,\nrecarga = N, evento (seq), commandId, turno avanzado\n(cierra recargas del actor y regenera +2 al siguiente)
+uc -> db : save(nueva versión, expectedVersion)  — UNA escritura
+alt conflicto de versión
+  db --> uc : RoomConflictError
+  uc -> db : relee (NO se vuelve a sortear)
+  uc --> gw : resultado ya guardado o COMMAND_CONFLICT
+else guardado
+  db --> uc : persistido
+  uc -> pub : publish(roomId, [skillUsed])
+  pub --> wa : skillUsed (skill, power, cooldown, bonus, resolution, battle)
+  pub --> wb : skillUsed (los mismos bytes)
+end
+@enduml
