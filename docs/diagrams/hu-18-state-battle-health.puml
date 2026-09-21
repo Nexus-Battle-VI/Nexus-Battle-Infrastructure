@@ -1,0 +1,35 @@
+@startuml hu-18-state-battle-health
+title HU-18 — Estado de la batalla: antes de la acción → acción → Vida cambiada → turno siguiente
+skinparam shadowing false
+
+[*] --> Iniciada : StartBattle congela el snapshot de combate\n(Vida máxima = Vida actual)
+
+state Iniciada {
+  [*] --> TurnoDeA
+  state "IN_BATTLE\nturnsCompleted = n\ncurrentTurn = A\nVida de A y B íntegras" as TurnoDeA
+}
+
+state "Acción válida de A" as Accion {
+  state "Ataque no efectivo\n(Ataque ≤ Defensa)\ndaño = 0" as Miss
+  state "Golpe efectivo con 0 %\n(NO_DAMAGE)\ndaño = 0" as Cero
+  state "Golpe efectivo con daño\nfloor(base × % / 100)" as Hit
+}
+
+state "IN_BATTLE\nturnsCompleted = n + 1\ncurrentTurn = B\nVida de B: max(0, Vida − daño aplicado)" as TurnoDeB
+
+TurnoDeA --> Miss : attack(target = B)
+TurnoDeA --> Cero : attack(target = B)
+TurnoDeA --> Hit : attack(target = B)
+
+Miss --> TurnoDeB : misma transición atómica\n(evento seq + commandId + turno)
+Cero --> TurnoDeB : misma transición atómica
+Hit --> TurnoDeB : misma transición atómica
+
+TurnoDeA --> TurnoDeA : comando inválido / fuera de turno\n(sin cambios, 0 sorteos)
+TurnoDeB --> TurnoDeB : commandId repetido\n(mismo resultado, sin efectos)
+
+note right of TurnoDeB
+  Vida en 0 NO finaliza la batalla (HU-21):
+  el caído no puede ser objetivo ni atacar.
+end note
+@enduml

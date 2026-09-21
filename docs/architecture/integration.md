@@ -63,6 +63,17 @@ Web A/B <--WebSocket ticket + resume/seq-- Combat: misma cola y mismo turno para
 
 Combat es la única autoridad de la cola y del turno; Web solo lo representa. Contrato, mensajes y decisiones pendientes en el [contrato HU-17](../contracts/hu-17-battle-turn-order-v1.md) y sus diagramas de [secuencia](../diagrams/hu-17-sequence-battle-start.puml), [actividades](../diagrams/hu-17-activity-turn-order.puml) y [estados](../diagrams/hu-17-state-battle-room.puml). El transporte es el WebSocket ya aceptado en [ADR-020](../adr/ADR-020-realtime-combat.md); no hay ADR nuevo.
 
+### Combat: ataque básico (HU-18, diseño)
+
+```text
+Web A --WebSocket {"type":"attack","commandId","roomId","target":{teamLabel,seat}}--> Combat
+Combat: valida turno/objetivo (0 sorteos) -> HU-20 (Ataque vs Defensa) -> HU-25 (efecto) -> daño (floor) -> Vida
+        -> UNA escritura (Vida + evento + commandId + turno avanzado) -> basicAttackResolved (seq)
+Web A/B <-- basicAttackResolved / snapshot / resume -- Combat: misma Vida y mismo turno para ambos
+```
+
+El cliente solo envía la **intención** (el objetivo); Combat deriva al atacante del `sub` autenticado y es la única fuente de la Vida, que congela como *snapshot de combate* al iniciar la batalla (sin llamadas a Player/Inventory por golpe). No hay endpoint REST de ataque. Contrato y decisiones en el [contrato HU-18](../contracts/hu-18-basic-attack-v1.md) y sus diagramas de [secuencia](../diagrams/hu-18-sequence-basic-attack.puml), [actividades](../diagrams/hu-18-activity-basic-attack.puml) y [estados](../diagrams/hu-18-state-battle-health.puml).
+
 ## Contrato del mensaje de notificación
 
 ```json

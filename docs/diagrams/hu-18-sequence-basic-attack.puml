@@ -1,0 +1,78 @@
+@startuml hu-18-sequence-basic-attack
+title HU-18 — Ataque básico: Web → Combat → HU-20 → estado → Web A y Web B
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+
+actor "Jugador A\n(tiene el turno)" as ua
+participant "Web A" as wa
+participant "Gateway\nWebSocket" as gw
+participant "ExecuteBasicAttack\n(caso de uso)" as uc
+participant "BattleRoom\n(agregado)" as room
+participant "HU-20\nprepareAttack + ResolveAttack" as hu20
+participant "RandomSequence\n(HU-24 / HU-25)" as rng
+database "MongoDB\nbattle-rooms" as db
+participant "Publicador" as pub
+participant "Web B" as wb
+
+== Intención (el cliente solo envía el objetivo) ==
+ua -> wa : selecciona a B y pulsa "Ataque básico"
+wa -> wa : commandId nuevo (UUID); bloquea el doble envío
+wa -> gw : {"type":"attack","commandId","roomId","target":{"teamLabel","seat"}}
+note right of gw
+  Atacante = sub autenticado de la conexión.
+  No viajan Ataque, Defensa, Daño, Vida ni turno.
+end note
+gw -> uc : execute(roomId, sub, commandId, target)
+uc -> uc : serializa por sala (una réplica)
+
+== Validación: 0 sorteos ==
+uc -> db : findById(roomId)
+db --> uc : sala + battle.combatants (Vida y perfiles congelados)
+uc -> room : planBasicAttack(sub, commandId, target)
+alt commandId ya procesado
+  room --> uc : resultado guardado (evento con su seq)
+  uc --> gw : evento persistido (sin sortear, sin guardar, sin difundir)
+  gw --> wa : basicAttackResolved (mismo evento, solo al remitente)
+else rechazo (turno, objetivo, perfil, Vida)
+  room --> uc : DomainError
+  gw --> wa : command.rejected {command:"attack", commandId, code}
+else válido
+  room --> uc : atacante y objetivo (snapshots)
+end
+
+== Resolución ==
+uc -> hu20 : prepareAttack(atacante, objetivo)\nResolveAttack.execute(...)
+hu20 -> rng : dado de Ataque
+hu20 -> hu20 : Ataque > Defensa ?
+opt golpe efectivo
+  hu20 -> rng : índice de efecto (HU-25)
+  hu20 --> uc : efecto + porcentaje
+  opt porcentaje > 0 y daño DICE
+    uc -> rng : dado(s) de Daño
+  end
+end
+uc -> uc : daño calculado = floor(dañoBase × % / 100)\ndaño aplicado = min(daño, Vida)
+
+== Una sola transición atómica ==
+uc -> room : applyBasicAttack(plan, resultado, commandId, ahora)
+room --> uc : nueva versión: Vida del objetivo,\nevento (seq), commandId procesado, turno avanzado
+uc -> db : save(nueva versión, expectedVersion)  — UNA escritura
+alt conflicto de versión
+  db --> uc : RoomConflictError
+  uc -> db : relee (NO se vuelve a sortear)
+  uc --> gw : resultado ya guardado o COMMAND_CONFLICT
+else guardado
+  db --> uc : persistido
+  uc -> pub : publish(roomId, [basicAttackResolved])
+  pub --> wa : basicAttackResolved (seq, resolution, targetHealth, battle)
+  pub --> wb : basicAttackResolved (los mismos bytes)
+end
+
+== Los dos clientes ==
+wa -> wa : reductor: seq === lastSeq + 1 → Vida y turno del servidor
+wb -> wb : reductor: mismo evento → misma Vida y mismo turno
+note over wa, wb
+  Reconexión / recarga: resume reenvía el evento o envía un snapshot
+  con la Vida y el turno actuales. Nada se recalcula.
+end note
+@enduml

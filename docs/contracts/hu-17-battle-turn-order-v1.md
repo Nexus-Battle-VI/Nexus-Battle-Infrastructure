@@ -85,6 +85,7 @@ HU-16 valida al **unirse** y captura `heroLoadoutVersion`. El inicio **repite** 
 - `heroSubtype` es una copia de **presentación** del subtipo canónico que publica Player-Inventory al iniciar, para que Web elija el modelo visual; no se copia inventario ni estadísticas. `null` para `AI`.
 - `playerId` ya viaja hoy en `BattleRoomDto` (HU-15) y Web ya lo compara con su `sub`; no es un dato nuevo expuesto.
 - **Nunca** viajan: semilla, estado de MT19937, valores aleatorios futuros, número de sorteos, inventario, JWT, tickets ni sus hashes.
+- **HU-18 amplía `battle` de forma aditiva** con `combatants` (Vida actual y máxima por participante) y añade el evento `basicAttackResolved`; ningún campo ni mensaje de este contrato cambia. Ver el [contrato HU-18](hu-18-basic-attack-v1.md).
 
 ## 5. Protocolo de tiempo real (aplicación de ADR-020)
 

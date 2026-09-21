@@ -212,7 +212,7 @@ La lectura **omite los mensajes ocultos**. La persistencia los conserva.
 | `GET` | `/api/v1/combat/rooms/:roomId` (solo participantes; HU-17, **diseño** [contrato v1](hu-17-battle-turn-order-v1.md)) | `200` |
 | `POST` | `/api/v1/combat/rooms/:roomId/start` (solo participantes, idempotente; HU-17, **diseño**) | `200` |
 | `POST` | `/api/v1/combat/realtime/tickets` (ADR-020; HU-17, **diseño**) | `201` |
-| WebSocket | `/api/v1/combat/realtime` (ticket de un solo uso, [ADR-020](../adr/ADR-020-realtime-combat.md)) | — |
+| WebSocket | `/api/v1/combat/realtime` (ticket de un solo uso, [ADR-020](../adr/ADR-020-realtime-combat.md)); comando de juego `attack` (HU-18, **diseño** [contrato v1](hu-18-basic-attack-v1.md)) | — |
 
 Las tres rutas marcadas **diseño** las define el [contrato de HU-17](hu-17-battle-turn-order-v1.md) (Task #405) y **solo son capacidad cuando Combat las integre** (Task #406); ese documento fija también los mensajes del WebSocket (`battleStarted`, `turnAdvanced`, `snapshot`, `resume`). Errores y esquemas: OpenAPI de Combat (`/api/docs`). Combat consume, con HMAC, rutas internas de Player/Inventory (`GET /api/internal/v1/players/:playerId/equipped-hero`) y de Account (`GET /api/internal/accounts/:subject/battle-profile`).
 
