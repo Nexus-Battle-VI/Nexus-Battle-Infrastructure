@@ -23,6 +23,10 @@ if (¿la sala está PREPARING con cupo completo?) then (no)
   :409;
   stop
 endif
+if (¿los dos equipos tienen el mismo número\nde participantes?) then (no)
+  :422 UNSUPPORTED_TEAM_COMPOSITION\n(sin revalidar, sin sorteo, sin cola);
+  stop
+endif
 :Revalidar cada participante HUMAN (HU-16):\nhéroe equipado, elegibilidad y versión de loadout;
 if (¿todos superan la validación?) then (no)
   :422 con blockers[]\n(no hay cola, no hay battleStarted);
@@ -31,9 +35,6 @@ endif
 :Sortear el equipo inicial\n(entero uniforme {0,1}, muestreo por rechazo sobre HU-24);
 :Barajar cada equipo\n(Fisher-Yates con enteros uniformes acotados);
 :Intercalar equipos empezando por el equipo inicial;
-if (¿un equipo se agota antes?) then (sí)
-  :Añadir al final los restantes del otro equipo\n(en su orden barajado);
-endif
 :Cola inmutable; posición activa = 0\n(turnsCompleted = 0);
 :Persistir con bloqueo optimista\nstatus IN_BATTLE + battle + evento battleStarted (seq 1);
 if (¿conflicto de versión?) then (sí)

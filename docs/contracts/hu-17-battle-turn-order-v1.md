@@ -29,13 +29,13 @@ Auditado el dominio actual de Combat (`develop`): existe el agregado `BattleRoom
 
 ### Decisión técnica necesaria: quién y cómo dispara el inicio
 
-La Issue no define el disparador. Se elige un comando HTTP explícito, **`POST /api/v1/combat/rooms/:roomId/start`**, que puede invocar **cualquier participante `HUMAN` de la sala** y que no admite cuerpo (ningún cliente elige quién inicia ni quién participa). Motivos y alternativas descartadas:
+La Issue no define el disparador. Se elige un comando HTTP explícito, **`POST /api/v1/combat/rooms/:roomId/start`**, que puede invocar **cualquier participante `HUMAN` de la sala** y que no admite cuerpo (ningún cliente elige quién inicia, el orden ni quién participa). **El cliente solicita el inicio; Combat es la única autoridad que lo autoriza y ejecuta:** decide si puede iniciar, revalida a los participantes, sortea, persiste y publica. Motivos y alternativas descartadas:
 
 - **Iniciar automáticamente dentro de `join`** se descarta: acopla la transacción del ingreso con la revalidación de otros jugadores contra Player-Inventory (hasta seis llamadas internas) y deja una sala `PREPARING` sin camino de reintento si esa validación falla por un motivo transitorio.
 - **Comando WebSocket `start`**: ADR-020 reserva el canal de tiempo real para comandos de juego (`attack`, `useSkill`, …); el ciclo de vida de la sala (crear, unirse, abandonar, cancelar) ya es HTTP y el inicio es de esa misma familia.
 - El comando es **idempotente**, así que ambos clientes pueden invocarlo al ver `PREPARING` sin carrera ni doble batalla.
 
-> Esta elección está **pendiente de ratificación del Product Owner**; no contradice ninguna regla de RF-17.
+> **Decisión técnica adoptada** en la revisión de los PRs de HU-17 (Infrastructure #116, Combat #26, Web #112): no contradice ninguna regla de RF-17 y deja de estar pendiente.
 
 ## 3. Superficie HTTP
 
@@ -44,7 +44,7 @@ Todas las rutas son autenticadas (JWT de Cognito) y **derivan la identidad del `
 | Método | Ruta | Éxito | Errores |
 | --- | --- | --- | --- |
 | `POST` | `/api/v1/combat/realtime/tickets` (ADR-020) | `201` `{ "ticket": "<opaco>", "expiresInSeconds": 30 }` | `401` |
-| `POST` | `/api/v1/combat/rooms/:roomId/start` | `200` sala (ver §4) | `400` (`roomId` no UUID v4), `401`, `403` (no es participante), `404`, `409` (sala no `PREPARING`/`IN_BATTLE` o conflicto de versión), `422` (`blockers[]` de elegibilidad, o sin héroe equipado), `503` (Player-Inventory o Account no respondieron) |
+| `POST` | `/api/v1/combat/rooms/:roomId/start` | `200` sala (ver §4) | `400` (`roomId` no UUID v4), `401`, `403` (no es participante), `404`, `409` (sala no `PREPARING`/`IN_BATTLE` o conflicto de versión), `422` (`blockers[]` de elegibilidad; sin héroe equipado; o `code: UNSUPPORTED_TEAM_COMPOSITION` si los equipos tienen distinto tamaño), `503` (Player-Inventory o Account no respondieron) |
 | `GET` | `/api/v1/combat/rooms/:roomId` | `200` sala (ver §4) | `400`, `401`, `403` (no es participante), `404` |
 
 `GET /api/v1/combat/rooms/:roomId` existe porque `GET /rooms` solo lista salas `WAITING_FOR_PLAYERS` con cupo: en cuanto una sala pasa a `PREPARING` o `IN_BATTLE` el cliente perdía toda forma HTTP de leerla (limitación ya declarada por Web en HU-15.3).
@@ -117,6 +117,7 @@ Cualquier comando futuro llevará `commandId` (ADR-020). Combat **deduplica por 
 
 - **`seq`**: entero creciente **por sala**, comienza en 1 (`battleStarted` = 1). Cada evento de batalla lleva el suyo; el orden entre eventos es total.
 - **`resume`**: si `lastSeq` está entre 1 y el último `seq`, se **reenvían en orden** los eventos posteriores de la bitácora persistida; si falta o es inválido, se envía un `snapshot` del estado visible completo. Termina con `resume.ok`. Un no participante recibe `command.rejected` con `NOT_A_PARTICIPANT` y **no** se suscribe.
+- **Recuperación sin pérdida de eventos:** el servidor pone la conexión en modo «recuperando» **antes** de leer el estado y **retiene** los eventos que se publiquen mientras tanto; después entrega, en un único bloque síncrono, la lectura (replay o `snapshot`), lo retenido con `seq` posterior (descarta lo que la lectura ya incluía; ante un hueco se detiene y el cliente lo detecta por `seq` y repite `resume`) y la suscripción, y por último `resume.ok` con el último `seq` **realmente entregado**. Así, un evento `N + 1` persistido y publicado entre la lectura de `N` y la suscripción llega igualmente, en orden y sin duplicarse. Dos `resume` de una misma conexión se serializan. Un no participante nunca recibe lo retenido. Supone un único proceso publicador (una réplica), como el almacén de tickets.
 - **Cliente:** aplica solo `seq` mayor que el último aplicado; un `seq` repetido o anterior se ignora; un salto (`seq` > último + 1) obliga a pedir `resume`. No reconstruye estado con mensajes inventados.
 - **Latido:** el servidor envía un *ping* cada 25 s; una conexión sin *pong* se cierra (queda desconectada, no abandonada; el abandono es de HU-21).
 - **Persistir antes de difundir:** validar → generar/actualizar → **persistir con bloqueo optimista** → difundir. Si la persistencia falla, no se difunde nada.
@@ -130,13 +131,13 @@ Cualquier comando futuro llevará `commandId` (ADR-020). Combat **deduplica por 
 
 1. Elegir el equipo que inicia con un entero uniforme en `{0,1}`.
 2. Barajar cada equipo con Fisher-Yates usando enteros uniformes acotados (los «participantes» de un equipo son intercambiables; RF-17 exige que las decisiones aleatorias necesarias para construir la secuencia salgan de HU-24).
-3. Intercalar: equipo inicial, otro equipo, equipo inicial… mientras queden participantes en ambos.
-4. Si un equipo se agota antes (composiciones desiguales, p. ej. 1 humano contra 3 IA en `PVE`), los que restan del otro equipo **se añaden a continuación en su orden barajado**. *Decisión técnica pendiente de ratificación del PO*: RF-17 define la alternancia solo para equipos equilibrados.
+3. Intercalar estrictamente: equipo inicial, otro equipo, equipo inicial…
+4. **Solo se admiten equipos con el mismo número de participantes.** RF-17 exige alternar entre ambos equipos pero **no define** qué ocurre cuando uno se agota antes (1 contra 3, 2 contra 3…), y esa regla no está ratificada formalmente: HU-17 **no la inventa**. Con equipos de distinto tamaño `start` responde `422` con `code: UNSUPPORTED_TEAM_COMPOSITION` **antes de revalidar a nadie y sin consumir ningún sorteo**: no hay cola, no hay `battleStarted` y la sala sigue `PREPARING`. Esto incluye composiciones `PVE` de un humano contra varias `AI`. Impedir esas salas desde su creación (HU-14) sería un cambio aparte que exige una aclaración formal.
 5. Persistir la cola resultante. **No se vuelve a sortear jamás.**
 
 **1 contra 1:** la cola tiene exactamente dos entradas; inicia quien resulte del sorteo del paso 1 y el rival va segundo.
 
-**Invariantes** (verificadas por pruebas de dominio): lista no vacía; solo participantes de la sala confirmados; sin duplicados; tamaño = roster definitivo; alternancia entre equipos mientras ambos tengan integrantes; una única posición activa; el contenido de `turnOrder` no cambia; tras el último participante se vuelve al primero (`turnsCompleted mod n`); las rondas siguientes reutilizan exactamente la misma cola.
+**Invariantes** (verificadas por pruebas de dominio): lista no vacía; solo participantes de la sala confirmados; sin duplicados; tamaño = roster definitivo; equipos del mismo tamaño y alternancia estricta; una única posición activa; el contenido de `turnOrder` no cambia; tras el último participante se vuelve al primero (`turnsCompleted mod n`); las rondas siguientes reutilizan exactamente la misma cola.
 
 **Fin de turno.** `completeTurn(actor, commandId)` (dominio/aplicación, **no** expuesto como ruta pública): exige batalla `IN_BATTLE` y que `actor` sea el participante de la posición activa (o el servidor para un turno de `AI`); avanza `turnsCompleted` y registra `turnAdvanced`. Un `commandId` ya procesado devuelve el resultado anterior sin avanzar de nuevo. Web **nunca** decide `turno + 1`: solo pinta el `currentTurn` que recibe.
 
@@ -144,7 +145,7 @@ Cualquier comando futuro llevará `commandId` (ADR-020). Combat **deduplica por 
 
 Ninguna decisión usa `Math.random`, `crypto`, `Date.now` ni otro generador: solo `RandomSequencePort.nextIndex()` (`1..8000`, uniforme por ADR-021). Para elegir uniformemente entre `n` opciones **no se usa el módulo ingenuo** (`8000` no es múltiplo de 3, 5 ni 6, lo que sesgaría): se aplica **muestreo por rechazo**: con `v = índice − 1`, se acepta si `v < 8000 − (8000 mod n)` y el resultado es `v mod n`; en otro caso se descarta y se toma otro índice (con tope de intentos). Con `n = 2` nunca se rechaza. Se documentan los sorteos: 1 para el equipo inicial y, por equipo de `k` integrantes, `k − 1` más los rechazos.
 
-> **Política de semilla (pendiente de decisión, heredada de ADR-021):** el código de Combat no tenía política de semilla por batalla. HU-17 es el primer consumidor real y necesita una secuencia. Se decide **la mínima compatible con HU-26**: una secuencia con estado **de proceso**, creada al arrancar con la semilla validada (por defecto `3.000.000`, configurable con `COMBAT_RANDOM_SEED`, entero sin signo de 32 bits) y consumida por todas las batallas, de modo que cada sorteo **avanza** el estado. No se usa una semilla constante por batalla (produciría siempre el mismo equipo inicial). **Limitación declarada:** tras reiniciar Combat la secuencia vuelve a empezar; persistir la posición del cursor, o una semilla por batalla, requiere decisión del PO y es la política runtime que ADR-021 ya marcaba como pendiente.
+> **Semilla y ciclo de vida de la secuencia (decisión técnica separada):** el requisito de HU-17 es usar la semilla seleccionada y validada por HU-26 (`3.000.000`). El documento exige que la semilla haya sido validada antes de producción, pero **no define** si la secuencia debe ser global por proceso o por batalla, si el cursor se persiste ni cómo se comporta tras un reinicio; HU-17 **no establece** ninguna de esas políticas como requisito funcional, y `3.000.000` es la semilla validada por HU-26, no una «semilla global de producción» decretada. **Implementación provisional (detalle técnico, no ratificado):** para poder sortear, Combat crea al arrancar una secuencia con estado de proceso con esa semilla (`COMBAT_RANDOM_SEED`, por defecto `3.000.000`, entero sin signo de 32 bits) que consumen todas las batallas; no usa una semilla constante por batalla porque produciría siempre el mismo equipo inicial. Tras reiniciar Combat la secuencia vuelve a empezar y el cursor no se persiste. Ninguna prueba de HU-17 depende de ese ciclo de vida (usan un generador guionizado). El ciclo de vida definitivo es una **decisión técnica separada** (ADR-021 ya la dejaba abierta) y ni bloquea ni forma parte de HU-17.
 
 ## 8. Persistencia
 
@@ -162,9 +163,10 @@ Ninguna decisión usa `Math.random`, `crypto`, `Date.now` ni otro generador: sol
 
 | Punto | Estado |
 | --- | --- |
-| Disparador del inicio (`POST …/start` por cualquier participante) | decisión técnica **pendiente de ratificar** por el PO |
-| Alternancia con equipos desiguales | decisión técnica **pendiente de ratificar** por el PO |
-| Política de semilla por batalla / persistencia del cursor | **pendiente** (ADR-021); HU-17 usa la secuencia de proceso descrita en §7 |
+| Disparador del inicio (`POST …/start` por cualquier participante) | **adoptada**: el cliente lo solicita y Combat lo autoriza y ejecuta (§2) |
+| Orden con equipos de distinto tamaño | **sin regla ratificada**: HU-17 lo rechaza (`422 UNSUPPORTED_TEAM_COMPOSITION`). Prohibir esas salas al crearlas (HU-14) requiere una aclaración formal |
+| Ciclo de vida de la secuencia aleatoria (por proceso o por batalla, cursor, reinicio) | **decisión técnica separada** (ADR-021); no es requisito de HU-17, que usa la semilla validada por HU-26 |
+| Validación con dos sesiones reales de navegador (Task #408) | procedimiento y plantilla de evidencia en el [runbook de aceptación manual](../runbooks/hu-17-aceptacion-manual.md); **pendiente de ejecutar** tras el merge |
 | Abandono o desconexión durante la batalla | fuera de HU-17 (HU-21) |
 | Bloqueo del equipamiento durante la batalla | HU-29 |
 | Ataque, habilidades, daño, Poder, fin de batalla | HU-18, HU-19, HU-21 |

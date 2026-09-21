@@ -58,5 +58,13 @@ combat --> wb : ticket (30 s, un uso)
 wb -> combat : WS abrir sin credenciales; {"type":"auth","ticket"}
 combat --> wb : auth.ok
 wb -> combat : {"type":"resume","roomId","lastSeq":1}
-combat --> wb : turnAdvanced (seq 2) ... resume.ok
+note right of combat
+  Antes de leer el estado, Combat pone la conexión en
+  "recuperando" y RETIENE los eventos que se publiquen
+  mientras tanto. Después entrega, en un bloque síncrono:
+  replay/snapshot + lo retenido con seq posterior
+  + suscripción, y por último resume.ok con el último
+  seq realmente entregado (sin pérdida de eventos).
+end note
+combat --> wb : turnAdvanced (seq 2) ... turnAdvanced (seq N) ... resume.ok (seq N)
 @enduml
