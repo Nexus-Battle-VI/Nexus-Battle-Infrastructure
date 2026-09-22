@@ -131,18 +131,21 @@ Ver [hu-22-reward-table-v1.json](hu-22-reward-table-v1.json) — artefacto **ver
 - Dentro de un tier, cada producto pesa lo mismo (no hay dato de rareza individual en Catalog que justifique un peso distinto).
 - El archivo JSON es la única fuente de los `productId` reales; Combat no vuelve a consultar Catalog en el momento del sorteo (evita una dependencia síncrona más en el camino crítico) pero si el contrato de Catalog cambia (producto archivado, etc.) esta tabla debe regenerarse — ver §9, `TERMINAL_FAILURE` si el `productId` seleccionado ya no es válido en el grant.
 - **Versión:** `schemaVersion: "1"`. Cualquier cambio de pesos, tipos o exclusiones es una **nueva versión** de este archivo con su propia fecha de auditoría, nunca una edición silenciosa del array de productos.
+- **Filas:** cada uno de los 40 productos tiene un tramo contiguo (`firstRow`–`lastRow`) dentro de **1–8000** — 300 filas por `ARMADURA` (16 × 300 = 4800 = 60 %), 150 por `ARMA` (16 × 150 = 2400 = 30 %), 100 por `ITEM` (8 × 100 = 800 = 10 %). Es el **mismo espacio de 8000 filas** que `EffectControlTable` (HU-25), no uno nuevo — ver §6.
 
-## 6. RNG de la recompensa (reutiliza HU-24, no lo reabre)
+## 6. RNG de la recompensa (reutiliza HU-24, no lo reabre — corregido 2026-09-22)
 
-Combat ya posee `RandomSequencePort` (ADR-021): una secuencia con estado, `nextIndex()` devuelve un índice **uniforme discreto**. HU-22 reutiliza exactamente ese puerto para un propósito distinto de la tabla de efectos de HU-25:
+Combat ya posee `RandomSequencePort` (ADR-021): una secuencia con estado, `nextIndex()` devuelve un `RandomIndex`, **siempre en `1..8000` por construcción** (`RandomIndex.MIN`/`MAX`, HU-24). Ese rango **no es configurable por llamada** — no existe una forma de pedirle al puerto un índice uniforme en otro espacio (p. ej. `1..10000`). Una versión anterior de este contrato proponía un espacio de 10000 con dos sorteos (tier y luego producto); **se descarta**: no hay forma de obtener ese espacio del puerto real sin extenderlo, y extenderlo tocaría HU-24, que este contrato explícitamente no reabre.
+
+**Diseño corregido: una única llamada, mismo espacio de 8000 que HU-25.**
 
 ```text
-RandomSequencePort.nextIndex(1..10000) ──► índice uniforme ──► tramo de tier (ver mapeo) ──► RandomSequencePort.nextIndex(1..N_tier) ──► producto dentro del tier
+RandomSequencePort.nextIndex() ──► RandomIndex (1..8000) ──► RewardTable.resolve(index) ──► producto (uno de los 40 leaf de hu-22-reward-table-v1.json)
 ```
 
-- **Mapeo tier:** el primer índice uniforme en `1..10000` se compara contra los tramos contiguos `COMUN 1–6000`, `RARA 6001–9000`, `ESPECIAL 9001–10000` (60 %/30 %/10 %, igual patrón de "rangos contiguos" que `EffectControlTable`, ADR-021 §"La tabla no es una colección de 8000 documentos").
-- **Segundo índice**, uniforme en `1..N_tier` (16, 16 u 8 según el tier), selecciona el producto dentro del tier según el orden fijo del JSON versionado.
-- Es una **secuencia nueva e independiente** de la que resuelve daño/crítico de esa misma batalla (no se reutiliza el estado de la tabla de efectos de HU-25 ni se reinicia el generador): la fábrica de secuencias de Combat crea la que corresponde a `RewardWorkflow`, con su propia semilla derivada según la misma política que ya use Combat para crear secuencias de batalla (sin novedad de ADR-021, que deja la política de semilla por agregado como pendiente de implementación runtime, no como bloqueo de HU-22).
+- `RewardTable` es una estructura de dominio nueva en Combat, **construida en memoria a partir del JSON versionado**, con el mismo patrón de "rangos contiguos" que `EffectControlTable` (HU-25): 40 tramos fijos y ordenados, sin huecos ni solapes, que cubren exactamente `1–8000`. `resolve(index)` es una función pura, sin RNG propio, igual que `EffectControlTable.resolve`.
+- Una **única** llamada a `nextIndex()` por cofre resuelve directamente el producto — no hay un segundo sorteo "dentro del tier": los 40 tramos ya están al nivel de producto individual, con el peso por producto ya incorporado en su ancho de tramo (300/150/100 filas).
+- Es una **secuencia propia del `RewardWorkflow`**, independiente de la que resolvió daño/crítico de esa misma batalla (no se reutiliza el cursor de la tabla de efectos de HU-25 ni se reinicia el generador): la fábrica de secuencias de Combat crea la que corresponde al workflow de recompensa, con su propia semilla derivada según la misma política que ya use Combat para crear secuencias de batalla (sin novedad de ADR-021, que deja la política de semilla por agregado como pendiente de implementación runtime, no como bloqueo de HU-22).
 - **No** se usa `Math.random`, `node:crypto` como selector, ni una segunda instancia de MT19937/Box-Müller fuera de ese puerto. **No** se expone el índice ni la semilla a Web ni a Player-Inventory.
 
 ## 7. Contrato Combat → Player-Inventory (reutilizado, ampliado en el allow-list)

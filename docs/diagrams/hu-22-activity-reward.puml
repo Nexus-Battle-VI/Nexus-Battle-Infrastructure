@@ -17,8 +17,8 @@ endif
 
 if (chestEarned?) then (sí)
   :estado CHEST_ELIGIBLE;
-  :sortear tier con RandomSequencePort.nextIndex() (1..10000);
-  :sortear producto dentro del tier (1..N_tier);
+  :RandomSequencePort.nextIndex() (1..8000, secuencia propia del workflow);
+  :RewardTable.resolve(index) -> producto (40 tramos, mismo espacio que HU-25);
   :persistir REWARD_SELECTED (productId fijo, no se vuelve a sortear);
   :POST Player-Inventory grants (operationId determinista, productId, quantity 1);
   if (Inventory confirmó?) then (sí)
