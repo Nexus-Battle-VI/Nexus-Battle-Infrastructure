@@ -161,7 +161,7 @@ POST /api/internal/v1/inventory/grants
 }
 ```
 
-**Único cambio de contrato:** el allow-list de `x-internal-service` en Player-Inventory hoy solo admite `commerce` (auditado 2026-09-22, `docs/purchase-grants.md` §Autenticación). La Task #430 debe **ampliarlo a `combat`**, igual que ADR-019 ya previó ("ampliar los servicios autorizados… a `auction` y `missions`" — HU-22 añade `combat` por el mismo motivo). No se crea un segundo endpoint de grants.
+**Corrección (2026-09-22, tras auditar el código y no solo la documentación):** el allow-list de `x-internal-service` en Player-Inventory **ya incluye `combat`** desde HU-15 (#31, héroe equipado) — `docs/purchase-grants.md` decía "solo `commerce`" pero ese texto estaba desactualizado. El `InternalServiceGuard` es **global** a toda ruta `@InternalOnly()` del servicio, no por ruta, así que `combat` ya podía llamar `POST /internal/v1/inventory/grants` sin ningún cambio de código. La Task #430 (PR [#40](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/40)) documenta esta capacidad ya existente y añade una prueba de regresión; **no se crea un segundo endpoint de grants ni se modifica el allow-list**.
 
 `operationId` incluye una secuencia (`chest:1`, `chest:2`, …) porque un jugador puede ganar más de un cofre a lo largo de distintas batallas de la misma semana; dentro de una sola resolución de cofre el número de secuencia es siempre `1` salvo que HU-22 evolucione a entregar más de un ítem por cofre (no lo hace).
 
