@@ -1,15 +1,15 @@
 # Contrato HU-65 — Liquidación de subasta entre Auction y Wallet (v1)
 
-- **Estado:** diseño de HU-65.2 / Task [#324](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/324). Las operaciones de `holds`, `captures` y `releases` descritas aquí **no están implementadas** al crear este contrato.
+- **Estado:** Wallet implementó los holds de Auction en [PR #12](https://github.com/Nexus-Battle-VI/Nexus-Battle-Wallet/pull/12). Auction aún debe implementar el cliente y la orquestación durable de HU-65.2 / Task [#324](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/324).
 - **Historia:** [HU-65 #50](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/50) · Team Gama.
 - **Base arquitectónica:** [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md), sin crear un ADR nuevo.
-- **Orden obligatorio:** Infrastructure (este documento) → Wallet → Auction → pruebas integradas de #324. Wallet se despliega antes de habilitar las llamadas de Auction.
+- **Orden actual:** Wallet está desplegable antes de habilitar las llamadas de Auction; falta Auction y la validación integrada de #324.
 
 ## 1. Alcance, realidad actual y propiedad
 
 Este documento define el contrato interno para reservar créditos de una puja y, al cerrar una subasta, capturar la reserva ganadora a favor del vendedor y liberar las perdedoras. La captura económica no depende del reclamo posterior de HU-69.
 
-Hoy Wallet solo implementa el crédito de recompensa de batalla (`POST /api/internal/v1/wallet/credits/battle-reward`); no tiene holds, saldo reservado, captura ni liberación. Auction ya persiste el identificador de reserva de las pujas y la oferta líder, pero aún no tiene un cliente HTTP de Wallet ni una intención durable de liquidación. Por tanto, todo endpoint de este documento es diseño hasta las Tasks posteriores.
+Wallet ya implementa holds específicos de Auction, reserva, captura, liberación, ledger, locks, idempotencia y HMAC mediante el PR #12. Auction ya persiste el identificador de reserva de las pujas y la oferta líder, pero aún no tiene cliente HTTP de Wallet ni intención durable de liquidación. El paso pendiente de #324 es Auction y las pruebas integradas.
 
 | Wallet posee en exclusiva | Auction posee en exclusiva |
 | --- | --- |
@@ -28,23 +28,26 @@ Todas las rutas son internas bajo `/api/internal/v1/wallet/*` y requieren el mec
 
 Caddy bloquea `/api/internal*` desde fuera. No se propaga JWT de un jugador ni se introduce otro mecanismo de autenticación.
 
-## 3. Modelo objetivo de Wallet
+> **Nota de actualización.** Este contrato se redactó antes de implementar Wallet. El PR #12 materializó la misma semántica económica con DTOs planos; esta revisión alinea la forma canónica con esa implementación mergeada, sin cambiar garantías económicas ni de idempotencia. Auction debe consumir esta forma.
 
-La migración futura de Wallet debe ampliar el saldo actual (`balance`) para soportar `available` y `reserved`, ambos no negativos, y tablas propias de holds y ledger. No existe todavía esa migración.
+## 3. Modelo económico implementado de Wallet
+
+`balance` es el saldo total, `reserved` son créditos bloqueados y `available = balance - reserved` es un valor derivado, no una columna persistida. Wallet posee sus tablas de holds y ledger.
 
 ```text
-available >= 0
+balance >= 0
 reserved >= 0
-available + reserved = créditos del jugador antes de créditos o capturas externas
+reserved <= balance
 ```
 
 Un hold tiene `id`, `playerId`, `amount`, referencia de Auction, `status`, `createdAt` y `expiresAt`. Sus únicos estados son `ACTIVE`, `CAPTURED`, `RELEASED` y `EXPIRED`; no existe reactivación.
 
 | Transición | Efecto |
 | --- | --- |
-| `ACTIVE → CAPTURED` | reduce `reserved` del ganador y acredita el mismo importe al vendedor |
-| `ACTIVE → RELEASED` | reduce `reserved` y devuelve el importe a `available` |
-| `ACTIVE → EXPIRED` | mismo efecto económico que liberar, con auditoría de expiración |
+| reserva `ACTIVE` | no cambia `balance`, aumenta `reserved` y disminuye `available` |
+| `ACTIVE → CAPTURED` | reduce `reserved` y `balance` del ganador; acredita exactamente el mismo importe al vendedor |
+| `ACTIVE → RELEASED` | no cambia `balance`, reduce `reserved` y aumenta `available` |
+| `ACTIVE → EXPIRED` | no cambia `balance`, reduce `reserved` y aumenta `available`, con auditoría |
 | desde `CAPTURED`, `RELEASED` o `EXPIRED` | ninguna transición posterior |
 
 Una captura de un hold `RELEASED`/`EXPIRED` o una liberación de uno `CAPTURED` es un rechazo terminal `422`. Repetir una operación ya resuelta con su mismo `operationId` es replay, no una nueva transición.
@@ -75,16 +78,13 @@ POST /api/internal/v1/wallet/holds
   "operationId": "auction:auction-1:bid:bid-7:reserve",
   "playerId": "bidder-1",
   "amount": 35,
-  "reason": "AUCTION_BID",
-  "reference": {
-    "auctionId": "auction-1",
-    "bidId": "bid-7",
-    "auctionClosesAt": "2026-09-23T12:00:00.000Z"
-  }
+  "auctionId": "auction-1",
+  "bidId": "bid-7",
+  "auctionClosesAt": "2026-09-23T12:00:00.000Z"
 }
 ```
 
-`auctionClosesAt` es la hora que Auction ya fijó en servidor al publicar; nunca proviene del navegador. El request no acepta `expiresAt`: Wallet, con su propio reloj, valida que el cierre sea futuro y calcula `expiresAt = auctionClosesAt + AUCTION_HOLD_GRACE`. La gracia es configuración de Wallet y cubre el retraso del cierre/reintentos; si la fecha es inválida, vencida o fuera del máximo contractual configurado, responde `422`.
+Este endpoint es exclusivo de Auction y la intención `AUCTION_BID` está implícita en su contexto. `auctionClosesAt` es la hora que Auction ya fijó en servidor al publicar; nunca proviene del navegador. El request no acepta `expiresAt`: Wallet calcula `expiresAt = auctionClosesAt + AUCTION_HOLD_GRACE`, valida que el cierre sea futuro y que no exceda el máximo configurado; ante fecha inválida o vencida responde `422`.
 
 Respuesta `200`:
 
@@ -107,15 +107,12 @@ POST /api/internal/v1/wallet/holds/{holdId}/captures
 {
   "operationId": "auction:auction-1:settlement:capture",
   "beneficiaryPlayerId": "seller-1",
-  "reason": "AUCTION_SETTLEMENT",
-  "reference": {
-    "auctionId": "auction-1",
-    "winningBidId": "bid-7"
-  }
+  "auctionId": "auction-1",
+  "winningBidId": "bid-7"
 }
 ```
 
-No se envía importe ni saldo resultante: Wallet deriva el importe del hold almacenado y valida que su referencia coincida. En una única transacción local bloquea el hold `ACTIVE`, lo marca `CAPTURED`, reduce el `reserved` del ganador, acredita exactamente ese importe al vendedor, inserta las entradas de ledger de débito/crédito y guarda el resultado idempotente.
+No se envía importe ni saldo resultante: Wallet deriva el importe del hold almacenado y valida `auctionId` y `winningBidId`. En una única transacción local bloquea el hold `ACTIVE`, lo marca `CAPTURED`, reduce el `reserved` y el `balance` del ganador, acredita exactamente ese importe al vendedor, inserta las entradas de ledger de débito/crédito y guarda el resultado idempotente.
 
 Invariante: **créditos capturados al ganador = créditos acreditados al vendedor**. La transacción completa confirma o revierte; no crea ni destruye créditos.
 
@@ -183,10 +180,12 @@ La captura ganadora no espera una transacción distribuida con las liberaciones 
 | Auction cae tras captura | Wallet conserva resultado idempotente | recupera intención durable y consulta por replay | transferencia duplicada u olvidada |
 | liquidaciones concurrentes | Wallet serializa por hold/operación y devuelve una aplicación + replays | ambos usan el mismo id determinista | carrera y doble captura |
 
-## 8. Responsabilidades de implementación
+## 8. Responsabilidades actuales
 
-Wallet implementará migraciones para saldos `available`/`reserved`, holds, ledger de reserva/captura/liberación, endpoints, HMAC, locks e idempotencia. Auction implementará el cliente HTTP firmado, persistencia de la intención de liquidación, acceso a la reserva líder y reservas perdedoras, orquestación/reintentos y pruebas de integración. Ninguna implementación debe afirmar que este contrato ya estaba disponible antes de sus respectivos PRs.
+**Wallet — implementado:** balances y `reserved`, Auction holds, reserve/capture/release, ledger, locks, idempotencia y HMAC. Wallet restringe `/api/internal/v1/wallet/holds/*` al caller `auction`.
+
+**Auction — pendiente:** cliente HTTP firmado, persistencia durable del settlement, identificación del hold ganador, releases pendientes, reintentos, recuperación ante crash y pruebas integradas.
 
 ## 9. Fuera de alcance
 
-Wallet, inventario, scheduler, notificaciones, reclamo HU-69, endpoints públicos y la implementación de #324 están fuera de este PR documental.
+Inventory, Notifications, scheduler de otra Task, reclamo HU-69 y endpoints públicos están fuera de este contrato. La implementación de Wallet ya existe; la implementación de Auction de #324 sigue pendiente.
