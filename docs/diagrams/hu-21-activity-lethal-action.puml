@@ -1,0 +1,29 @@
+@startuml hu-21-activity-lethal-action
+title HU-21 — Acción letal (attack / useSkill): eliminación en la misma escritura de la acción
+skinparam shadowing false
+
+start
+:Recibir attack / useSkill (comando de un participante);
+:Liquidar vencimientos primero
+(reloj del servidor, dentro del cerrojo de la sala);
+if (¿la sala ya está FINISHED o el turno ya pasó?) then (sí)
+  :Rechazar: BATTLE_NOT_ACTIVE o NOT_YOUR_TURN
+(0 sorteos, sin cambios);
+  stop
+endif
+:Validar y resolver la acción (HU-18 / HU-19 / HU-20);
+:Aplicar el daño a la Vida del objetivo;
+if (¿algún equipo sin héroes con Vida?) then (sí)
+  :ELIMINATION · ganador = equipo del actor;
+  :Restaurar el Poder de todos (HU-11);
+  :Persistir en UNA escritura
+evento de la acción (seq n) + battleFinished (seq n + 1);
+  :Difundir ambos en ese orden · notificar FINISHED
+cancelar vencimientos · liberar presencia · notificar a consumidores;
+else (no)
+  :Avanzar el turno saltando a los héroes sin Vida
+nuevo turnStartedAt (temporizador de 30 s);
+  :Persistir el evento de la acción y difundirlo;
+endif
+stop
+@enduml

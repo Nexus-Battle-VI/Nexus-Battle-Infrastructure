@@ -1,0 +1,71 @@
+@startuml hu-21-sequence-finish
+title HU-21 — Finalización autoritativa: vencimientos, desconexión y acción letal → un único resultado
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+
+participant "Web A / Web B" as web
+participant "Gateway\nWebSocket" as gw
+participant "Planificador\n(barrido 1 s)" as sch
+participant "ProcessBattleDeadlines /\nExecute* (casos de uso)" as uc
+participant "Cerrojo por sala\n(RoomCommandLockPort)" as lock
+participant "BattleRoom\n(agregado)" as room
+database "MongoDB\nbattle-rooms" as db
+participant "Publicador\nde eventos" as pub
+participant "Notificador\nde sala" as notif
+participant "BattleResultPublisherPort\n(HU-22/23/29/30/09)" as res
+
+== A. Vencimiento (tiempo o turno) o gracia de desconexión ==
+sch -> uc : tick(ahora)  ·  sala con vencimiento pendiente
+uc -> lock : run(roomId)
+lock -> uc : turno exclusivo
+uc -> db : findById(roomId)
+uc -> room : liquidar(ahora, presencia)
+alt sala ya FINISHED o sin vencimiento real
+  room --> uc : sin cambios (no-op)
+else turno vencido
+  room --> uc : turnTimedOut · turno avanzado
+  uc -> db : save(room, expectedVersion)
+  uc -> pub : publish(roomId, [turnTimedOut])
+else global vencido o gracia vencida con el participante ausente
+  room --> uc : FINISHED · result · battleFinished · Poder restaurado
+  uc -> db : save(room, expectedVersion)
+  uc -> pub : publish(roomId, [battleFinished])
+  uc -> notif : notifyRoomUpdated(FINISHED)
+  uc -> sch : cancelar(roomId)
+  uc -> gw : liberar(roomId)  (presencia y suscripciones)
+  uc -> res : publish(BattleFinishedNotification)
+end
+
+== B. Presencia (el gateway informa, no decide) ==
+web -> gw : cierre de la última conexión de batalla del participante
+gw -> sch : gracia(roomId, participante, ahora + 30 s)
+web -> gw : resume (dentro de la gracia)
+gw -> sch : cancelar gracia(roomId, participante)
+
+== C. Acción letal (attack / useSkill) ==
+web -> gw : {"type":"attack"|"useSkill", "commandId", …}
+gw -> uc : execute(...)
+uc -> lock : run(roomId)
+uc -> room : liquidar vencimientos (perezoso, reloj del servidor)
+alt la sala ya venció o terminó
+  room --> uc : turno pasado o FINISHED
+  uc --> gw : NOT_YOUR_TURN o BATTLE_NOT_ACTIVE
+else la acción deja a un equipo sin héroes con Vida
+  uc -> room : applyBasicAttack / applySkill
+  room --> uc : evento de la acción (seq n) + battleFinished (seq n + 1)
+  uc -> db : save(room, expectedVersion)   ← UNA escritura
+  uc -> pub : publish(roomId, [acción, battleFinished])
+  uc -> notif : notifyRoomUpdated(FINISHED)
+  uc -> res : publish(BattleFinishedNotification)
+end
+
+== Carrera: dos causas a la vez ==
+note over uc, db
+  El cerrojo serializa; el bloqueo optimista por version es la red de seguridad.
+  Quien pierde relee, ve FINISHED y no repite nada:
+  un solo battleFinished y una sola notificación.
+end note
+
+pub -> web : mismos bytes para todos los participantes (seq consecutivos)
+web -> web : muestra el resultado; deja de ofrecer acciones
+@enduml
