@@ -20,7 +20,7 @@ Fuentes UML editables:
 - [Secuencia](../diagrams/hu-75-sequence.puml)
 - [Dominio](../diagrams/hu-75-domain.puml)
 
-Contrato conceptual (no OpenAPI): [missions-difficulty-v1.md](../contracts/missions-difficulty-v1.md).
+Contrato conceptual (no OpenAPI): [hu-75-mission-difficulty-v1.md](../contracts/hu-75-mission-difficulty-v1.md).
 
 ## Vista rápida (para revisión)
 
@@ -170,7 +170,7 @@ Errores de negocio de esta HU:
 | `UNKNOWN_DIFFICULTY` | valor fuera del vocabulario |
 | `PROGRESSION_LOCKED` | falta el clear del nivel inmediatamente inferior |
 
-Firmas HTTP concretas: [missions-difficulty-v1.md](../contracts/missions-difficulty-v1.md). **No** se añaden a [service-catalog.md](../contracts/service-catalog.md) como implementadas.
+Firmas HTTP concretas: [hu-75-mission-difficulty-v1.md](../contracts/hu-75-mission-difficulty-v1.md). En [service-catalog.md](../contracts/service-catalog.md) figuran marcadas como **diseño**, no como implementadas.
 
 ## Separación con Jugar Online / Combat
 
@@ -191,11 +191,38 @@ HU-75 **no** reimplementa daño, turnos ni aleatoriedad. Esas dependencias (HU-1
 | RF-75 | CA-04 | P-04 Legendario desbloqueado | Clear `HEROIC` + `LEGENDARY` | Multiplicador `2.0` y `rewardTier=PREMIUM` | No. Falta HU-72 y HU-10 |
 | RF-75 | CA-04 | P-05 Mítico | Clear `LEGENDARY` + `MYTHIC` | Código `MYTHIC` y `EXCLUSIVE`; **sin** multiplicador inventado | Bloqueado por decisión PO |
 
-Fronteras adicionales a documentar en pruebas (75.4), no son CA extra de la HU:
+Las fronteras que no son CA de la HU (Normal siempre libre, repetir un nivel ya completado, un fallo que no abre el siguiente, clears de otra misión o de otro jugador) están en la [matriz de transición y aislamiento](#matriz-de-transición-y-aislamiento); son la matriz de pruebas de HU-75.4 para la política pura de dominio.
 
-- Normal siempre libre (si el PO acepta P-D2);
-- repetir Heroico ya completado;
-- fallo en Heroico **no** abre Legendario.
+## Matriz de transición y aislamiento
+
+Tabla de decisión de `DifficultyPolicy` para **una misión** `M` y **un jugador** `P`. `clears(P, M)` es el conjunto de niveles con `MissionDifficultyClear` registrado para ese par.
+
+| clears(P, M) | Solicita | Resultado | `required` en el 422 |
+| --- | --- | --- | --- |
+| ∅ | `NORMAL` | Acepta (P-D2) | — |
+| ∅ | `HEROIC` | `PROGRESSION_LOCKED` | `NORMAL` |
+| ∅ | `LEGENDARY` | `PROGRESSION_LOCKED` | `HEROIC` |
+| {`NORMAL`} | `HEROIC` | Acepta | — |
+| {`NORMAL`} | `LEGENDARY` | `PROGRESSION_LOCKED`: no se salta un nivel | `HEROIC` |
+| {`NORMAL`, `HEROIC`} | `LEGENDARY` | Acepta | — |
+| {`NORMAL`, `HEROIC`} | `MYTHIC` | `PROGRESSION_LOCKED` | `LEGENDARY` |
+| {`NORMAL`, `HEROIC`, `LEGENDARY`} | `MYTHIC` | Acepta; `enemyStatMultiplier` ausente hasta que el PO lo fije | — |
+| {`NORMAL`} | `NORMAL` | Acepta: repetir un nivel completado está permitido (P-D3) | — |
+
+`required` es siempre el nivel **inmediatamente inferior** al solicitado, aunque falten varios: el mensaje nombra el siguiente paso, no toda la escalera.
+
+Casos de aislamiento que la política **rechaza** aunque se parezcan a progresión. Ninguno desbloquea:
+
+| Caso | Hecho disponible | Solicita | Resultado |
+| --- | --- | --- | --- |
+| Otra misión | `clear(P, M2, NORMAL)` | `HEROIC` en `M` | `PROGRESSION_LOCKED`, `required = NORMAL` |
+| Mismo nivel en otra misión | `clear(P, M2, HEROIC)` | `LEGENDARY` en `M` | `PROGRESSION_LOCKED`, `required = HEROIC` |
+| Otro jugador | `clear(P2, M, NORMAL)` | `HEROIC` en `M` por `P` | `PROGRESSION_LOCKED`, `required = NORMAL` |
+| Fallo o abandono | `Enrollment(P, M, NORMAL)` con `result ≠ SUCCESS` | `HEROIC` en `M` | `PROGRESSION_LOCKED`: no existe clear (P-D1) |
+| Matrícula sin terminar | `Enrollment(P, M, NORMAL)` activa | `HEROIC` en `M` | `PROGRESSION_LOCKED`: matricular no desbloquea |
+| Salto de nivel | `clear(P, M, NORMAL)` | `LEGENDARY` en `M` | `PROGRESSION_LOCKED`, `required = HEROIC` |
+
+Los fixtures de respuesta para cada estado están en el [contrato](../contracts/hu-75-mission-difficulty-v1.md#fixtures-por-estado-de-progresión).
 
 ## Impacto arquitectónico
 
