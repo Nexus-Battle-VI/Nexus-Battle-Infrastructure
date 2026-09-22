@@ -1,0 +1,33 @@
+@startuml hu-21-state-battle-lifecycle
+title HU-21 — Ciclo de vida de una sala de batalla y transición única a FINISHED
+skinparam shadowing false
+
+[*] --> WAITING_FOR_PLAYERS : POST /rooms (HU-14)
+
+WAITING_FOR_PLAYERS --> PREPARING : se ocupa el último cupo (HU-15)
+WAITING_FOR_PLAYERS --> CANCELLED : el creador cancela (HU-14)
+PREPARING --> IN_BATTLE : POST /rooms/{id}/start (HU-17)\ncola generada · battleStarted seq = 1
+
+state IN_BATTLE {
+  [*] --> TurnoActivo
+  state "Turno activo\nturnStartedAt + 30 s" as TurnoActivo
+  TurnoActivo --> TurnoActivo : attack / useSkill válido\n(turno avanza, temporizador nuevo)
+  TurnoActivo --> TurnoActivo : 30 s sin acción\nturnTimedOut (turno perdido)
+}
+
+IN_BATTLE --> FINISHED : ELIMINATION\nun equipo sin héroes con Vida\n(misma escritura que la acción)
+IN_BATTLE --> FINISHED : DISCONNECTION\ngracia de 30 s vencida\ny el participante sigue ausente
+IN_BATTLE --> FINISHED : TIME_LIMIT\nstartedAt + 6 min\n(% de vida → vida absoluta → NO_WINNER)
+
+FINISHED --> FINISHED : cualquier otro intento\n(no-op idempotente)
+FINISHED --> [*]
+CANCELLED --> [*]
+
+note right of FINISHED
+  Terminal. Una sola vez.
+  Persiste: status, result, battleFinished (seq),
+  Poder restaurado (HU-11).
+  Libera: planificador, presencia, chat, cerrojos.
+  Señal: estado + evento + notificación a consumidores.
+end note
+@enduml

@@ -162,6 +162,22 @@ resultados. Cada batalla y simulación guarda su semilla, lo que hace el
 resultado **reproducible** para auditoría sin hacerlo **predecible** para el
 jugador.
 
+> **Evolución (2026-09-20).** El detalle del generador, la separación entre
+> variable normal e índice uniforme y la integración con la tabla de 8000
+> posiciones quedan formalizados en [ADR-021](ADR-021-combat-randomness-and-effect-table.md) (`Proposed`). No
+> cambia el reparto de propiedad decidido aquí: la aleatoriedad sigue siendo de Combat.
+>
+> **Aclaración de estado actual (2026-09-20).** Dos frases de este párrafo describen
+> el **diseño objetivo**, no lo implementado en `develop`:
+>
+> - *«Cada batalla y simulación guarda su semilla»*: Combat todavía **no** persiste
+>   semillas ni tiene una política de semilla por batalla o simulación (no existe el
+>   agregado de batalla que la aloje). Pendiente de implementación runtime; la intención
+>   arquitectónica se conserva.
+> - *«la validación de semilla (HU-26) [vive] en Combat»*: HU-26 se aceptó como estudio
+>   de selección y validación con evidencia documentada (semilla de referencia
+>   3.000.000), no como una funcionalidad runtime dentro de Combat.
+
 ### Temporizadores
 
 El vencimiento de subastas (HU-65), de reservas (Wallet), de misiones (HU-70)

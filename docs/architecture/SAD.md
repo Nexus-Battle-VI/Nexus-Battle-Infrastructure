@@ -50,6 +50,19 @@ Más dos repositorios que no son bounded contexts: `Nexus-Battle-Web` (interfaz 
 
 Detalle en [microservices.md](microservices.md) y [data-ownership.md](data-ownership.md).
 
+### Combat / aleatoriedad
+
+Combat (Sprint 2, [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md)) posee las salas, la batalla, el motor, **la aleatoriedad** y las tablas de efectos. El tiempo real de las salas se decide en [ADR-020](../adr/ADR-020-realtime-combat.md) y el generador pseudoaleatorio, su relación con la tabla de 8000 posiciones y la semilla validada en [ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md) (`Accepted`).
+
+```text
+semilla -> MT19937 -> Box-Müller -> Z ~ N(0,1) -> Φ(Z) -> indice uniforme 1..8000 -> tabla vigente (HU-25) -> efecto
+```
+
+- La normal pertenece a la variable intermedia `Z`; el índice que consulta la tabla es **uniforme**, para que «4800 filas de 8000» sea realmente el 60 %. HU-26 aportó un estudio estadístico aceptado sobre la representación normal escalada de ese procedimiento y la selección de la semilla; no es una prueba de paridad numérica con la `Z ~ N(0,1)` que genera hoy Combat.
+- Player/Inventory entrega el héroe equipado (`subtype`, `activeEffects`) por contrato interno; Combat construye la tabla vigente. Missions no genera números: pedirá simulaciones a Combat (contrato **previsto**).
+- **Implementado** en Combat: motor HU-24, tabla y resolución HU-25, `CRITICAL_CHANCE` sobre la tabla y salas/lobby. **Pendiente:** política de semilla por batalla o simulación (la semilla 3.000.000 es la validada por HU-26, no una semilla global), Missions → Combat y el consumo por HU-20.
+- Diagrama: [combat-randomness.puml](../diagrams/combat-randomness.puml).
+
 ## 5. Arquitectura interna común
 
 Los seis servicios comparten la misma estructura: **Clean + Hexagonal**.
@@ -216,3 +229,4 @@ Se dejan tachadas en lugar de borrarlas: quien haya leído una versión anterior
 | [018](../adr/ADR-018-catalog-lifecycle-events-transport.md) | Transporte de eventos de ciclo de vida de Producto | Accepted |
 | [019](../adr/ADR-019-sprint-2-bounded-contexts.md) | Contextos acotados de Sprint 2: Combat, Missions, Auction y Wallet | Accepted |
 | [020](../adr/ADR-020-realtime-combat.md) | Tiempo real para Jugar Online | Accepted |
+| [021](../adr/ADR-021-combat-randomness-and-effect-table.md) | Aleatoriedad de Combat y mapeo uniforme a la tabla de efectos | Accepted |

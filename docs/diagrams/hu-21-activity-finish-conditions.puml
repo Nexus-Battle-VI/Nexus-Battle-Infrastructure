@@ -1,0 +1,57 @@
+@startuml hu-21-activity-finish-conditions
+title HU-21 — Evaluación de las condiciones de cierre (por sala IN_BATTLE, bajo su cerrojo)
+skinparam shadowing false
+
+start
+:Releer la sala (versión vigente);
+if (¿status = FINISHED?) then (sí)
+  :No hacer nada (idempotente);
+  stop
+endif
+
+:ahora = ClockPort.now();
+:Elegir el vencimiento MÁS ANTIGUO entre\n· gracias de desconexión vencidas y aún ausentes\n· global (startedAt + 6 min)\n· turno (turnStartedAt + 30 s);
+note right
+  Empate exacto: DISCONNECTION,
+  luego TIME_LIMIT, luego turno.
+  Límite inclusivo: ahora ≥ vencimiento.
+end note
+
+if (¿hay alguno vencido?) then (no)
+  :Sin cambios;
+  stop
+endif
+
+switch (¿cuál?)
+case (Gracia vencida)
+  :reason = DISCONNECTION\nperdedor = equipo del desconectado\nganador = rival;
+case (Global vencido)
+  :Por equipo: Σ Vida actual y Σ Vida máxima;
+  if (¿porcentajes distintos?\n(restanteA × máximaB ≠ restanteB × máximaA)) then (sí)
+    :gana el mayor porcentaje\ntiebreak = LIFE_PERCENT;
+  elseif (¿vida absoluta distinta?) then (sí)
+    :gana la mayor vida restante\ntiebreak = ABSOLUTE_LIFE;
+  else (no)
+    :outcome = NO_WINNER\ntiebreak = null;
+  endif
+  :reason = TIME_LIMIT;
+case (Turno vencido)
+  :turnTimedOut: cerrar el turno sin acción\nsaltar héroes sin Vida\nnuevo turnStartedAt;
+  :Persistir · publicar turnTimedOut;
+  stop
+endswitch
+
+:Construir BattleResult (equipos, participantes, causa);
+:Restaurar el Poder de todos los combatientes (HU-11);
+:status = FINISHED · evento battleFinished (seq siguiente);
+:save(room, expectedVersion)  — UNA escritura;
+if (¿RoomConflictError?) then (sí)
+  :Releer y reevaluar\n(si ya está FINISHED: no-op);
+  stop
+endif
+:Publicar battleFinished (mismos bytes a todos);
+:Notificar sala FINISHED (chat revalida y se cierra);
+:Cancelar vencimientos y gracias · liberar presencia;
+:Publicar BattleFinishedNotification\n(créditos como derecho; sin acreditar);
+stop
+@enduml
