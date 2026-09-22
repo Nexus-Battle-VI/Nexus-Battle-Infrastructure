@@ -1,0 +1,53 @@
+@startuml hu-22-sequence-reward
+title HU-22 — Secuencia: créditos de victoria y cofre (reveal inmediato)
+
+actor Web
+participant Combat
+participant Wallet
+participant "Player-\nInventory" as Inventory
+
+== HU-21 ya cerró la batalla ==
+Combat -> Combat : BattleResult terminal (persistido, HU-21)
+Combat -> Combat : crear RewardWorkflow por participante HUMAN\n(estado PENDING_CREDIT, persistido antes de llamar a nadie)
+
+loop por cada participante HUMAN
+  Combat -> Wallet : POST /api/internal/v1/wallet/credits/battle-reward\n(operationId determinista, creditsAmount, victoryCreditsAmount)
+  activate Wallet
+  Wallet -> Wallet : transacción: ledger insert-only + balance + victoryProgress\n+ weeklyChestCount (America/Bogota)
+  Wallet --> Combat : balance, victoryProgress, weeklyChestCount, chestEarned
+  deactivate Wallet
+  Combat -> Combat : estado CREDIT_CONFIRMED
+
+  alt chestEarned == true
+    Combat -> Combat : estado CHEST_ELIGIBLE
+    Combat -> Combat : BATTLE_RANDOM_SEQUENCE.nextIndex() (HU-24, MISMA secuencia de\nproceso que turnos/ataques, 1..8000) -> RewardTable.resolve() -> producto
+    Combat -> Combat : estado REWARD_SELECTED (productId persistido)
+    Combat -> Inventory : POST /api/internal/v1/inventory/grants\n(operationId determinista, productId, quantity:1)
+    activate Inventory
+    Inventory --> Combat : applied, item entregado
+    deactivate Inventory
+    Combat -> Combat : estado COMPLETED (con cofre)
+  else chestEarned == false
+    Combat -> Combat : estado COMPLETED (sin cofre)
+  end
+
+end
+
+== Web se entera: sondeo, NO push (corregido 2026-09-22 -- implementación real, no lo que proponía una versión anterior de este diagrama) ==
+note over Web, Combat
+  No hay un segundo mensaje de WebSocket para HU-22: no hay precedente en
+  Web de invalidar caché de TanStack Query desde un evento realtime, y
+  acoplar el socket de combate a este dominio no aportaba nada que el
+  sondeo no resolviera ya.
+end note
+loop cada 1500 ms, activado solo tras el final de la batalla, hasta un estado final
+  Web -> Combat : GET /v1/combat/rooms/:roomId/reward (JWT)
+  Combat --> Web : creditsEarned, balance, progreso, chest, reward,\nrewardDelivery: NONE | PENDING | CONFIRMED | FAILED
+end
+note over Web
+  Se detiene al llegar a CONFIRMED, FAILED,
+  o NONE con balance ya conocido -- nunca
+  sondea algo que ya se resolvió.
+end note
+
+@enduml
