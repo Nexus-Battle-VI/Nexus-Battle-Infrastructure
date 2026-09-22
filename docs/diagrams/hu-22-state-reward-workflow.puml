@@ -1,32 +1,42 @@
 @startuml hu-22-state-reward-workflow
-title HU-22 — Estados de RewardWorkflow (por participante HUMAN de una batalla)
+title HU-22 — Estados de RewardWorkflow (Combat #32, 6 estados persistidos — corregido 2026-09-22)
 
 [*] --> PENDING_CREDIT : BattleResult terminal (HU-21)
 
-PENDING_CREDIT --> CREDIT_CONFIRMED : Wallet responde (applied true o false por replay)
-PENDING_CREDIT --> RETRYABLE_FAILURE : timeout / 503
+PENDING_CREDIT --> PENDING_CREDIT : timeout / 503 en Wallet\n(registerRetryableFailure, NO cambia de estado;\nel barrido periodico lo reintenta)
+PENDING_CREDIT --> CREDIT_CONFIRMED : Wallet responde, chestEarned == false
+PENDING_CREDIT --> CHEST_ELIGIBLE : Wallet responde, chestEarned == true
+PENDING_CREDIT --> TERMINAL_FAILURE : 422 / 409 con cuerpo distinto\n(rechazo terminal de Wallet)
 
-CREDIT_CONFIRMED --> COMPLETED : chestEarned == false
-CREDIT_CONFIRMED --> CHEST_ELIGIBLE : chestEarned == true
+CREDIT_CONFIRMED --> COMPLETED : sin cofre, nada mas que hacer
 
-CHEST_ELIGIBLE --> REWARD_SELECTED : RandomSequencePort.nextIndex() (HU-24)\ny persistencia del productId
+CHEST_ELIGIBLE --> REWARD_SELECTED : RandomSequencePort.nextIndex() (HU-24)\ny persistencia del productId (pura, no falla)
 
-REWARD_SELECTED --> INVENTORY_PENDING : POST Player-Inventory grants
-INVENTORY_PENDING --> COMPLETED : Inventory confirma (applied)
-INVENTORY_PENDING --> RETRYABLE_FAILURE : timeout / 503\n(reintenta MISMO productId, no vuelve a sortear)
-INVENTORY_PENDING --> TERMINAL_FAILURE : 422 (productId ya no válido en Catalog)
-
-RETRYABLE_FAILURE --> PENDING_CREDIT : reintento (si falló antes de CREDIT_CONFIRMED)
-RETRYABLE_FAILURE --> REWARD_SELECTED : reintento (si falló después de REWARD_SELECTED)
+REWARD_SELECTED --> REWARD_SELECTED : timeout / 503 en Inventory\n(registerRetryableFailure, NO cambia de estado;\nreintenta el MISMO productId, no vuelve a sortear)
+REWARD_SELECTED --> COMPLETED : Inventory confirma (applied)
+REWARD_SELECTED --> TERMINAL_FAILURE : 422 / 409 con cuerpo distinto\n(rechazo terminal de Inventory)
 
 COMPLETED --> [*]
-TERMINAL_FAILURE --> [*] : requiere intervención;\ncréditos ya confirmados quedan firmes
+TERMINAL_FAILURE --> [*] : requiere intervención;\ncréditos ya confirmados (si los hubo) quedan firmes
 
 note right of TERMINAL_FAILURE
   No revierte el crédito ya acreditado
   por Wallet (HU-22 §66). Web muestra
-  rewardDelivery: PENDING, nunca
-  "entregado" en falso.
+  rewardDelivery: FAILED (corregido
+  2026-09-22): nunca "entregado" en
+  falso, y tampoco "procesando" para
+  siempre -- Combat nunca reintenta
+  solo un TERMINAL_FAILURE.
+end note
+
+note left of PENDING_CREDIT
+  INVENTORY_PENDING y RETRYABLE_FAILURE
+  del diseno conceptual (contrato §8.1)
+  NO son estados persistidos aparte: un
+  fallo transitorio se registra sin
+  cambiar el `state`, y el workflow
+  reanuda desde su estado de origen en
+  el siguiente barrido.
 end note
 
 @enduml

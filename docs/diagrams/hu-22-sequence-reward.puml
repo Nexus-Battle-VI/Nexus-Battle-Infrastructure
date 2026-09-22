@@ -31,11 +31,23 @@ loop por cada participante HUMAN
     Combat -> Combat : estado COMPLETED (sin cofre)
   end
 
-  Combat -> Web : notificación aditiva sobre el snapshot de la sala\n(creditsEarned, balance, progreso, chest, reward, rewardDelivery)
 end
 
-== Refresh / reconexión ==
-Web -> Combat : resume / snapshot
-Combat --> Web : mismo RewardWorkflow ya persistido (sin repetir Wallet/Inventory)
+== Web se entera: sondeo, NO push (corregido 2026-09-22 -- implementación real, no lo que proponía una versión anterior de este diagrama) ==
+note over Web, Combat
+  No hay un segundo mensaje de WebSocket para HU-22: no hay precedente en
+  Web de invalidar caché de TanStack Query desde un evento realtime, y
+  acoplar el socket de combate a este dominio no aportaba nada que el
+  sondeo no resolviera ya.
+end note
+loop cada 1500 ms, activado solo tras el final de la batalla, hasta un estado final
+  Web -> Combat : GET /v1/combat/rooms/:roomId/reward (JWT)
+  Combat --> Web : creditsEarned, balance, progreso, chest, reward,\nrewardDelivery: NONE | PENDING | CONFIRMED | FAILED
+end
+note over Web
+  Se detiene al llegar a CONFIRMED, FAILED,
+  o NONE con balance ya conocido -- nunca
+  sondea algo que ya se resolvió.
+end note
 
 @enduml

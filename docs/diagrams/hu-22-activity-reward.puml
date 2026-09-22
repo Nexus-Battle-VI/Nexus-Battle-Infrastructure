@@ -9,10 +9,15 @@ start
 
 if (Wallet respondió?) then (sí)
   :leer balance, victoryProgress, weeklyChestCount, chestEarned;
-else (no / timeout)
-  :estado RETRYABLE_FAILURE;
-  :reintentar mismo operationId (bounded backoff);
-  stop
+else (no)
+  if (422 / 409 con cuerpo distinto?) then (terminal)
+    :estado TERMINAL_FAILURE;
+    stop
+  else (503 / timeout, transitorio)
+    :registrar el intento fallido, SIN cambiar de estado\n(sigue en PENDING_CREDIT; corregido 2026-09-22:\nno es un estado propio, ver contrato §8.1);
+    :el barrido periódico reintenta el mismo operationId;
+    stop
+  endif
 endif
 
 if (chestEarned?) then (sí)
@@ -23,15 +28,21 @@ if (chestEarned?) then (sí)
   :POST Player-Inventory grants (operationId determinista, productId, quantity 1);
   if (Inventory confirmó?) then (sí)
     :estado COMPLETED (con cofre);
-  else (no / timeout)
-    :estado RETRYABLE_FAILURE o TERMINAL_FAILURE (422);
-    :créditos YA confirmados; reward queda PENDING, sin ítem falso;
-    stop
+  else (no)
+    if (422 / 409 con cuerpo distinto?) then (terminal)
+      :estado TERMINAL_FAILURE;
+      :créditos YA confirmados quedan firmes;\nWeb muestra rewardDelivery: FAILED (corregido 2026-09-22),\nnunca "entregado" ni "procesando" para siempre;
+      stop
+    else (503 / timeout, transitorio)
+      :registrar el intento fallido, SIN cambiar de estado\n(sigue en REWARD_SELECTED, mismo productId);
+      :el barrido periódico reintenta;
+      stop
+    endif
   endif
 else (no)
   :estado COMPLETED (sin cofre);
 endif
 
-:notificar a Web (aditivo sobre el snapshot de la sala);
+:Web se entera por SONDEO (corregido 2026-09-22 --\nno hay push realtime, ver diagrama de secuencia):\nGET .../reward cada 1500 ms hasta un estado final;
 stop
 @enduml
