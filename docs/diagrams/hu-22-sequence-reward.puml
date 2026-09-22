@@ -20,7 +20,7 @@ loop por cada participante HUMAN
 
   alt chestEarned == true
     Combat -> Combat : estado CHEST_ELIGIBLE
-    Combat -> Combat : RandomSequencePort.nextIndex() (HU-24, secuencia propia\ndel workflow, 1..8000) -> RewardTable.resolve() -> producto
+    Combat -> Combat : BATTLE_RANDOM_SEQUENCE.nextIndex() (HU-24, MISMA secuencia de\nproceso que turnos/ataques, 1..8000) -> RewardTable.resolve() -> producto
     Combat -> Combat : estado REWARD_SELECTED (productId persistido)
     Combat -> Inventory : POST /api/internal/v1/inventory/grants\n(operationId determinista, productId, quantity:1)
     activate Inventory
