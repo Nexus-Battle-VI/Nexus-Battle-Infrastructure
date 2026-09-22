@@ -13,12 +13,16 @@ difficulty  = NORMAL | HEROIC | LEGENDARY | MYTHIC
 rewardTier  = STANDARD | IMPROVED | PREMIUM | EXCLUSIVE
 ```
 
-| difficulty | enemyStatMultiplier (literal HU) | rewardTier propuesto |
-| --- | --- | --- |
-| `NORMAL` | `1.0` | `STANDARD` |
-| `HEROIC` | `1.5` | `IMPROVED` |
-| `LEGENDARY` | `2.0` | `PREMIUM` |
-| `MYTHIC` | *pendiente del PO — no inventar* | `EXCLUSIVE` |
+Descriptor de escalado: lo que Missions aportará a HU-72 para que **Combat** lo aplique. Missions no escala nada.
+
+| difficulty | enemyStatMultiplier (literal HU) | Estadísticas afectadas | Redondeo | rewardTier propuesto |
+| --- | --- | --- | --- | --- |
+| `NORMAL` | `1.0` | ninguna (base) | — | `STANDARD` |
+| `HEROIC` | `1.5` | propuesta P-D6: Vida, Ataque y Defensa enemigas | **pendiente del PO** | `IMPROVED` |
+| `LEGENDARY` | `2.0` | propuesta P-D6 | **pendiente del PO** | `PREMIUM` |
+| `MYTHIC` | *ausente: pendiente del PO, no inventar* | **pendiente del PO** | **pendiente del PO** | `EXCLUSIVE` |
+
+Las celdas marcadas pendientes son las decisiones abiertas 1 y 2 del [diseño](../architecture/hu-75-dificultad-escalonada.md#decisiones-pendientes-visibles-no-resueltas), no huecos que HU-75.2 pueda rellenar por su cuenta.
 
 ## Operaciones conceptuales (jugador)
 
@@ -93,6 +97,44 @@ Cuerpo de 422:
 ```
 
 Web muestra `message`. No inventa el texto.
+
+## Fixtures por estado de progresión
+
+Respuestas de `GET /api/v1/missions/{missionId}/difficulties` para un mismo jugador y una misma misión, según sus clears. Solo se muestran `difficulty`, `unlocked` y `lockReason`; el resto de campos no cambia entre estados.
+
+Sin clears:
+
+```json
+[
+  { "difficulty": "NORMAL", "unlocked": true, "lockReason": null },
+  { "difficulty": "HEROIC", "unlocked": false, "lockReason": "Debes completar esta misión en Normal al menos una vez." },
+  { "difficulty": "LEGENDARY", "unlocked": false, "lockReason": "Debes completar esta misión en Heroico al menos una vez." },
+  { "difficulty": "MYTHIC", "unlocked": false, "lockReason": "Debes completar esta misión en Legendario al menos una vez." }
+]
+```
+
+Clear en `NORMAL`:
+
+```json
+[
+  { "difficulty": "NORMAL", "unlocked": true, "lockReason": null },
+  { "difficulty": "HEROIC", "unlocked": true, "lockReason": null },
+  { "difficulty": "LEGENDARY", "unlocked": false, "lockReason": "Debes completar esta misión en Heroico al menos una vez." },
+  { "difficulty": "MYTHIC", "unlocked": false, "lockReason": "Debes completar esta misión en Legendario al menos una vez." }
+]
+```
+
+Clears en `NORMAL` y `HEROIC`: `LEGENDARY` pasa a `unlocked: true`; `MYTHIC` sigue bloqueado con el mismo `lockReason`.
+
+Clears en `NORMAL`, `HEROIC` y `LEGENDARY`: los cuatro niveles `unlocked: true`; `MYTHIC` va sin `enemyStatMultiplier` hasta que el PO lo publique.
+
+Rechazo de matrícula que estos estados producen:
+
+```json
+{ "code": "PROGRESSION_LOCKED", "message": "No puedes iniciar esta misión en Legendario: primero complétala en Heroico.", "requested": "LEGENDARY", "required": "HEROIC" }
+```
+
+Ese mismo cuerpo responde tanto al salto de nivel (solo hay clear en `NORMAL`) como a un clear de `HEROIC` conseguido en **otra** misión o por **otro** jugador: la política solo mira `clears(playerId, missionId)`. La tabla completa de casos está en la [matriz de transición y aislamiento](../architecture/hu-75-dificultad-escalonada.md#matriz-de-transición-y-aislamiento).
 
 ## Operación interna hacia Combat (HU-72)
 

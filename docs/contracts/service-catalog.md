@@ -218,6 +218,17 @@ Las tres rutas marcadas **diseño** las define el [contrato de HU-17](hu-17-batt
 
 **La aleatoriedad no tiene ruta pública ni interna**: el generador (HU-24) y la tabla de efectos (HU-25) los consume Combat internamente ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)). No existen `/random`, `/rng` ni `/seed`. El contrato interno de simulaciones para Missions (`POST /api/internal/v1/combat/simulations`) está **previsto y sin formalizar**, por eso no se documenta aquí.
 
+### Missions — `/api/v1/missions`
+
+Sin rutas de negocio implementadas (andamiaje, [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md)). Primer contrato en **diseño**:
+
+| Método | Ruta | Códigos de éxito |
+| --- | --- | --- |
+| `GET` | `/api/v1/missions/:missionId/difficulties` (HU-75, **diseño** [contrato v1](hu-75-mission-difficulty-v1.md)) | `200` |
+| `POST` | `/api/v1/missions/:missionId/enrollments` con `difficulty` (extiende la matrícula de HU-70; HU-75, **diseño**) | `201` |
+
+Las dos rutas las define el [contrato de HU-75](hu-75-mission-difficulty-v1.md) (Task #383) y **solo son capacidad cuando Missions las integre** (Task #384). La matrícula pertenece a HU-70 (Task #365), que fija el resto del cuerpo y sus errores; HU-75 añade `difficulty`, el `422 PROGRESSION_LOCKED` y el `400 UNKNOWN_DIFFICULTY`. El contrato interno hacia Combat sigue **previsto y sin formalizar**: HU-75 solo fija los campos `difficulty` y `enemyStatMultiplier` que Missions aportará cuando HU-72 lo defina.
+
 ### Notifications
 
 Su entrada principal sigue siendo la cola de mensajes; el contrato de eventos está en [event-catalog.md](event-catalog.md). Desde HU-38 (Management #46) tiene además superficie HTTP propia, **implementada e integrada en `develop`**, detrás de `CATALOG_NOTIFICATIONS_HTTP_ENABLED` (opcional, `false` por defecto en el propio servicio -ver [Nexus-Battle-VI/Nexus-Battle-Notifications#20](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/20)-; la composición de referencia de este repositorio la habilita, ver `compose/compose.example.yml` y `compose/nodes/app.yml`).
