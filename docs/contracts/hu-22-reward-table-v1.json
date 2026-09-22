@@ -1,0 +1,295 @@
+{
+  "schemaVersion": "1",
+  "threshold": 20,
+  "tiers": [
+    {
+      "tierId": "COMUN",
+      "productType": "ARMADURA",
+      "weightPercent": 60,
+      "productCount": 16,
+      "weightPerProductPercent": 3.75,
+      "products": [
+        {
+          "productId": "45554d1c-8728-44ee-bdfc-287e87801098",
+          "sku": "atadura-carmesi-45554d1c",
+          "name": "Atadura carmesí",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "94002b15-496e-490c-b413-8a4855319701",
+          "sku": "bata-de-cirujano-94002b15",
+          "name": "Bata de Cirujano",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "69183910-7105-487c-ab64-c2b5d23cf15f",
+          "sku": "casco-de-ecos-ancestrales-69183910",
+          "name": "Casco de Ecos Ancestrales",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "315d6197-0acb-4359-a3f3-47d6931e5741",
+          "sku": "caida-de-fuego-315d6197",
+          "name": "Caída de fuego",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "6a96d059-88c1-4702-8f07-8410f98707a3",
+          "sku": "corona-de-hielo-6a96d059",
+          "name": "Corona de hielo",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "6254a686-61db-44f8-b58a-f4506a1dbcb4",
+          "sku": "defensa-del-enfurecido-6254a686",
+          "name": "Defensa del enfurecido",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "e36f7f9c-ee45-40dc-a2dc-33da4d9bdd12",
+          "sku": "magma-ardiente-e36f7f9c",
+          "name": "Magma Ardiente",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "f506d7d5-d1cc-49b7-b458-cc1d32d1cf6e",
+          "sku": "mano-del-desterrado-f506d7d5",
+          "name": "Mano del desterrado",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "f75ad91e-bd41-43e5-97f5-dfb313c56bac",
+          "sku": "pantalon-de-expedicion-medica-f75ad91e",
+          "name": "Pantalón de Expedición Médica",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "796af8f4-29fc-4944-9355-dae8aa8ae967",
+          "sku": "pie-de-atleta-796af8f4",
+          "name": "Pie de atleta",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "bfeb146d-6b9a-4aea-a744-07aebc9e7133",
+          "sku": "piel-de-caminante-del-bosque-bfeb146d",
+          "name": "Piel de Caminante del Bosque",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "2aadc743-1419-440f-b853-86bf2bcb3af3",
+          "sku": "puno-lucido-2aadc743",
+          "name": "Puño lúcido",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "6c7ccc47-306b-433c-b7ba-9775a0573570",
+          "sku": "punos-en-llamas-6c7ccc47",
+          "name": "Puños en llamas",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "ab73fd8d-7e68-4606-838b-1caa2acb02eb",
+          "sku": "sangre-cruel-ab73fd8d",
+          "name": "Sangre cruel",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "0dcf74f0-42a1-48c7-994d-ddd26c8f4d42",
+          "sku": "tunica-arcana-0dcf74f0",
+          "name": "Túnica arcana",
+          "creditsPriceReference": 60
+        },
+        {
+          "productId": "234c804b-94cc-411d-8cad-24eb1b9bd6f9",
+          "sku": "ventisca-234c804b",
+          "name": "Ventisca",
+          "creditsPriceReference": 60
+        }
+      ],
+      "indexRange": {
+        "from": 1,
+        "to": 6000
+      }
+    },
+    {
+      "tierId": "RARA",
+      "productType": "ARMA",
+      "weightPercent": 30,
+      "productCount": 16,
+      "weightPerProductPercent": 1.875,
+      "products": [
+        {
+          "productId": "095844e1-0b37-49d4-a4c0-c150504892e4",
+          "sku": "baculo-de-permafrost-095844e1",
+          "name": "Báculo de Permafrost",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "c846ae38-7a57-4d59-85e2-573e0c1a3d69",
+          "sku": "cierra-sangrienta-c846ae38",
+          "name": "Cierra sangrienta",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "1bc8da4f-5081-4d0e-84a6-5a5e1ac1b665",
+          "sku": "daga-purulenta-1bc8da4f",
+          "name": "Daga purulenta",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "eca786b7-5b32-462f-b5fe-159faca92af5",
+          "sku": "escudo-de-dragon-eca786b7",
+          "name": "Escudo de dragón",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "eca65350-adcb-4452-a9a1-f2b2b756abcc",
+          "sku": "espada-de-dos-manos-eca65350",
+          "name": "Espada de dos manos",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "e94527a7-6392-4776-961a-66e9b210b9ff",
+          "sku": "espada-de-una-mano-e94527a7",
+          "name": "Espada de una mano",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "f9c7ee97-ee1c-4683-8ff3-7f67a0c1b52c",
+          "sku": "fuego-fatuo-f9c7ee97",
+          "name": "Fuego fatuo",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "530070bb-7677-470e-afa5-4c184662b957",
+          "sku": "kit-de-urgencias-530070bb",
+          "name": "Kit de urgencias",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "aa5833c8-86e0-4c02-850f-1e2017927829",
+          "sku": "machete-vendito-aa5833c8",
+          "name": "Machete vendito",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "a9e279fd-a324-4083-a2f3-ae8e0be379be",
+          "sku": "orbe-de-manos-ardientes-a9e279fd",
+          "name": "Orbe de manos ardientes",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "cf1d645a-8f57-422b-b0bf-db4192f5d3d8",
+          "sku": "piedra-de-afilar-cf1d645a",
+          "name": "Piedra de afilar",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "f25f2096-621e-4d8b-aeae-64431e83eb0c",
+          "sku": "raiz-china-f25f2096",
+          "name": "Raíz china",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "7918f5a5-7b07-4ea9-a090-db9e419926b2",
+          "sku": "reanimador-7918f5a5",
+          "name": "Reanimador",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "ae400acc-aed3-4870-87a6-560f3994f60c",
+          "sku": "venas-heladas-ae400acc",
+          "name": "Venas heladas",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "739df0cc-bd87-4692-9b7c-eb3b8e85eec1",
+          "sku": "vision-borrosa-739df0cc",
+          "name": "Visión borrosa",
+          "creditsPriceReference": 80
+        },
+        {
+          "productId": "076fc7b3-9bfa-4d48-a960-446f1bdd3041",
+          "sku": "yerbabuena-076fc7b3",
+          "name": "Yerbabuena",
+          "creditsPriceReference": 80
+        }
+      ],
+      "indexRange": {
+        "from": 6001,
+        "to": 9000
+      }
+    },
+    {
+      "tierId": "ESPECIAL",
+      "productType": "ITEM",
+      "weightPercent": 10,
+      "productCount": 8,
+      "weightPerProductPercent": 1.25,
+      "products": [
+        {
+          "productId": "173c96e2-cfae-40a6-b9d0-066b92721fc1",
+          "sku": "anillo-para-piro-explosion-173c96e2",
+          "name": "Anillo para Piro-explosión",
+          "creditsPriceReference": 100
+        },
+        {
+          "productId": "01a3a9f0-3dc9-43d1-a8b5-258995bf62cf",
+          "sku": "benditas-01a3a9f0",
+          "name": "Benditas",
+          "creditsPriceReference": 100
+        },
+        {
+          "productId": "176c1c30-d7ec-4088-a041-d251955ec60c",
+          "sku": "empunadura-de-furia-176c1c30",
+          "name": "Empuñadura de Furia",
+          "creditsPriceReference": 100
+        },
+        {
+          "productId": "6e70fa14-fdb2-4593-a7e0-110c7e2d32ba",
+          "sku": "libro-de-la-ventisca-helada-6e70fa14",
+          "name": "Libro de la ventisca helada",
+          "creditsPriceReference": 100
+        },
+        {
+          "productId": "bcaa42c0-af23-4e84-a148-623037d76f05",
+          "sku": "mancuerna-yugular-bcaa42c0",
+          "name": "Mancuerna yugular",
+          "creditsPriceReference": 100
+        },
+        {
+          "productId": "94fddf73-3f0b-41c0-af3c-4cc89cad7977",
+          "sku": "pinchos-de-escudo-94fddf73",
+          "name": "Pinchos de escudo",
+          "creditsPriceReference": 100
+        },
+        {
+          "productId": "89b56f05-97ca-4826-baf5-6bea98c36381",
+          "sku": "pluma-sanadora-89b56f05",
+          "name": "Pluma sanadora",
+          "creditsPriceReference": 100
+        },
+        {
+          "productId": "c4d0626d-71d7-4c43-8c4d-f9deb994c481",
+          "sku": "veneno-lacerante-c4d0626d",
+          "name": "Veneno lacerante",
+          "creditsPriceReference": 100
+        }
+      ],
+      "indexRange": {
+        "from": 9001,
+        "to": 10000
+      }
+    }
+  ],
+  "indexSpace": 10000,
+  "auditedAt": "2026-09-22",
+  "auditSource": "GET https://nexus.simuladorupbbga.app/api/v1/catalog/products (paginado completo, 84 productos)",
+  "exclusionRules": [
+    "type === HEROE (HU-22 §127)",
+    "type === EPICA (HU-22 §127)",
+    "premium === true (HU-22 §126)",
+    "printRunMode === LIMITED (HU-22 §125, stock finito sin regla formal de consumo)",
+    "type === HABILIDAD (creditsPrice 0 en el Catalog real, no es loot con valor)"
+  ]
+}

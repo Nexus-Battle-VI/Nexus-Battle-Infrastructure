@@ -1,0 +1,37 @@
+@startuml hu-22-activity-reward
+title HU-22 — Actividad: de BattleResult a recompensa entregada
+
+start
+:BattleResult terminal (HU-21);
+:leer credits/victoryCredits del participante\n(BattleCreditsPolicy, ya implementada);
+:persistir RewardWorkflow (PENDING_CREDIT);
+:POST Wallet credits/battle-reward (operationId determinista);
+
+if (Wallet respondió?) then (sí)
+  :leer balance, victoryProgress, weeklyChestCount, chestEarned;
+else (no / timeout)
+  :estado RETRYABLE_FAILURE;
+  :reintentar mismo operationId (bounded backoff);
+  stop
+endif
+
+if (chestEarned?) then (sí)
+  :estado CHEST_ELIGIBLE;
+  :sortear tier con RandomSequencePort.nextIndex() (1..10000);
+  :sortear producto dentro del tier (1..N_tier);
+  :persistir REWARD_SELECTED (productId fijo, no se vuelve a sortear);
+  :POST Player-Inventory grants (operationId determinista, productId, quantity 1);
+  if (Inventory confirmó?) then (sí)
+    :estado COMPLETED (con cofre);
+  else (no / timeout)
+    :estado RETRYABLE_FAILURE o TERMINAL_FAILURE (422);
+    :créditos YA confirmados; reward queda PENDING, sin ítem falso;
+    stop
+  endif
+else (no)
+  :estado COMPLETED (sin cofre);
+endif
+
+:notificar a Web (aditivo sobre el snapshot de la sala);
+stop
+@enduml

@@ -1,0 +1,32 @@
+@startuml hu-22-state-reward-workflow
+title HU-22 — Estados de RewardWorkflow (por participante HUMAN de una batalla)
+
+[*] --> PENDING_CREDIT : BattleResult terminal (HU-21)
+
+PENDING_CREDIT --> CREDIT_CONFIRMED : Wallet responde (applied true o false por replay)
+PENDING_CREDIT --> RETRYABLE_FAILURE : timeout / 503
+
+CREDIT_CONFIRMED --> COMPLETED : chestEarned == false
+CREDIT_CONFIRMED --> CHEST_ELIGIBLE : chestEarned == true
+
+CHEST_ELIGIBLE --> REWARD_SELECTED : RandomSequencePort.nextIndex() (HU-24)\ny persistencia del productId
+
+REWARD_SELECTED --> INVENTORY_PENDING : POST Player-Inventory grants
+INVENTORY_PENDING --> COMPLETED : Inventory confirma (applied)
+INVENTORY_PENDING --> RETRYABLE_FAILURE : timeout / 503\n(reintenta MISMO productId, no vuelve a sortear)
+INVENTORY_PENDING --> TERMINAL_FAILURE : 422 (productId ya no válido en Catalog)
+
+RETRYABLE_FAILURE --> PENDING_CREDIT : reintento (si falló antes de CREDIT_CONFIRMED)
+RETRYABLE_FAILURE --> REWARD_SELECTED : reintento (si falló después de REWARD_SELECTED)
+
+COMPLETED --> [*]
+TERMINAL_FAILURE --> [*] : requiere intervención;\ncréditos ya confirmados quedan firmes
+
+note right of TERMINAL_FAILURE
+  No revierte el crédito ya acreditado
+  por Wallet (HU-22 §66). Web muestra
+  rewardDelivery: PENDING, nunca
+  "entregado" en falso.
+end note
+
+@enduml

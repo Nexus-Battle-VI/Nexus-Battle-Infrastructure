@@ -1,0 +1,41 @@
+@startuml hu-22-sequence-reward
+title HU-22 — Secuencia: créditos de victoria y cofre (reveal inmediato)
+
+actor Web
+participant Combat
+participant Wallet
+participant "Player-\nInventory" as Inventory
+
+== HU-21 ya cerró la batalla ==
+Combat -> Combat : BattleResult terminal (persistido, HU-21)
+Combat -> Combat : crear RewardWorkflow por participante HUMAN\n(estado PENDING_CREDIT, persistido antes de llamar a nadie)
+
+loop por cada participante HUMAN
+  Combat -> Wallet : POST /api/internal/v1/wallet/credits/battle-reward\n(operationId determinista, creditsAmount, victoryCreditsAmount)
+  activate Wallet
+  Wallet -> Wallet : transacción: ledger insert-only + balance + victoryProgress\n+ weeklyChestCount (America/Bogota)
+  Wallet --> Combat : balance, victoryProgress, weeklyChestCount, chestEarned
+  deactivate Wallet
+  Combat -> Combat : estado CREDIT_CONFIRMED
+
+  alt chestEarned == true
+    Combat -> Combat : estado CHEST_ELIGIBLE
+    Combat -> Combat : RandomSequencePort.nextIndex() (HU-24, secuencia\npropia del workflow) -> tier -> producto
+    Combat -> Combat : estado REWARD_SELECTED (productId persistido)
+    Combat -> Inventory : POST /api/internal/v1/inventory/grants\n(operationId determinista, productId, quantity:1)
+    activate Inventory
+    Inventory --> Combat : applied, item entregado
+    deactivate Inventory
+    Combat -> Combat : estado COMPLETED (con cofre)
+  else chestEarned == false
+    Combat -> Combat : estado COMPLETED (sin cofre)
+  end
+
+  Combat -> Web : notificación aditiva sobre el snapshot de la sala\n(creditsEarned, balance, progreso, chest, reward, rewardDelivery)
+end
+
+== Refresh / reconexión ==
+Web -> Combat : resume / snapshot
+Combat --> Web : mismo RewardWorkflow ya persistido (sin repetir Wallet/Inventory)
+
+@enduml
