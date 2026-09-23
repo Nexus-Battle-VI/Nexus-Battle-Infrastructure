@@ -1,38 +1,121 @@
-# HU-08 — Evidencia del diseño de progresión: experiencia requerida por nivel
+# HU-08 — Evidencia de progresión: experiencia requerida por nivel
 
 - **Issue central:** [Nexus-Battle-VI/Nexus-Battle-Management#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/17)
 - **Tasks:** [#188](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/188) (diseño · `open`), [#189](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/189) (implementación · `open`), [#190](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/190) (pruebas · `open`)
 - **Fecha:** 2026-09-23
 - **Requisito trazado:** `RF-08`
 - **Bounded context:** Player / Inventory · Team Alfa
-- **Pull Requests:** pendientes de abrir. El diseño va en la rama `docs/hu-08-1-diseno-progresion` y la implementación en `feat/hu-08-2-umbral-experiencia`, ambas contra `develop`.
-- **Estado:** diseño **e implementación** entregados. **La HU no está aceptada**: falta revisión por pares y aceptación del PO, y `CA-06` sigue sin resolver.
+- **Pull Requests:** pendientes de abrir. El diseño va en la rama `docs/hu-08-1-diseno-progresion`, la implementación en `feat/hu-08-2-umbral-experiencia` y las pruebas en la misma rama de implementación, todas contra `develop`.
+- **Matriz de trazabilidad:** [Nexus-Battle-Player-Inventory/docs/hu-08-matriz-de-pruebas.md](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-08-matriz-de-pruebas.md)
+- **Estado:** diseño, implementación y suite de pruebas entregados. **La HU no está aceptada**: falta revisión por pares y aceptación del PO, y `CA-06` sigue sin resolver.
 
 ## Estado de la verificación: qué se comprobó y qué NO
 
-Este documento **no declara la HU aceptada**. Lo que existe es la especificación y su
-implementación con evidencia de ejecución. Declarar aquí una aceptación sería exactamente el
-error que el Project ya cometió con HU-29 y HU-31, marcadas `Done` sin código en `develop`.
+Este documento **no declara la HU aceptada**. Lo que existe es la especificación, su
+implementación y la evidencia de ejecución de sus pruebas. Declarar aquí una aceptación sería
+exactamente el error que el Project ya cometió con HU-29 y HU-31, marcadas `Done` sin código en
+`develop`.
 
 | Nivel | Estado |
 | --- | --- |
 | Diseño de dominio, caso de uso y diagramas | **Entregado** en `Nexus-Battle-Player-Inventory/docs/hu-08-progresion.md` |
+| Matriz de trazabilidad `RF-08 → CA → escenario → nivel → resultado → tipo → script` | **Entregada** en `Nexus-Battle-Player-Inventory/docs/hu-08-matriz-de-pruebas.md` |
 | Modelo de dominio y objetos de valor | **Implementados** (`ExperiencePolicy`, `HeroLevel`, `Experience`, `HeroProgression`) |
 | Persistencia: migración `007-hero-progressions` | **Implementada**, con validador `$jsonSchema` en el motor |
 | Adaptadores Mongo y en memoria, con bloqueo optimista | **Implementados** |
 | Registro en el contenedor y operación reutilizable | **Implementados**, con prueba de cableado |
-| Aritmética exacta de la fórmula | **Verificada** en los 7 niveles: `100`, `120`, `144`, `172.8`, `207.36`, `248.832`, `298.5984` |
+| Aritmética exacta de la fórmula | **Verificada** contra una tabla de referencia derivada **fuera del repositorio**: `100`, `120`, `144`, `172.8`, `207.36`, `248.832`, `298.5984` |
 | Control de fórmula única | **Ejecutado**: `no-duplicate-experience-formula.spec.ts` falla si la fórmula se evalúa fuera de `ExperiencePolicy` |
 | Control de ausencia de redondeo | **Verificado**: la política no usa `Math.round`, `floor`, `ceil` ni `trunc` |
-| Pruebas unitarias | **Ejecutadas: 30 suites / 640 pruebas, en verde** (55 nuevas de HU-08) |
+| Determinismo | **Verificado**: 50 consultas por nivel de referencia, y el orden de consulta no altera el resultado |
+| Pruebas unitarias | **Ejecutadas: 31 suites / 664 pruebas, en verde** |
 | Pruebas de integración HTTP | **Ejecutadas: 9 suites / 101 pruebas, en verde** |
-| Pruebas contra MongoDB real | **Ejecutadas: 7 suites / 72 pruebas, en verde** (9 nuevas de HU-08) |
-| Cobertura global | **95,5 % sentencias / 87,4 % ramas** — sobre el umbral del 80 % |
+| Pruebas contra MongoDB real | **Ejecutadas: 7 suites / 74 pruebas, en verde** |
+| Casos de HU-08 | **84 en total**: 73 en la suite unitaria y 11 en la de base de datos |
+| Cobertura de la regla (`ExperiencePolicy`) | **100 % sentencias, ramas y funciones** |
+| Cobertura global | **95,7 % sentencias / 87,6 % ramas / 94,2 % funciones** — sobre el umbral del 80 % |
 | `lint`, `format:check`, `typecheck`, `build` | **Ejecutados y limpios** |
 | **Que el motor rechace persistir el umbral** | **Verificado con MongoDB real**: insertar `nextLevelThreshold` a mano falla |
+| Pruebas de redondeo | **NO existen, y es deliberado**: no hay política aprobada que verificar. Ver `D-3` |
+| Casos de `CA-06` | **NO existen, y es deliberado**: el criterio no es implementable sin fórmula. Ver `D-3` |
 | Revisión por pares | **PENDIENTE.** Es requisito del ruleset: 1 aprobación + Code Owner |
 | Aceptación del PO | **PENDIENTE**, y bloqueada por `CA-06` |
 | Uso del producto desplegado | **NO aplica**: no hay endpoint ni pantalla que consuma la progresión |
+
+## Reporte de ejecución (punto 8 de la Task #190)
+
+### Identificación de la ejecución
+
+| Campo | Valor |
+| --- | --- |
+| Fecha | 2026-09-23 |
+| Versión del paquete | `0.1.0` |
+| Commit bajo prueba | `7fc0a9f` (rama `feat/hu-08-2-umbral-experiencia`) |
+| Ambiente | Desarrollo local, Windows · Node `v24.19.0` · npm `11.17.0` |
+| MongoDB para `test:db` | Contenedor `mongo:8.0` vía Testcontainers · Docker `29.7.2` |
+| Comando | `npm run lint && npm run format:check && npm run typecheck && npm run test:unit && npm run test:integration && npm run test:coverage && npm run build && npm run test:db` |
+
+### Casos ejecutados
+
+| Suite | Suites | Casos | Aprobados | Fallidos | Bloqueados |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Unitaria (`test:unit`) | 31 | 664 | **664** | 0 | 0 |
+| Integración HTTP (`test:integration`) | 9 | 101 | **101** | 0 | 0 |
+| Base de datos (`test:db`) | 7 | 74 | **74** | 0 | 0 |
+| **Total** | **47** | **839** | **839** | **0** | **0** |
+
+**Casos de HU-08: 84** — 73 en la suite unitaria y 11 contra MongoDB real, repartidos en 8
+archivos de prueba unitaria y 1 de base de datos. El detalle por escenario está en la matriz de
+trazabilidad.
+
+### Cobertura disponible
+
+| Ámbito | Sentencias | Ramas | Funciones | Líneas |
+| --- | ---: | ---: | ---: | ---: |
+| **Global del servicio** | 95,7 % | 87,6 % | 94,2 % | 95,8 % |
+| `ExperiencePolicy.ts` (la regla) | **100 %** | **100 %** | **100 %** | **100 %** |
+| `HeroProgression.ts` | **100 %** | **100 %** | **100 %** | **100 %** |
+| `GetHeroProgression.ts` | **100 %** | **100 %** | **100 %** | **100 %** |
+| `hero-progression-mapping.ts` | **100 %** | **100 %** | **100 %** | **100 %** |
+| `InMemoryHeroProgressionRepository.ts` | **100 %** | **100 %** | **100 %** | **100 %** |
+| `experience.ts` | **100 %** | 85,7 % | **100 %** | **100 %** |
+| `hero-level.ts` | 75 % | 64,3 % | **100 %** | 75 % |
+
+Umbral configurado en Jest: **80 %**. Artefacto publicado por CI:
+`coverage-player-inventory` (`coverage/`, con `lcov` y `json-summary`).
+
+**Cobertura no perseguida, y por qué:** quedan cinco sentencias sin cubrir en `hero-level.ts`,
+las ramas que formatean un valor rechazado en el mensaje de error. La Task #190 prohíbe
+aumentar cobertura con pruebas triviales sin valor funcional, y comprobar cómo se escribe un
+mensaje de diagnóstico no verifica la fórmula, el rango, la precisión ni los límites. Se
+documenta el hueco en lugar de taparlo.
+
+### Defectos
+
+| # | Defecto | Estado |
+| --- | --- | --- |
+| D-1 | La fórmula en coma flotante daba `172.79999999999998` en el nivel 4 y desviaciones crecientes hasta el 7 | **Corregido**: aritmética racional exacta, con cuatro pruebas que fijan los valores |
+| D-2 | El umbral podía persistirse por descuido en un cambio futuro | **Prevenido**: `additionalProperties: false` y una prueba contra MongoDB real que lo comprueba |
+| D-3 | `CA-06` es criterio obligatorio, sin fórmula y sobre materia fuera de alcance: **bloquea la aceptación de la HU** | **Abierto.** Requiere decisión de PO y arquitectura |
+
+No se encontraron defectos en la ejecución: las 839 pruebas pasaron en el primer intento tras
+las correcciones de `D-1` y `D-2`, que se detectaron al construir la suite.
+
+### Observaciones para aceptación
+
+1. **La HU no puede aceptarse todavía.** `CA-06` es obligatorio y no puede aprobarse: por
+   `CA-08`, HU-08 queda formalmente inaceptable mientras siga en su redacción actual. Es el
+   punto que requiere decisión del Product Owner, no trabajo de desarrollo.
+2. **La política de redondeo sigue sin aprobarse**, así que no hay pruebas de redondeo: no hay
+   política que verificar. Lo que sí se prueba es la **ausencia** de redondeo, que es la
+   garantía opuesta y la única verificable hoy.
+3. **`CA-07` se cubre en proceso, no por HTTP.** No hay endpoint y ninguno está pedido; el
+   consumidor verificado es el caso de uso y la operación reutilizable, no una ruta.
+4. **Falta la revisión por pares**, que el ruleset exige (1 aprobación + Code Owner) y que
+   ningún desarrollador puede darse a sí mismo.
+5. **`EN-015` (#200) y `EN-016` (#201) siguen `open`.** Esta Task se apoya en lo ya existente:
+   no añadió dependencias ni reporteros nuevos, salvo `json` en la configuración de cobertura,
+   que es salida estándar de Jest.
 
 ## Criterios de aceptación
 
