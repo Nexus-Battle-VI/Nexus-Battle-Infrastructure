@@ -1,5 +1,5 @@
 @startuml hu-09-sequence
-title HU-09 — Secuencia: experiencia por derrota de un rival (JvE)
+title HU-09 — Secuencia: experiencia por cada NPC derrotado (JvE)
 
 actor Jugador
 participant "Missions" as Missions
@@ -8,39 +8,50 @@ participant "Motor de azar\n(HU-24, en proceso)" as RNG
 participant "Player-\nInventory" as Inventory
 
 == Cierre del enfrentamiento JvE (HU-72) ==
-Combat --> Missions : resultado de la simulación\n(combatOutcome, summary.enemiesDefeated[])
-Missions -> Missions : ¿victoria válida sobre un rival?\nno -> no hay recompensa (CA-08)
-Missions -> Missions : crear recompensa PENDING\n(persistida antes de llamar a nadie)
+Combat --> Missions : simulación (combatOutcome, combatLog)
+Missions -> Missions : enumerar CADA derrota\n(encounter + enemyInstanceId del combatLog)
+Missions -> Missions : ¿hay al menos una derrota?\nno -> no hay recompensas (CA-08)
 
-== La tirada (Combat) ==
-Missions -> Combat : POST /api/internal/v1/combat/experience-rolls\n(HMAC, operationId determinista)
+== 1. Persistir las recompensas ANTES de pedir nada ==
+loop por cada derrota
+  Missions -> Missions : crear recompensa PENDING\n(clave = enrollment + encounter + instancia)
+end
+note over Missions
+  Se persiste ANTES de pedir la tirada:
+  por eso no puede existir una tirada
+  que ninguna recompensa reclame.
+end note
+
+== 2. El lote de tiradas (Combat) ==
+Missions -> Combat : POST /api/internal/v1/combat/experience-rolls\n(operationId de lote, un elemento por derrota)
 activate Combat
-Combat -> RNG : BoundedRandom(sequence).nextInt(8) + 1
-RNG --> Combat : 1d8 en 1..8
-Combat -> Combat : PERSISTIR la tirada ANTES de responder\n(_id = operationId)
-Combat --> Missions : roll, applied, persistedAt
+loop por cada derrota del lote, en orden
+  Combat -> RNG : BoundedRandom(sequence).nextInt(8) + 1
+  RNG --> Combat : 1d8 en 1..8
+  Combat -> Combat : PERSISTIR la tirada de esa instancia\n(clave por encounter + enemigo)
+end
+Combat --> Missions : rolls[] en el mismo orden, persistedAt
 deactivate Combat
-Missions -> Missions : estado ROLLED
 
-== La fórmula (Missions) ==
-Missions -> Missions : experiencia = redondear(10 × 1,2^(1d8))\npolítica pura, único punto de la fórmula
-Missions -> Missions : persistir el importe
+== 3. La fórmula y la acreditación, una por derrota ==
+loop por cada derrota
+  Missions -> Missions : experiencia = redondear(10 × 1,2^(1d8))\npolitica pura, único punto de la fórmula
+  Missions -> Inventory : POST /api/internal/v1/players/{playerId}/heroes/{heroId}/experience\n(operationId por instancia, amount entero)
+  activate Inventory
+  Inventory -> Inventory : transacción:\nledger (_id = operationId) + progresión
+  Inventory -> Inventory : HeroProgression.awardExperience(amount)\nacumula y recalcula el nivel (tabla de HU-08)
+  Inventory --> Missions : level, currentXp, leveledUp, levelsGained
+  deactivate Inventory
+  Missions -> Missions : estado CREDITED de esa derrota
+end
 
-== La acreditación (Player/Inventory) ==
-Missions -> Inventory : POST /api/internal/v1/players/{playerId}/heroes/{heroId}/experience\n(operationId determinista, amount entero)
-activate Inventory
-Inventory -> Inventory : transacción:\nledger (_id = operationId) + progresión
-Inventory -> Inventory : HeroProgression.awardExperience(amount)\nacumula y recalcula el nivel (tabla de HU-08)
-Inventory --> Missions : level, currentXp, leveledUp, levelsGained, nextLevel
-deactivate Inventory
-Missions -> Missions : estado CREDITED
 Missions --> Jugador : experiencia acreditada y nivel actualizado
 
-== Reintento (cualquier fallo transitorio) ==
 note over Missions, Inventory
   Un reintento reutiliza EL MISMO operationId:
   no vuelve a consumir el cursor de azar,
   no vuelve a calcular distinto
   y no vuelve a acreditar.
+  Una derrota que falla no arrastra a las demás.
 end note
 @enduml

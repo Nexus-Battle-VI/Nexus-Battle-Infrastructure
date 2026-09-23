@@ -32,7 +32,7 @@ Este documento **no declara la HU aceptada** ni afirma que exista implementació
 | # | Origen | Contenido |
 | --- | --- | --- |
 | 1 | Requisito explícito del Issue #18 | Fórmula `10 × 1,2^(1d8)`; `1d8` entero `1..8` del motor centralizado; la XP se acumula; se verifica el umbral tras acreditar; sin victoria válida no hay recompensa |
-| 2 | Aclaración funcional del PO (posterior al enunciado) | La fórmula es de **JvE** (muerte de NPC en misión); **PvP no la otorga**; Missions coordina y calcula; Combat tira; Player/Inventory acredita |
+| 2 | Aclaración funcional del PO (posterior al enunciado) | La fórmula es de **JvE** (muerte de NPC en misión); **PvP no la otorga**; Missions coordina y calcula; Combat tira; Player/Inventory acredita. **Una recompensa, una tirada y una acreditación por cada NPC derrotado**, con clave por instancia real de la derrota |
 | 3 | Decisión arquitectónica vigente | `ADR-019` (ownership y HMAC interno) y `ADR-021` (Combat, única autoridad de aleatoriedad) |
 | 4 | Contrato reutilizado como plantilla | `POST /api/internal/v1/inventory/grants` (Player-Inventory, HU-59/HU-69): forma del endpoint interno y del ledger idempotente |
 | 5 | Decisión técnica de esta Task | Las dos operaciones internas, los `operationId` deterministas, los estados de la recompensa, la matriz de fallos y la elección de operación propia para la tirada |
@@ -42,8 +42,10 @@ Este documento **no declara la HU aceptada** ni afirma que exista implementació
 
 | Operación | Frontera | Idempotencia |
 | --- | --- | --- |
-| `POST /api/internal/v1/combat/experience-rolls` | Missions → Combat | `mission:{enrollmentId}:rival:{rivalRef}:xp-roll` |
-| `POST /api/internal/v1/players/{playerId}/heroes/{heroId}/experience` | Missions → Player/Inventory | `mission:{enrollmentId}:rival:{rivalRef}:hero:{heroId}:xp` |
+| `POST /api/internal/v1/combat/experience-rolls` | Missions → Combat | Lote por misión: `mission:{enrollmentId}:xp-rolls`; **una tirada por derrota**, persistida con `mission:{enrollmentId}:encounter:{encounterId}:enemy:{enemyInstanceId}:xp-roll` |
+| `POST /api/internal/v1/players/{playerId}/heroes/{heroId}/experience` | Missions → Player/Inventory | **Una acreditación por derrota**: `mission:{enrollmentId}:encounter:{encounterId}:enemy:{enemyInstanceId}:hero:{heroId}:xp` |
+
+**Una recompensa por cada NPC derrotado**, no una por misión. La clave es la **instancia real de la derrota** (`encounter` + `combatant` del `combatLog` de HU-72), nunca el arquetipo del enemigo: una misión puede enfrentar dos veces al mismo tipo.
 
 - **Ninguna superficie pública nueva.** Web consume el reporte de misión (HU-74).
 - **Ninguna ruta existente se modifica** y ningún mensaje de HU-21 cambia de forma.
@@ -51,13 +53,13 @@ Este documento **no declara la HU aceptada** ni afirma que exista implementació
 
 ## Decisiones abiertas del PO
 
-| # | Decisión | Valor provisional del contrato | Efecto |
-| --- | --- | --- | --- |
-| `P-1` | Una tirada **por rival derrotado** o **una por victoria** | Una por **victoria sobre un rival** | Solo cambia cuántas veces se invoca la operación de tirada |
-| `P-2` | Redondeo **al más próximo** o **truncamiento** | **Al más próximo**: `12, 14, 17, 21, 25, 30, 36, 43` | Con truncamiento: `12, 14, 17, 20, 24, 29, 35, 42` |
-| `P-3` | Corrección del enunciado de #18 (restringir a JvE y añadir la cadena de Misiones como dependencia) | Pendiente | No afecta al diseño; afecta a la trazabilidad |
+| # | Decisión | Estado |
+| --- | --- | --- |
+| `P-1` | Una recompensa por **rival derrotado** o una por victoria | **CERRADA: una por rival derrotado**, con clave por instancia real de la derrota |
+| `P-2` | Redondeo **al más próximo** o **truncamiento** | **PROVISIONAL: al más próximo**: `12, 14, 17, 21, 25, 30, 36, 43`. Con truncamiento: `12, 14, 17, 20, 24, 29, 35, 42` |
+| `P-3` | Corrección del enunciado de #18 (Misiones/JvE y dependencia de la cadena de Misiones) | **Ejecutada** el 2026-09-23 en el cuerpo del Issue |
 
-**Ninguna de las tres se ha resuelto en silencio.** Están escritas en el contrato, en el diseño y en el comentario de trazabilidad de #18.
+**`P-2` se mantiene marcada como provisional a propósito.** Que la XP deba ser entera es una decisión tomada; **cómo** se convierte `14,4` en entero no lo es hasta que se confirme «redondeo al entero más cercano» frente a truncamiento.
 
 ## Bloqueos, medidos
 
@@ -87,18 +89,36 @@ Este documento **no declara la HU aceptada** ni afirma que exista implementació
 
 1. **No crear un generador.** `ADR-021` da la exclusiva a Combat y las guardas estáticas del repositorio ya vigilan `Math.random`/`crypto`.
 2. **No duplicar la fórmula.** Vive solo en Missions; Combat devuelve la tirada y Player/Inventory recibe un importe entero.
-3. **No volver a tirar en un reintento.** La tirada se persiste en Combat antes de responder, con `operationId` determinista.
+3. **No volver a tirar en un reintento.** Las tiradas se persisten en Combat antes de responder, con `operationId` determinista.
 4. **No acreditar dos veces.** El ledger de Player/Inventory tiene `_id = operationId` y la progresión se actualiza en la misma transacción.
-5. **No mostrar como concedida una recompensa pendiente.** El reporte de misión ya separa la foto del estado de cada línea.
+5. **No identificar la recompensa por el arquetipo del enemigo.** Dos `sombra-corrompida` en encuentros distintos son dos derrotas distintas: la clave es `encounter` + instancia.
+6. **No dejar una tirada sin recompensa que la reclame.** La recompensa se persiste **antes** de pedir la tirada; una tirada guardada sin acreditar es aceptable mientras el barrido pueda terminarla, pero una tirada huérfana no.
+7. **No mostrar como concedida una recompensa pendiente.** El reporte de misión ya separa la foto del estado de cada línea.
 
 ## Qué falta para cerrar HU-09
 
-1. **Corrección de `P-3`** por el PO (enunciado y dependencias de #18).
-2. **Respuesta a `P-1` y `P-2`**; si no llega, el contrato mantiene los valores provisionales.
-3. **Merge de HU-08** (PRs #42/#43/#44) para desbloquear `#441`.
-4. **Flujo de misión** (`HU-72.2`, `HU-74.2`) para desbloquear `#442`.
-5. Implementación de `#440`, `#441`, `#442` y, si el PO la pide, `#443`.
-6. Verificación E2E (`#444`) y **entonces** revisión por pares y aceptación del PO.
+1. **Confirmación de `P-2`** por el PO (redondeo al más próximo o truncamiento); hasta entonces el contrato mantiene la marca provisional.
+2. **Merge de HU-08** (PRs #42/#43/#44) para desbloquear `#441`.
+3. **Flujo de misión** (`HU-72.2`, `HU-74.2`) para desbloquear `#442`.
+4. Implementación de `#440`, `#441`, `#442` y, si el PO la pide, `#443`.
+5. Verificación E2E (`#444`) y **entonces** revisión por pares y aceptación del PO.
+
+## Alineación con la progresión de HU-08
+
+Los ejemplos de nivel que usan el contrato y esta evidencia son los de la **tabla entera y duplicativa** ya formalizada:
+
+| Acumulado | Nivel | Por qué |
+| --- | ---: | --- |
+| `< 200` | 1 | El nivel 1 es el suelo |
+| `200` … `399` | 2 | |
+| `400` … `799` | 3 | **`749` sigue siendo nivel 3**: el nivel 4 exige `800` |
+| `800` … `1.599` | 4 | |
+| `1.600` … `3.199` | 5 | |
+| `3.200` … `6.399` | 6 | |
+| `6.400` … `12.799` | 7 | |
+| `≥ 12.800` | 8 | La experiencia **sigue acumulándose** y el nivel permanece en 8 |
+
+Sin decimales en ningún punto, y con el nivel máximo 8 sin descarte de experiencia. Verificado además que **no existe ningún `128.000`** en el repositorio: el último umbral es `12.800`.
 
 ## Archivos de este entregable
 
