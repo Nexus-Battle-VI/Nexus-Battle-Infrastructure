@@ -78,6 +78,9 @@ en el proxy, ver más abajo).
 | --- | --- | --- | --- | --- |
 | `POST` | `/api/internal/v1/inventory/grants` | `200`, `400`, `409`, `422`, `503` | `commerce` | HU-59 |
 | `GET` | `/api/internal/v1/inventory/products/:productId/owners` | `200`, `400`, `401` | `commerce`, `notifications` | HU-38 |
+| `POST` | `/api/internal/v1/players/:playerId/heroes/:heroId/experience` (**diseño**) | `200`, `400`, `401`, `409`, `422`, `503` | `missions` | HU-09 |
+
+La ruta de experiencia es **diseño de la Task #439**: acredita un importe **ya entero** al héroe, con ledger idempotente (`_id = operationId`) y actualización de la progresión en la misma transacción. **Se invoca una vez por cada NPC derrotado**, y su clave incluye la instancia real de la derrota. Usa `@InternalOnly()` **y** `@InternalCallers('missions')`, de modo que **no amplía el allow-list global** (`commerce`, `notifications`, `combat`): el permiso se acota a esa ruta. Contrato: [hu-09-experience-reward-v1](hu-09-experience-reward-v1.md) §7.
 
 `.../products/:productId/owners` resuelve qué jugadores poseen actualmente un
 producto (`{ productId, owners: [{ playerId }] }`, sin correo, nombre ni
@@ -229,6 +232,8 @@ Sin rutas de negocio implementadas (andamiaje, [ADR-019](../adr/ADR-019-sprint-2
 | `POST` | `/api/v1/missions/:missionId/enrollments` (HU-70, **diseño**) | `201` |
 
 Las tres rutas las define el [contrato de HU-70](hu-70-mission-enrollment-v1.md) (Task #365) y **solo son capacidad cuando Missions las integre** (Task #366). Las rutas internas de compromisos del héroe en Player/Inventory que ese contrato describe son una **propuesta** para Team Alfa: no existen.
+
+**Previsto y sin implementar (HU-09, Task #439):** `POST /api/internal/v1/combat/experience-rolls` (servicio permitido: `missions`) devolvería **una tirada `1d8` por cada NPC derrotado** de una misión, obtenidas del motor centralizado y **persistidas antes de responder**, con `operationId` de lote determinista y clave por instancia de derrota. **No es una ruta de azar**: no acepta rango, no devuelve el índice ni la semilla y es idempotente. Contrato: [hu-09-experience-reward-v1](hu-09-experience-reward-v1.md) §5.
 
 ### Notifications
 

@@ -1,0 +1,35 @@
+@startuml hu-09-use-case
+title HU-09 — Caso de uso: otorgar experiencia por derrota de un rival (JvE)
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Jugador" as Jugador
+actor "Sistema\n(cierre de la misión)" as Sistema
+
+rectangle "Missions — JvE" {
+  usecase "UC-HU09-01\nOtorgar experiencia por\nderrota de un rival" as UC
+}
+
+rectangle "Combat" {
+  usecase "Producir la tirada 1d8\n(motor centralizado HU-24)" as UCROLL
+}
+
+rectangle "Player / Inventory" {
+  usecase "Acreditar experiencia\ny recalcular el nivel (HU-08)" as UCCRED
+}
+
+Sistema --> UC : dispara
+UC ..> UCROLL : <<include>>
+UC ..> UCCRED : <<include>>
+
+UC --> Jugador : el héroe acumula XP\ny puede subir de nivel
+
+note right of UC
+  A1  Sin victoria válida (CA-08): no se otorga nada
+  A2  Sin héroe beneficiario (AI / heroId nulo)
+  A3  Reintento con el mismo operationId
+  A4  Rechazo terminal 422 -> FAILED, sin revertir la misión
+  A5  503 -> queda pendiente y se reintenta
+end note
+@enduml
