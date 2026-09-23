@@ -1,0 +1,46 @@
+@startuml hu-09-sequence
+title HU-09 — Secuencia: experiencia por derrota de un rival (JvE)
+
+actor Jugador
+participant "Missions" as Missions
+participant "Combat" as Combat
+participant "Motor de azar\n(HU-24, en proceso)" as RNG
+participant "Player-\nInventory" as Inventory
+
+== Cierre del enfrentamiento JvE (HU-72) ==
+Combat --> Missions : resultado de la simulación\n(combatOutcome, summary.enemiesDefeated[])
+Missions -> Missions : ¿victoria válida sobre un rival?\nno -> no hay recompensa (CA-08)
+Missions -> Missions : crear recompensa PENDING\n(persistida antes de llamar a nadie)
+
+== La tirada (Combat) ==
+Missions -> Combat : POST /api/internal/v1/combat/experience-rolls\n(HMAC, operationId determinista)
+activate Combat
+Combat -> RNG : BoundedRandom(sequence).nextInt(8) + 1
+RNG --> Combat : 1d8 en 1..8
+Combat -> Combat : PERSISTIR la tirada ANTES de responder\n(_id = operationId)
+Combat --> Missions : roll, applied, persistedAt
+deactivate Combat
+Missions -> Missions : estado ROLLED
+
+== La fórmula (Missions) ==
+Missions -> Missions : experiencia = redondear(10 × 1,2^(1d8))\npolítica pura, único punto de la fórmula
+Missions -> Missions : persistir el importe
+
+== La acreditación (Player/Inventory) ==
+Missions -> Inventory : POST /api/internal/v1/players/{playerId}/heroes/{heroId}/experience\n(operationId determinista, amount entero)
+activate Inventory
+Inventory -> Inventory : transacción:\nledger (_id = operationId) + progresión
+Inventory -> Inventory : HeroProgression.awardExperience(amount)\nacumula y recalcula el nivel (tabla de HU-08)
+Inventory --> Missions : level, currentXp, leveledUp, levelsGained, nextLevel
+deactivate Inventory
+Missions -> Missions : estado CREDITED
+Missions --> Jugador : experiencia acreditada y nivel actualizado
+
+== Reintento (cualquier fallo transitorio) ==
+note over Missions, Inventory
+  Un reintento reutiliza EL MISMO operationId:
+  no vuelve a consumir el cursor de azar,
+  no vuelve a calcular distinto
+  y no vuelve a acreditar.
+end note
+@enduml

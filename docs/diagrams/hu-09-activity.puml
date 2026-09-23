@@ -1,0 +1,53 @@
+@startuml hu-09-activity
+title HU-09 — Actividad: de la victoria sobre el rival a la experiencia acreditada
+
+start
+
+:Enfrentamiento JvE terminado;
+
+if (¿Victoria válida sobre un rival?) then (no)
+  :No se crea recompensa;
+  :No se pide tirada ni se acredita\n(CA-08);
+  stop
+else (sí)
+endif
+
+if (¿Héroe beneficiario identificado?) then (no)
+  :Sin recompensa\n(participante AI o heroId nulo);
+  stop
+else (sí)
+endif
+
+:Crear recompensa en estado PENDING\n(persistida antes de llamar a nadie);
+
+fork
+  :Pedir la tirada a Combat\noperationId = mission:{enrollmentId}:rival:{rivalRef}:xp-roll;
+  :Combat obtiene 1d8 del motor centralizado\ny lo PERSISTE antes de responder;
+  :Recibir 1d8 ∈ {1..8};
+fork again
+  :Reintento con el MISMO operationId\nsi Combat no está disponible (503);
+end fork
+
+:Calcular experiencia = redondear(10 × 1,2^(1d8))\npolítica pura de Missions;
+:Persistir el importe (estado ROLLED);
+
+:Acreditar en Player/Inventory\noperationId = mission:{enrollmentId}:rival:{rivalRef}:hero:{heroId}:xp;
+
+if (¿Aceptada?) then (sí)
+  :Player/Inventory acumula la XP\ny recalcula el nivel con la tabla de HU-08;
+  :Marcar CREDITED;
+  :Reflejar el estado en el reporte de misión;
+else (422 rechazo terminal)
+  :Marcar FAILED con motivo;
+  note right
+    La misión NO se revierte:
+    la recompensa es un efecto
+    posterior al cierre.
+  end note
+else (503 / timeout)
+  :Quedarse en el estado de origen;
+  :Reintentar con el MISMO operationId\nsin volver a tirar;
+endif
+
+stop
+@enduml
