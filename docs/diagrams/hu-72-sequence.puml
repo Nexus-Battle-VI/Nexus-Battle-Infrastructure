@@ -1,0 +1,38 @@
+@startuml hu-72-sequence
+title HU-72 — Simulación, cierre y liberación del héroe (secuencia)
+autonumber
+
+participant "Missions\n(planificadores)" as Missions
+database "PostgreSQL\n(missions)" as DB
+participant "Combat\n(Team Alfa)" as Combat
+participant "Player/Inventory\n(Team Alfa)" as Inventory
+
+== Simular, en cuanto empieza la misión ==
+Missions -> DB : Leer MissionEnrollmentStarted\ny crear la ejecución QUEUED
+Missions -> DB : Marcar REQUESTED
+Missions -> Combat : POST /api/internal/v1/combat/simulations\nHMAC, operationId, héroe, rotaciones,\nencuentros, dificultad, Máster, timeBudget
+alt Simulación hecha
+  Combat -> Combat : Simular con su generador\n(HU-18, 19, 20, 24 y 25)
+  Combat --> Missions : 200 simulationId, seedRef,\ncombatOutcome, summary, combatLog
+  Missions -> DB : Guardar el resultado sellado\n(SIMULATED)
+else Combat no disponible
+  Combat --> Missions : 503 o tiempo agotado
+  Missions -> DB : Programar reintento\ncon el mismo operationId
+else Configuración rechazada
+  Combat --> Missions : 422
+  Missions -> DB : VOIDED y hecho MissionSettled
+end
+
+== Cerrar, al llegar endsAt ==
+Missions -> DB : SELECT SIMULATED con endsAt vencido\nFOR UPDATE SKIP LOCKED
+Missions -> Missions : Evaluar objetivos
+Missions -> DB : Matrícula COMPLETED o FAILED,\nclear de HU-75 si hubo éxito,\nSETTLED y hecho MissionSettled
+Missions -> Inventory : POST /api/internal/v1/inventory/commitments/{operationId}/release
+Inventory --> Missions : 204
+Missions -> DB : Anotar heroReleasedAt
+
+note over Missions, DB
+  HU-74, HU-76, HU-10 y la notificación
+  de fin de misión leen MissionSettled.
+end note
+@enduml
