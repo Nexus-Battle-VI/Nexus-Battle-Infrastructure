@@ -50,6 +50,18 @@ Este documento **no declara la HU aceptada** ni afirma que exista implementació
 - **Ninguna superficie pública nueva.** Web consume el reporte de misión (HU-74).
 - **Ninguna ruta existente se modifica** y ningún mensaje de HU-21 cambia de forma.
 - **`missions` no entra en el allow-list global** de Player/Inventory: la ruta se acota con `@InternalCallers('missions')`.
+- **En Combat no hay nada que ampliar.** Su lista cerrada de servicios es global y ya vale exactamente `['missions']`, que es el llamante; y el mecanismo por ruta (`@InternalCallers`) **no existe** allí, así que no se inventa. La operación de tirada sería además la **primera ruta interna de Combat**.
+
+### Correcciones posteriores a la entrega (revisión de la Task `#440`)
+
+Dos defectos del contrato, encontrados al preparar la implementación de Combat. Ninguno cambia el reparto.
+
+| # | Defecto | Corrección |
+| --- | --- | --- |
+| 1 | La tabla de errores traía `422 HERO_NOT_ELIGIBLE`, que **Combat no puede producir**: la elegibilidad del héroe no es suya ni tiene con qué comprobarla. Un código que nunca se dispara es una promesa falsa | Se retira. En su lugar queda `422 DUPLICATE_DEFEAT` (la misma instancia dos veces en un lote), que sí depende solo de lo que Combat recibe. `defeats` vacío pasa a ser `400 SCHEMA_INVALID` |
+| 2 | El contrato prometía `409` cuando el mismo `operationId` llega con otro contenido, pero describía **una tirada por documento**: con documentos sueltos no hay dónde comparar el conjunto, y la promesa era inimplementable | El lote se persiste en **un único documento** con `_id = operationId` del lote y las tiradas dentro, cada una con su clave por derrota. Una escritura atómica y comparable |
+
+Y un límite que queda escrito en lugar de tácito: **Combat no valida que la misión exista ni que el héroe sea elegible**. La confianza se apoya en el HMAC, en la lista cerrada (`missions` es hoy el único autorizado) y en la idempotencia.
 
 ## Decisiones abiertas del PO
 

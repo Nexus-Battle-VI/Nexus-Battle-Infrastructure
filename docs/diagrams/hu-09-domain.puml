@@ -6,15 +6,24 @@ package "Combat" #EEF5FF {
     + rollFor(sequence) : 1..8
     ..no conoce la fórmula..
   }
-  class ExperienceRoll <<persistido, UNO POR DERROTA>> {
-    + operationId : string (clave _id)
+  class ExperienceRollBatch <<persistido, UNO POR MISIÓN>> {
+    + operationId : string (clave _id del lote)
     + enrollmentId : string
+    + simulationId : string
+    + heroId : string
+    + createdAt : Date
+    + rolls : ExperienceRoll[]
+  }
+  class ExperienceRoll <<valor, UNO POR DERROTA>> {
+    + key : string (encuentro + instancia)
     + encounterId : string
     + enemyInstanceId : string
+    + rivalRef : string
     + roll : 1..8
     + persistedAt : Date
   }
-  ExperienceRollPolicy ..> ExperienceRoll : produce, en el orden del lote
+  ExperienceRollBatch *-- ExperienceRoll
+  ExperienceRollPolicy ..> ExperienceRollBatch : produce, en el orden del lote
 }
 
 package "Missions" #EFFAEF {
@@ -60,7 +69,7 @@ package "Player / Inventory" #FFF7EE {
   ExperienceGrant ..> HeroProgression : acredita en la misma transacción
 }
 
-ExperienceReward --> ExperienceRoll : consume por instancia\n(no la posee)
+ExperienceReward --> ExperienceRollBatch : consume la tirada de su instancia\n(no la posee)
 ExperienceReward --> ExperienceGrant : produce (idempotente por operationId)
 ExperienceReward ..> HeroProgression : NUNCA la copia\n(estado de otro contexto)
 
