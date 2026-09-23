@@ -100,7 +100,7 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | Aspecto | Estado |
 | --- | --- |
 | Repositorios con CI verde | 8 de 8 |
-| Pruebas y cobertura | Se registran por entrega y repositorio; HU-39 enlaza sus ejecuciones en [evidencia](docs/evidence/HU-39-asignacion-de-roles.md) |
+| Pruebas y cobertura | Se registran por entrega y repositorio; HU-39 enlaza sus ejecuciones en [evidencia](docs/evidence/HU-39-asignacion-de-roles.md) y HU-57 en [su verificación](docs/evidence/HU-57-verificacion-implementacion.md) |
 | Control de acceso | **Activo**: Cognito, JWT y RBAC; ver [ADR-004](docs/adr/ADR-004-identity-directory.md) |
 | Persistencia real | **Activa**: PostgreSQL y MongoDB; ver [ADR-005](docs/adr/ADR-005-data-strategy.md) |
 | Comunicación entre servicios | **Ausente** — ver [ADR-006](docs/adr/ADR-006-messaging.md) |

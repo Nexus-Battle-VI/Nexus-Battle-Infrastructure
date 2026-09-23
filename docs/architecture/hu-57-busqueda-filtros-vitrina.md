@@ -256,7 +256,9 @@ Estados: **Cumplido**, **Parcial**, **No cumplido**, **Pendiente de decisión**.
 
 ## 12. Escenarios dejados identificados para pruebas posteriores (`#223`)
 
-No se automatizan aquí. Se dejan nombrados para la task de pruebas:
+No se automatizan aquí. Se dejan nombrados para la task de pruebas. El **registro de verificación**
+de la implementación existente —qué pruebas lo cubren ya, con qué resultado y qué queda bloqueado—
+está en [`docs/evidence/HU-57-verificacion-implementacion.md`](../evidence/HU-57-verificacion-implementacion.md).
 
 1. Primera página con los ítems que exige `CA-01` y el resto paginado (`CP-57-03`).
 2. Card con los cinco campos documentados (`CA-02`).
