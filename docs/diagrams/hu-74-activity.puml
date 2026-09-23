@@ -1,0 +1,21 @@
+@startuml hu-74-activity
+title HU-74 — Generar el reporte dentro del cierre (actividad)
+
+start
+:El cierre de HU-72 decide el resultado\ny abre la transacción;
+if (¿La misión quedó VOIDED?) then (sí)
+  :Sin reporte: el historial la muestra\nsin estadísticas (P-T3);
+else (no)
+  :Leer resumen y bitácora guardados (HU-72);
+  :Leer la evidencia del Máster (HU-73);
+  :Armar la foto: resumen, héroe, duración,\nestadísticas, enemigos, Máster y objetivos;
+  :Guardar mission_reports con schemaVersion 1\n(inmutable);
+  :Crear las líneas de recompensa conocidas\nen PENDING;
+endif
+:COMMIT junto con la matrícula final\ny el hecho MissionSettled;
+note right
+  Reporte y misión terminada
+  existen o no existen juntos (CA-04).
+end note
+stop
+@enduml

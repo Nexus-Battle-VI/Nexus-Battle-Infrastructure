@@ -1,0 +1,97 @@
+{
+  "contract": "hu-74-mission-report-v1",
+  "status": "design-draft",
+  "description": "Escenarios de diseño de HU-74 (Task #379). Los resúmenes vienen de los fixtures de HU-72 y HU-73; las recompensas de créditos son ilustrativas hasta que HU-10 las defina.",
+  "player": "cognito-sub-jugador-demo",
+  "otherPlayer": "cognito-sub-otro-jugador",
+  "scenarios": [
+    {
+      "id": "R-1",
+      "ca": ["CA-01", "CA-02"],
+      "title": "Misión completada",
+      "given": { "settlement": "P-01 de hu-72-mission-simulation-fixtures-v1.json" },
+      "expected": {
+        "reportCreatedInSettlementTransaction": true,
+        "request": "GET /api/v1/missions/me/reports/enr_01JB8Y3K7Q",
+        "status": 200,
+        "blocksPresent": ["summary", "combatStats", "enemies", "objectives", "rewards"],
+        "summary": { "outcome": "COMPLETED", "simulatedDuration": "PT9H40M" },
+        "historyContains": "enr_01JB8Y3K7Q"
+      }
+    },
+    {
+      "id": "R-2",
+      "ca": ["CA-02"],
+      "title": "Misión fallida",
+      "given": { "settlement": "P-04 de hu-72-mission-simulation-fixtures-v1.json" },
+      "expected": {
+        "status": 200,
+        "summary": { "outcome": "FAILED" },
+        "enemies": { "boss": { "defeated": false } },
+        "combatStats": { "encountersCompleted": 3, "encountersTotal": 5 }
+      }
+    },
+    {
+      "id": "R-3",
+      "ca": ["CA-03"],
+      "title": "Máster derrotado",
+      "given": { "masterCase": "M-3 de hu-73-master-encounter-fixtures-v1.json" },
+      "expected": {
+        "status": 200,
+        "enemies": { "masters": [{ "masterRef": "sombra-del-olvido", "status": "APPEARED_DEFEATED" }] },
+        "rewardsContain": { "kind": "EPIC", "reference": "velo-de-sombras", "source": "HU-73" }
+      }
+    },
+    {
+      "id": "R-4",
+      "ca": ["CA-02"],
+      "title": "Recompensa pendiente de acreditar",
+      "given": {
+        "rewards": [{ "line": 1, "kind": "CREDITS", "quantity": 50, "status": "PENDING", "source": "HU-10" }],
+        "laterEvent": { "line": 1, "status": "CREDITED" }
+      },
+      "expected": {
+        "firstRead": { "rewards": [{ "kind": "CREDITS", "status": "PENDING" }] },
+        "secondRead": { "rewards": [{ "kind": "CREDITS", "status": "CREDITED" }] },
+        "snapshotUnchanged": true
+      }
+    },
+    {
+      "id": "R-5",
+      "ca": ["CA-04"],
+      "title": "Misión en curso",
+      "given": { "enrollment": { "enrollmentId": "enr_01JB8Y3K7Q", "status": "IN_PROGRESS", "endsAt": "2026-10-02T03:00:00Z" } },
+      "expected": {
+        "status": 404,
+        "body": { "code": "REPORT_NOT_AVAILABLE", "endsAt": "2026-10-02T03:00:00Z" },
+        "historyContains": null
+      }
+    },
+    {
+      "id": "R-6",
+      "ca": [],
+      "title": "Reporte de otro jugador",
+      "given": { "reportOwner": "cognito-sub-otro-jugador" },
+      "expected": { "status": 404, "body": { "code": "REPORT_NOT_FOUND" } }
+    },
+    {
+      "id": "H-1",
+      "ca": ["CA-05"],
+      "title": "Resumen del historial con varias misiones",
+      "given": {
+        "reports": [
+          { "enrollmentId": "enr_a", "missionId": "msn_templo_olvidado", "category": "STORY", "difficulty": "NORMAL", "outcome": "COMPLETED", "simulatedDuration": "PT9H40M", "finishedAt": "2026-10-02T03:00:00Z" },
+          { "enrollmentId": "enr_b", "missionId": "msn_templo_olvidado", "category": "STORY", "difficulty": "NORMAL", "outcome": "COMPLETED", "simulatedDuration": "PT8H55M", "finishedAt": "2026-10-04T03:00:00Z" },
+          { "enrollmentId": "enr_c", "missionId": "msn_camara_sellada", "category": "STORY", "difficulty": "NORMAL", "outcome": "FAILED", "simulatedDuration": "PT3H10M", "finishedAt": "2026-10-05T09:00:00Z" }
+        ],
+        "chains": [{ "chainId": "templo", "missions": ["msn_templo_olvidado", "msn_camara_sellada"] }]
+      },
+      "expected": {
+        "historyOrder": ["enr_c", "enr_b", "enr_a"],
+        "byCategory": [{ "category": "STORY", "completed": 2, "failed": 1, "abandoned": 0 }],
+        "bestTimes": [{ "missionId": "msn_templo_olvidado", "difficulty": "NORMAL", "simulatedDuration": "PT8H55M", "enrollmentId": "enr_b" }],
+        "narrativeProgress": [{ "chainId": "templo", "completed": 1, "total": 2 }]
+      }
+    }
+  ]
+}

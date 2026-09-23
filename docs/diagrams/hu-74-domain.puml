@@ -1,0 +1,75 @@
+@startuml hu-74-domain
+title HU-74 — Fragmento de dominio del reporte y el historial
+hide empty members
+skinparam classAttributeIconSize 0
+
+package "Missions (Team Beta)" {
+  class MissionReport <<foto inmutable>> {
+    enrollmentId
+    playerId
+    mission
+    outcome
+    outcomeReason
+    hero
+    startedAt
+    finishedAt
+    simulatedDuration
+    combatStats
+    enemies
+    master
+    objectives
+    schemaVersion
+    generatedAt
+  }
+
+  class ReportRewardLine {
+    lineNo
+    kind : RewardKind
+    reference
+    name
+    rarity
+    quantity
+    status : RewardStatus
+    source
+  }
+
+  enum RewardKind {
+    CREDITS
+    PRODUCT
+    EPIC
+    EXPERIENCE
+  }
+
+  enum RewardStatus {
+    PENDING
+    CREDITED
+    FAILED
+  }
+
+  class ReportBuilder <<aplicación>> {
+    build(execution, masterRecords, objectives)
+  }
+
+  package "Proyecciones de lectura" {
+    class HistoryEntry
+    class CategoryStats
+    class BestTime
+    class EpicCollectionEntry
+    class NarrativeProgress
+  }
+
+  interface ReportRepository
+  interface HistoryQueries
+}
+
+MissionReport "1" *-- "0..*" ReportRewardLine
+ReportRewardLine --> RewardKind
+ReportRewardLine --> RewardStatus
+ReportBuilder ..> MissionReport : crea en el cierre
+ReportRepository ..> MissionReport
+HistoryQueries ..> HistoryEntry
+HistoryQueries ..> CategoryStats
+HistoryQueries ..> BestTime
+HistoryQueries ..> EpicCollectionEntry
+HistoryQueries ..> NarrativeProgress
+@enduml
