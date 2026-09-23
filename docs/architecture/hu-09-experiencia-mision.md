@@ -32,7 +32,7 @@ HU-09 es esa pieza, y su dificultad no está en la fórmula —que es trivial—
   1. Missions cierra el enfrentamiento JvE y **enumera cada enemigo derrotado** a partir de la simulación (encuentro + instancia).
   2. Por **cada derrota**, Missions persiste una recompensa en estado `PENDING`. **Se persiste antes de pedir nada**: es lo que impide que exista una tirada sin dueño.
   3. Missions pide a Combat el **lote de tiradas** de esa misión, con un `operationId` determinista.
-  4. Combat consume un `1d8` del motor centralizado **por derrota**, lo persiste con su propia clave y devuelve el lote en el mismo orden.
+  4. Combat consume un `1d8` del motor centralizado **por derrota** y devuelve el lote en el mismo orden, **persistido antes de responder** en un único documento por misión, con la clave de cada derrota dentro.
   5. Por cada derrota, Missions calcula `10 × 1,2^(1d8)`, lo redondea a entero y persiste el importe (`ROLLED`).
   6. Por cada derrota, Missions acredita el importe en Player/Inventory con el `operationId` determinista de esa instancia.
   7. Player/Inventory acumula la experiencia, recalcula el nivel con la tabla de HU-08 y confirma.
@@ -59,6 +59,12 @@ Missions
     rewardFor(roll: 1..8) -> entero
 
 Combat
+  ExperienceRollBatch              (persistido, UNO POR MISIÓN)
+    operationId                    <- clave del lote: mission:{enrollmentId}:xp-rolls
+    enrollmentId, simulationId, heroId, createdAt
+    rolls[]                        <- una por derrota, con su clave de instancia
+      encounterId, enemyInstanceId, rivalRef, roll: 1..8, persistedAt
+
   ExperienceRollPolicy             (política pura; consume el motor, no la fórmula)
     rollFor(sequence) -> 1..8
 
@@ -70,7 +76,8 @@ Player/Inventory
 Decisiones de modelado:
 
 - **La recompensa es un agregado de Missions**, no un campo del reporte ni del héroe, y hay **una por NPC derrotado**. Tiene ciclo de vida propio (pendiente mientras se reintenta) y estado que sobrevive al reinicio, exactamente como el `RewardWorkflow` de HU-22 en Combat.
-- **La clave de una recompensa es la instancia de la derrota** (`encounterId` + `enemyInstanceId`), nunca el arquetipo del enemigo: una misión puede enfrentar dos veces al mismo tipo y el arquetipo colisionaría.
+- **La clave de una recompensa es la instancia de la derrota** (`encounterId` + `enemyInstanceId`), nunca el arquetipo del enemigo: una misión puede enfrentar dos veces al mismo tipo y el arquetipo colisionaría. La misma clave identifica cada tirada dentro del lote de Combat.
+- **El lote de tiradas se persiste en un único documento por misión**, no en uno por tirada. Dos motivos: una sola escritura impide conjuntos de tiradas a medias, y el documento es lo que permite comparar el contenido cuando llega el mismo `operationId` con otra lista —sin él, el `409` que promete el contrato sería inimplementable.
 - **La tirada no se guarda en Missions como fuente de verdad**: se guarda el importe calculado. La tirada vive en Combat, que es quien la produjo y quien debe poder repetirla sin volver a consumir el cursor.
 - **El importe se persiste antes de acreditar.** Si Missions cae entre el cálculo y la acreditación, el reintento usa el importe guardado y **no** vuelve a tirar ni a calcular distinto.
 - **Missions no guarda el nivel ni el acumulado del héroe.** Es estado de otro contexto; lo devuelve Player/Inventory y se representa, no se copia.
@@ -99,6 +106,7 @@ Decisiones de modelado:
 | D-7 | La clave de una recompensa es `encounterId` + `enemyInstanceId`, no `rivalRef` | Una misión puede enfrentar dos veces al mismo arquetipo; identificarlo por arquetipo colisionaría y perdería o duplicaría recompensas | Identificar por `rivalRef`: colisiona con `sombra-corrompida` en los encuentros 1 y 2 del ejemplo de HU-72 |
 | D-8 | Las tiradas de una misión se piden **en un lote**, las acreditaciones **una por derrota** | Un lote resuelve el consumo del cursor de azar de una vez y evita conjuntos de tiradas a medias; una acreditación por derrota conserva traza e idempotencia | Una llamada de tirada por derrota: 19 viajes y riesgo de lote parcial; una acreditación agregada: pierde la clave por derrota |
 | D-9 | La recompensa se persiste **antes** de pedir la tirada | Es lo que hace imposible la tirada huérfana: toda tirada guardada tiene una recompensa que la reclama | Pedir primero la tirada: una caída dejaría tiradas sin dueño |
+| D-10 | El lote de tiradas se persiste en **un único documento** por misión, con la clave de cada derrota dentro | Una escritura atómica —sin conjuntos a medias— y un contenido comparable, que es lo que hace implementable el `409` del contrato | Un documento por tirada: no habría dónde detectar que el mismo `operationId` llegó con otra lista |
 
 ## 7. Riesgos
 

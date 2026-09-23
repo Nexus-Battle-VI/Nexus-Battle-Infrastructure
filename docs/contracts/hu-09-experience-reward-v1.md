@@ -121,7 +121,7 @@ BoundedRandom(sequence).nextInt(8) + 1   →   1d8 ∈ {1..8}, uniforme y sin se
 POST /api/internal/v1/combat/experience-rolls
 ```
 
-Cabeceras del esquema vigente de ADR-019: `x-internal-service: missions`, `x-internal-timestamp`, `x-internal-signature` (HMAC-SHA256 sobre JSON canónico), secreto `INTERNAL_SERVICE_AUTH_SECRET` y lista cerrada de servicios por ruta. `/api/internal*` responde `404` desde Caddy.
+Cabeceras del esquema vigente de ADR-019: `x-internal-service: missions`, `x-internal-timestamp`, `x-internal-signature` (HMAC-SHA256 sobre JSON canónico), secreto `INTERNAL_SERVICE_AUTH_SECRET` y lista cerrada de servicios. `/api/internal*` responde `404` desde Caddy. **Sería la primera ruta interna de Combat**, que hoy no expone ninguna.
 
 **Una llamada por misión, una tirada por derrota.** El lote lleva todas las derrotas de la misión y devuelve una tirada por cada una, en el mismo orden.
 
@@ -153,18 +153,23 @@ Cabeceras del esquema vigente de ADR-019: `x-internal-service: missions`, `x-int
 }
 ```
 
-- **Cada tirada se persiste con su propia clave**, `mission:{enrollmentId}:encounter:{encounterId}:enemy:{enemyInstanceId}:xp-roll`, **antes de responder**. El `operationId` del lote es la clave de idempotencia de la llamada; la clave por derrota es la de la tirada.
+- **El lote se persiste en un ÚNICO documento** cuya clave es el `operationId` del lote, `mission:{enrollmentId}:xp-rolls`, **antes de responder**. Dentro van las tiradas, cada una con **su clave por derrota** — `mission:{enrollmentId}:encounter:{encounterId}:enemy:{enemyInstanceId}:xp-roll` — y su `persistedAt`.
+- **Por qué un documento y no uno por tirada.** Una sola escritura es lo que garantiza que no queden conjuntos de tiradas a medias, y es además lo único que permite **comparar el contenido** en un reintento: con documentos sueltos no habría dónde detectar que el mismo `operationId` llegó con otra lista de derrotas, y el `409` de §8 sería inimplementable.
 - Un lote de **una** derrota es un caso particular del mismo contrato: no hay una operación aparte.
 - `enemyInstanceId` es el `combatant` de HU-72 (`<enemyRef>#<n>`), y `encounterId` su `encounter`. Los dos juntos identifican la derrota real.
 
 | HTTP | `code` | Cuándo | Qué hace Missions |
 | --- | --- | --- | --- |
 | `200` | — | Tirada hecha, o repetida con el mismo `operationId` y el mismo cuerpo | Guarda y pasa a `ROLLED` |
-| `400` | `SCHEMA_INVALID` | El cuerpo no cumple el esquema | `FAILED` y alerta |
+| `400` | `SCHEMA_INVALID` | El cuerpo no cumple el esquema, **incluido `defeats` vacío**: el esquema exige al menos una derrota | `FAILED` y alerta |
 | `401` | `INTERNAL_SIGNATURE_INVALID` | Firma ausente o inválida | Alerta; no reintenta |
-| `409` | `OPERATION_ID_REUSED` | El `operationId` llegó con otro cuerpo | `FAILED` y alerta |
-| `422` | `HERO_NOT_ELIGIBLE` | El héroe no puede recibir la recompensa | `FAILED`; no reintenta |
+| `409` | `OPERATION_ID_REUSED` | El `operationId` llegó con **otra lista de derrotas** | `FAILED` y alerta |
+| `422` | `DUPLICATE_DEFEAT` | La misma instancia (`encounterId` + `enemyInstanceId`) aparece dos veces en el lote | `FAILED`; no reintenta |
 | `503` | `ROLL_UNAVAILABLE` | Combat no puede atender ahora | Reintenta con el **mismo** `operationId` |
+
+**Corrección (revisión de la Task `#440`).** Una versión anterior de esta tabla traía `422 HERO_NOT_ELIGIBLE`. **Se retira porque Combat no puede producirla**: la elegibilidad del héroe no es suya y no tiene con qué comprobarla —no conoce el catálogo de héroes ni la misión—, así que un código que nunca puede dispararse es una promesa falsa. En su lugar queda `DUPLICATE_DEFEAT`, que sí depende solo de lo que Combat recibe.
+
+**Autorización en Combat.** La lista cerrada de servicios es **global** en este servicio —`INTERNAL_CALLERS`, que hoy vale exactamente `['missions']`— y ya cubre a Missions: **no hay que ampliarla ni añadir un mecanismo por ruta**, que en Combat no existe. El mecanismo por ruta (`@InternalCallers`) sí existe en Player/Inventory, y allí se usa para acotar la ruta de experiencia; aquí no hace falta porque no hay ninguna otra ruta interna.
 
 **La tirada se persiste antes de responder.** Es la garantía de que un reintento de Missions —o un reinicio de Combat— **no vuelve a consumir el cursor aleatorio**: un segundo `1d8` daría otra recompensa por el mismo hecho.
 
@@ -175,7 +180,7 @@ Cabeceras del esquema vigente de ADR-019: `x-internal-service: missions`, `x-int
 | **A** | Extender la respuesta de `POST /api/internal/v1/combat/simulations` (HU-72) con la tirada | Un viaje menos, pero **acopla HU-09 a un contrato que aún no está mergeado** (PR #132) y obliga a producir la tirada dentro de la simulación, incluso cuando el resultado no da derecho a recompensa |
 | **B (elegida)** | Operación propia de Combat, invocada por Missions **después** de saber que hubo victoria | Desacopla HU-09 de HU-72, mantiene intacto el contrato de simulación, permite persistir la tirada antes de cualquier efecto remoto y es directamente verificable con `operationId` |
 
-**No es exponer aleatoriedad**, que es lo que `ADR-021` prohíbe: la operación no acepta un rango, no devuelve el índice ni la semilla, no es parametrizable y es idempotente por `operationId`. Es una operación de dominio («resolver la tirada de la recompensa de esta derrota»), el mismo criterio con el que HU-22 resuelve el cofre dentro de Combat.
+**No es exponer aleatoriedad**, que es lo que `ADR-021` prohíbe: la operación no acepta un rango, no devuelve el índice ni la semilla, no es parametrizable y es idempotente por `operationId`. Es una operación de dominio («resolver las tiradas de las derrotas de esta misión»), el mismo criterio con el que HU-22 resuelve el cofre dentro de Combat.
 
 ## 6. La fórmula y el redondeo
 
@@ -338,6 +343,7 @@ La representación del **estado** es obligatoria: mostrar como concedida una rec
 - El `heroId` y el `playerId` viajan en la ruta porque el llamante es un servicio autenticado; nunca se aceptan de un cliente.
 - No se registran secretos HMAC ni el estado interno del generador. Sí se correlacionan `enrollmentId`, `operationId`, `roll` y estado.
 - **No se expone la semilla** en ninguna respuesta (HU-24/ADR-021), y la operación de tirada no acepta rango ni parámetros de azar.
+- **Combat no valida que la misión exista ni que el héroe sea elegible.** No es suyo y no tiene con qué: el catálogo de héroes y el estado de la misión viven en otros contextos. La confianza se apoya en el HMAC, en la lista cerrada de servicios —hoy `missions` es el **único** autorizado a llamar a las rutas internas de Combat— y en la idempotencia, **no** en una comprobación que Combat no puede hacer. Es un límite aceptado y escrito, no un olvido.
 
 ## 12. Fuera de alcance
 
