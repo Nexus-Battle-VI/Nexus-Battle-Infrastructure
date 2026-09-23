@@ -229,8 +229,11 @@ Sin rutas de negocio implementadas (andamiaje, [ADR-019](../adr/ADR-019-sprint-2
 | `POST` | `/api/v1/missions/:missionId/enrollments` (HU-70, **diseño**) | `201` |
 | `GET` | `/api/v1/missions/:missionId/strategies/:heroId` (HU-71, **diseño** [contrato v1](hu-71-mission-strategy-v1.md)) | `200` |
 | `PUT` | `/api/v1/missions/:missionId/strategies/:heroId` (HU-71, **diseño**) | `200`, `201` |
+| `GET` | `/api/v1/missions/me/reports/:enrollmentId` (HU-74, **diseño** [contrato v1](hu-74-mission-report-v1.md)) | `200` |
+| `GET` | `/api/v1/missions/me/history` (HU-74, **diseño**) | `200` |
+| `GET` | `/api/v1/missions/me/history/summary` (HU-74, **diseño**) | `200` |
 
-Las tres primeras rutas las define el [contrato de HU-70](hu-70-mission-enrollment-v1.md) (Task #365) y **solo son capacidad cuando Missions las integre** (Task #366). Las dos de estrategia las define el [contrato de HU-71](hu-71-mission-strategy-v1.md) (Task #369) y son capacidad cuando Missions las integre (Task #370). Las rutas internas de compromisos del héroe en Player/Inventory que ese contrato describe son una **propuesta** para Team Alfa: no existen.
+Las tres primeras rutas las define el [contrato de HU-70](hu-70-mission-enrollment-v1.md) (Task #365) y **solo son capacidad cuando Missions las integre** (Task #366). Las dos de estrategia las define el [contrato de HU-71](hu-71-mission-strategy-v1.md) (Task #369) y las tres de reporte e historial, el [contrato de HU-74](hu-74-mission-report-v1.md) (Task #379); también son capacidad solo cuando Missions las integre (Tasks #370 y #380). Las rutas internas de compromisos del héroe en Player/Inventory que ese contrato describe son una **propuesta** para Team Alfa: no existen.
 
 ### Notifications
 
