@@ -30,6 +30,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [hu-72-simulacion-mision.md](docs/architecture/hu-72-simulacion-mision.md) | Diseño de HU-72: simulación asíncrona en Combat, cierre en `endsAt`, liberación del héroe y propuesta de contrato |
 | [hu-73-encuentro-master.md](docs/architecture/hu-73-encuentro-master.md) | Diseño de HU-73: aparición del Máster con la aleatoriedad de Combat, evidencia del encuentro y entrega idempotente de la épica |
 | [hu-74-reporte-mision.md](docs/architecture/hu-74-reporte-mision.md) | Diseño de HU-74: reporte inmutable creado en el cierre, recompensas con estado propio e historial por jugador |
+| [hu-76-logros-misiones.md](docs/architecture/hu-76-logros-misiones.md) | Diseño de HU-76: catálogo versionado de logros, progreso idempotente por jugador y reconocimientos |
 | [observability.md](docs/architecture/observability.md) | Registro, sondas y qué no se mide todavía |
 | [testing.md](docs/architecture/testing.md) | Estrategia de pruebas y cobertura real |
 | [developer-workflow.md](docs/architecture/developer-workflow.md) | Flujo de trabajo, CI y OIDC futuro |
