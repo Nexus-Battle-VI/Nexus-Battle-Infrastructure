@@ -53,6 +53,118 @@ e inbox y es la clave de idempotencia. El contrato formal inicial está en
 
 Ambos incluyen la cantidad de la operación **y la resultante**, de modo que un consumidor puede reconstruir el saldo sin consultar el servicio.
 
+## Auction
+
+| Evento | Cuándo | Campos propios |
+| --- | --- | --- |
+| `auction.settled.v1` | Una subasta queda liquidada durablemente, después de Wallet e Inventory | envelope V1 + `auctionId`, `productId`, `sellerId`, `resultType`, `settledAt`; con ganador añade `winnerId`, `winningBidId`, `finalAmountCredits` y `loserBidderIds` |
+
+**HU-65.6 / Management #328.** El contrato formal es
+[auction-settlement-events-v1.asyncapi.yaml](auction-settlement-events-v1.asyncapi.yaml).
+Auction es productor y Notifications es el único consumidor competitivo de su
+cola SQS Standard dedicada. Es un hecho de integración, no un comando por
+destinatario: Notifications decide las representaciones in-app para vendedor,
+ganador y perdedores.
+
+`eventId` es obligatoriamente `auction:{auctionId}:settled` y `correlationId`
+es `auction:{auctionId}:settlement`; ambos permanecen estables en outbox,
+reintentos, SQS y redrive. `aggregateId` y `data.auctionId` son el mismo ID.
+
+- `WITH_WINNER` exige ganador, puja ganadora, importe final y
+  `loserBidderIds`; estos son IDs de usuario únicos calculados como
+  `distinct(all bidderIds) - winnerId`, sin historial de pujas y sin incluir
+  al ganador.
+- `WITHOUT_BIDS` omite todos los campos de ganador y `loserBidderIds`; no usa
+  `null`. Solo genera una notificación dirigida al vendedor.
+- `productName` no forma parte de V1: `productId` es la referencia funcional
+  mínima. Puede añadirse opcionalmente en una evolución compatible si una UX
+  posterior lo necesita.
+- La comisión no reembolsada es una regla de negocio de Auction/Wallet; no se
+  transporta `feeCredits`. Notifications puede expresar la regla sin conocer
+  el monto.
+
+El productor debe comprobar que el JSON serializado cabe en el máximo
+contractual de **64 KiB**. SQS Standard admite hasta 256 KiB: 64 KiB es un
+guardrail del proyecto, no una restricción nativa de AWS. La
+lista compacta de IDs únicos es el único conjunto variable permitido; no se
+introduce segmentación en V1 porque el dominio actual no demuestra que pueda
+exceder el límite. Si ocurriera, requerirá un contrato versionado/evolución,
+no truncar destinatarios silenciosamente.
+
+La entrega es at-least-once y no hay orden global. Auction marca
+`published_at` solamente tras `SendMessage` exitoso. Si este falla, queda
+`null` y el dispatcher reintenta. Si el proceso cae entre enviar y marcar,
+puede publicar un duplicado: Notifications debe absorberlo con persistencia
+durable y unicidad real de los IDs por destinatario:
+
+```text
+auction:{auctionId}:settled:seller:{sellerId}
+auction:{auctionId}:settled:winner:{winnerId}
+auction:{auctionId}:settled:loser:{userId}
+```
+
+Para `WITH_WINNER`, Notifications genera como máximo un aviso por rol y no
+genera el de perdedor para el ganador. Si un ID coincide de forma anómala entre
+seller, winner y perdedor, debe deduplicar por destinatario con precedencia
+`winner > seller > loser`; no se emiten dos mensajes de resultado para la
+misma persona. Para `WITHOUT_BIDS`, solo se genera el de vendedor.
+
+La secuencia no acopla settlement a Notifications:
+
+```text
+Auction DB transaction -> settlement COMPLETED + outbox durable -> dispatcher
+-> SQS -> Notifications -> Mongo notification
+```
+
+Una caída de Notifications no revierte Wallet ni Inventory: el mensaje queda
+reintentable en outbox/SQS. Un error transitorio conserva el mensaje hasta que
+venza/extienda su visibilidad; a los cinco receives se mueve a DLQ. El redrive
+manual es administrativo y seguro solo porque el consumidor es idempotente.
+Payload inválido o versión no soportada va a DLQ de forma controlada.
+
+Los fixtures contractuales obligatorios están como ejemplos AsyncAPI: un
+`WITH_WINNER` con seller, winner y dos perdedores distintos, y un
+`WITHOUT_BIDS`. Las implementaciones deben además rechazar: ganador incluido
+en `loserBidderIds`, `WITH_WINNER` sin `winnerId`, y `WITHOUT_BIDS` con un
+campo de ganador.
+
+### Topología, configuración y seguridad futuras
+
+La topología definida para una futura tarea de IaC es deliberadamente separada
+de Catalog:
+
+```text
+nexus-battle-{environment}-auction-settlement-notifications
+nexus-battle-{environment}-auction-settlement-notifications-dlq
+```
+
+Debe reproducir el patrón SQS existente: Standard, long polling de 20 s,
+visibility timeout de 60 s, retención principal de 4 días, DLQ de 14 días,
+SSE-SQS, máximo contractual de 64 KiB y `maxReceiveCount: 5`. La política de
+redrive de la DLQ solo acepta la cola principal como fuente. No hay orden
+global ni deduplicación del broker; la garantía es at-least-once.
+
+El futuro módulo Terraform debe conceder únicamente sobre el ARN de la cola
+principal: Auction `sqs:SendMessage`; Notifications `sqs:ReceiveMessage`,
+`sqs:DeleteMessage`, `sqs:ChangeMessageVisibility` y
+`sqs:GetQueueAttributes`. No concede `sqs:*`, gestión de la DLQ ni redrive al
+rol de ejecución. La demo actual comparte un rol de nodo, por lo que esos
+permisos se declaran separados por owner y recurso aunque aún no se puedan
+aislar por contenedor.
+
+Las variables de runtime propuestas, siguiendo los nombres de Catalog, son:
+
+| Servicio | Variable | Uso futuro |
+| --- | --- | --- |
+| Auction | `AUCTION_SETTLEMENT_QUEUE_URL` | URL de la cola para el dispatcher |
+| Auction | `AUCTION_SETTLEMENT_EVENT_DISPATCH_ENABLED` | Opt-in seguro del dispatcher, análogo a `CATALOG_EVENT_DISPATCH_ENABLED` |
+| Notifications | `AUCTION_SETTLEMENT_QUEUE_URL` | Misma URL de consumo |
+| Notifications | `AUCTION_SETTLEMENT_QUEUE_DRIVER` | Driver dedicado (`sqs`/`memory`), sin acoplarse a la cola general |
+
+Estas son especificaciones para el wiring posterior de Terraform/Compose y
+los dos servicios; esta documentación no crea recursos, no modifica Compose y
+no habilita ningún producer o consumer.
+
 ## Catalog
 
 | Evento | Cuándo | Campos propios |
@@ -257,3 +369,9 @@ Un cambio incompatible exige versionar el evento y mantener ambas versiones hast
 [catalog-events-v1.asyncapi.yaml](catalog-events-v1.asyncapi.yaml) formaliza la decisión aceptada de EN-027.4 (ADR-017) para `catalog.product.created`. Usa AsyncAPI 3.0.0 y declara una cola SQS Standard, envelope V1, productor Catalog y consumidor Notifications.
 
 El contrato está aceptado y versionado, y la cola que declara ya está provisionada como código Terraform (`infra/modules/catalog_events_queue`); todavía no se aplicó contra la cuenta real. Los demás eventos de este catálogo no quedan adoptados por esa decisión y no deben enviarse por la cola de Producto.
+
+[auction-settlement-events-v1.asyncapi.yaml](auction-settlement-events-v1.asyncapi.yaml)
+formaliza HU-65.6 (Management #328) para `auction.settled.v1`. Declara una cola
+SQS Standard y DLQ propias, pero **no** provisiona recursos ni afirma que
+Auction o Notifications ya tengan dispatcher/consumer: esos cambios pertenecen
+a sus respectivos repositorios.
