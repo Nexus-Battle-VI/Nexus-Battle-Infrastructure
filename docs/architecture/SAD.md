@@ -78,7 +78,21 @@ Player/Inv-> acredita cada derrota y recalcula el nivel con la tabla de HU-08
 - **Combat no calcula experiencia** y **Missions no genera aleatoriedad**: `ADR-021` da la exclusiva del azar a Combat y `ADR-019` da la propiedad del estado del héroe a Player/Inventory. La tirada se persiste **antes de responder**, de modo que un reintento no vuelve a consumir el cursor aleatorio.
 - La acreditación es **idempotente** por `operationId` determinista, con ledger propio en Player/Inventory (`_id = operationId`) y actualización de la progresión en la misma transacción. Un reintento nunca duplica experiencia.
 - **Estado:** **implementada y verificada de extremo a extremo; NO aceptada.** Las cuatro piezas existen (Combat `#440`, Player/Inventory `#441`, Missions `#442` y `#443`) y la cadena se recorre entera: 12/12 casos en verde sobre las tres piezas reales, con el reporte en [`hu-09-ejecucion-e2e.json`](../evidence/hu-09-ejecucion-e2e.json). Falta la revisión por pares y la aprobación del PO (`CA-09`), y la decisión `P-2` —redondeo al más próximo frente a truncamiento— sigue abierta. Ver el [contrato](../contracts/hu-09-experience-reward-v1.md), el [diseño](hu-09-experiencia-mision.md) y la [evidencia](../evidence/HU-09-experiencia-por-derrota-de-un-rival.md).
-- **Límite conocido:** el escenario sustituye el resultado de la simulación de HU-72 (Combat todavía no produce bitácoras y su ingreso responde `503`) y el perfil y el compromiso del héroe (la ruta interna de `HU-71.2` no está en `develop`). La tirada, el cálculo, la acreditación y el nivel **sí** son los reales. Está declarado en la evidencia, pieza por pieza.
+- **Límite conocido:** el escenario sustituye el resultado de la simulación de HU-72 y el perfil del héroe —son **la misma dependencia**: la ruta de simulación de Combat existe, pero valida `hero.profile.effectiveStats` y `hero.profile.subtype`, y sin la ruta interna de perfil de Player/Inventory (`HU-71.2`) no hay perfil real que enviarle—, más el compromiso del héroe y el testimonio. La tirada, el cálculo, la acreditación y el nivel **sí** son los reales. Está declarado en la evidencia, pieza por pieza.
+
+### Bloqueo de equipamiento en combate (HU-29)
+
+Con una batalla **activa**, el equipamiento con el que el héroe **entró** permanece fijo: toda mutación del loadout —arma, armadura o ítem— se **rechaza** con un mensaje explicativo y el loadout **no se modifica**. Al terminar la batalla la restricción **deja de aplicarse**. La regla **precede** a la operación de equipar de HU-28; no la reimplementa ni toca las capacidades 2/6/2.
+
+```text
+estado de batalla publicado -> RestriccionEquipamientoEnCombate -> procede | rechazado con motivo
+```
+
+- **El estado de batalla lo publica Combat**, no Player/Inventory. El diseño lo modela como un **estado que se recibe**, y no prescribe transporte ni firmas: el enmarcado arquitectónico ya lo decidió [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md), que asigna a Player/Inventory los **compromisos** del héroe (`BATTLE`, `MISSION`, `AUCTION`, `TOURNAMENT`) y hace que Combat publique el compromiso **al iniciar** y lo **libere al terminar**.
+- **El loadout no se clona.** Como la mutación no se aplica, no hace falta un snapshot que demuestre «sin modificaciones»: una copia sería una segunda versión de la misma verdad.
+- **Sin lock permanente.** No hay nada que «desbloquear»: hay una condición que se cumple mientras dure la batalla.
+- **Estado:** **solo diseño** (Task [#231](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/231)) y **sin aceptar**. La implementación es [#232](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/232) y las pruebas [#233](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/233), y **no se dan por desbloqueadas**: no hay guard en `develop`, la propuesta de implementación sigue en borrador y falta la decisión funcional. Ver el [diseño](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-29-bloqueo-equipamiento-combate.md) y [la evidencia](../evidence/HU-29-bloqueo-equipamiento-en-combate.md).
+- Diagramas: [caso de uso](../diagrams/hu-29-use-case.puml), [actividad](../diagrams/hu-29-activity.puml), [secuencia](../diagrams/hu-29-sequence.puml), [dominio](../diagrams/hu-29-domain.puml).
 
 ## 5. Arquitectura interna común
 
@@ -231,6 +245,16 @@ Se enumeran juntas porque quien lea este documento necesita conocerlas antes de 
     experiencia se acota con `@InternalCallers('missions')` **sin** ampliar la
     lista global: es una decisión de mínimo privilegio, no un pendiente. La cadena
     de HU-09 lo ejerce de verdad (`S-05`, `S-06`).
+11. **El bloqueo de equipamiento en combate (HU-29) está solo diseñado, y su decisión
+    funcional sigue abierta.** No hay guard en `develop`: la propuesta de implementación
+    es el PR [Player-Inventory #26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26),
+    **en borrador** y por detrás de `develop`. Falta decidir **qué cuenta como
+    «batalla activa»** —la lectura literal apunta a `IN_BATTLE`; ampliarlo a
+    `PREPARING` rompería el lobby de preparación de HU-15.3— y el **texto del
+    mensaje**. La épica **no** entra en el bloqueo: la HU nombra arma, armadura e
+    ítem, y HU-28 excluye `EPICA` de las categorías equipables. Ver el
+    [diseño](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-29-bloqueo-equipamiento-combate.md)
+    y [la evidencia](../evidence/HU-29-bloqueo-equipamiento-en-combate.md).
 
 Ninguna es un descuido. Cada una tiene su motivo registrado y su condición de desbloqueo.
 
