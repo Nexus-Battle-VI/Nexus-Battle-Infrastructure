@@ -1,0 +1,33 @@
+@startuml hu-73-activity
+title HU-73 — Evaluar la aparición del Máster en cada punto (actividad)
+
+start
+:Missions resuelve la probabilidad\npara el subtipo del héroe;
+if (¿Hay probabilidad para ese subtipo?) then (no)
+  :Registrar NOT_APPLICABLE (CA-02);
+  stop
+endif
+:Enviar el bloque master a Combat (HU-72);
+while (¿Queda un punto de evaluación?) is (sí)
+  if (¿Se alcanzó maxAppearances?) then (sí)
+    :Registrar SKIPPED_MAX_REACHED;
+  else (no)
+    :Combat tira con su generador (ADR-021);
+    if (¿Aparece el Máster?) then (no)
+      :Registrar NOT_APPEARED (CA-02);
+    else (sí)
+      :Crear el encuentro con levelOffset 2\ny estadísticas superiores (CA-04);
+      :Resolver el combate con las reglas de Combat;
+      if (¿Quién cae?) then (el Máster)
+        :Registrar APPEARED_DEFEATED (CA-01);
+      else (el héroe)
+        :Registrar APPEARED_HERO_DEFEATED (CA-03);
+        :La simulación termina y la misión falla (HU-72).\nAl cerrar se piden las épicas de los Máster\nderrotados en puntos anteriores;
+        stop
+      endif
+    endif
+  endif
+endwhile (no)
+:Al cerrar la misión: pedir la épica por cada\nAPPEARED_DEFEATED con su operationId determinista;
+stop
+@enduml

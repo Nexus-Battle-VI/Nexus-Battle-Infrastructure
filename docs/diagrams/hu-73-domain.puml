@@ -1,0 +1,69 @@
+@startuml hu-73-domain
+title HU-73 — Fragmento de dominio del encuentro con Máster
+hide empty members
+skinparam classAttributeIconSize 0
+
+package "Missions (Team Beta)" {
+  class MasterEncounterConfig <<valor>> {
+    evaluationPoints
+    maxAppearances
+    --
+    probabilityFor(heroSubtype)
+  }
+
+  class MasterCandidate <<valor>> {
+    masterRef
+    name
+    subtype
+    levelOffset = 2
+    profile
+    probabilityByHeroType
+  }
+
+  class MasterEpic <<valor>> {
+    epicRef
+    name
+    generalEffect
+    epicEffect
+    productId
+  }
+
+  class MasterEncounterRecord <<evidencia>> {
+    enrollmentId
+    sequence
+    afterEncounter
+    masterRef
+    status : MasterEncounterStatus
+    epicRef
+    grantOperationId
+    grantedAt
+  }
+
+  enum MasterEncounterStatus {
+    NOT_APPLICABLE
+    NOT_APPEARED
+    APPEARED_DEFEATED
+    APPEARED_HERO_DEFEATED
+    APPEARED_ESCAPED
+    SKIPPED_MAX_REACHED
+  }
+
+  class MasterConfigPolicy <<dominio puro>> {
+    validate(config, encountersTotal)
+  }
+
+  interface EpicGrantPort
+}
+
+MasterEncounterConfig "1" *-- "1..*" MasterCandidate
+MasterCandidate "1" *-- "1" MasterEpic
+MasterEncounterRecord --> MasterEncounterStatus
+MasterConfigPolicy ..> MasterEncounterConfig
+EpicGrantPort ..> MasterEncounterRecord : solo APPEARED_DEFEATED
+
+note bottom of EpicGrantPort
+  POST /api/internal/v1/inventory/grants
+  (contrato de HU-59, idempotente por operationId).
+  La acreditación es de HU-32 y Player/Inventory.
+end note
+@enduml
