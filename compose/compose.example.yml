@@ -324,6 +324,8 @@ services:
       # y el resto sigue funcionando. Lo exigen con `:?` otros servicios de
       # este fichero, asi que en la practica ya esta definido.
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      AUCTION_SETTLEMENT_QUEUE_URL: ${AUCTION_SETTLEMENT_QUEUE_URL:-}
+      AUCTION_SETTLEMENT_EVENT_DISPATCH_ENABLED: 'false'
     depends_on:
       auction-migrate:
         condition: service_completed_successfully
@@ -404,6 +406,8 @@ services:
       # Notifications#24). Catalog, ademas, sigue sin dispatcher que publique
       # estos eventos desde su outbox.
       CATALOG_LIFECYCLE_QUEUE_URL: ${CATALOG_LIFECYCLE_QUEUE_URL:-}
+      AUCTION_SETTLEMENT_QUEUE_URL: ${AUCTION_SETTLEMENT_QUEUE_URL:-}
+      AUCTION_SETTLEMENT_QUEUE_DRIVER: memory
       # A proposito NO se define CATALOG_LIFECYCLE_QUEUE_DRIVER aqui: su
       # default en Notifications es `memory` (Notifications#24), que es
       # exactamente lo que este compose local sin AWS necesita -sin el,
