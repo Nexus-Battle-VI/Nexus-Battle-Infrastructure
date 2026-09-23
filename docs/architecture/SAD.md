@@ -67,14 +67,17 @@ semilla -> MT19937 -> Box-Müller -> Z ~ N(0,1) -> Φ(Z) -> indice uniforme 1..8
 
 Player/Inventory posee el **nivel** y la **experiencia acumulada** del héroe, en un agregado por `(jugador, héroe)` con su propio almacén. No es una decisión nueva de este documento: la ficha de ownership de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md) ya asigna a Player/Inventory el héroe, su equipamiento y sus estadísticas efectivas, y solo ese contexto escribe su Mongo.
 
-La regla de la fórmula vive **en proceso**, en `ExperiencePolicy`, como política pura: no persiste, no expone HTTP y no otorga experiencia. El **umbral no se almacena** —es derivable del nivel—, de modo que la fórmula tiene un único punto conceptual y no puede desincronizarse.
+La regla vive **en proceso**, en `ExperiencePolicy`, como política pura: no persiste, no expone HTTP y no entrega experiencia. Contiene la **tabla de umbrales aprobada por el Product Owner** —`100 · 200 · 400 · 800 · 1.600 · 3.200 · 6.400 · 12.800`, de experiencia **acumulada** por nivel— y las dos direcciones de esa tabla: el umbral de un nivel y el nivel de un acumulado. El **umbral no se almacena** —es derivable del nivel—, de modo que la regla tiene un único punto conceptual y no puede desincronizarse.
 
 ```text
-nivel actual (1..8) -> ExperiencePolicy -> umbral del siguiente nivel, o MAX_LEVEL
+nivel actual (1..8)  -> ExperiencePolicy -> umbral del siguiente nivel, o MAX_LEVEL
+xp acumulada         -> ExperiencePolicy -> nivel alcanzado (puede cruzar varios de golpe)
 ```
 
-- **Lo que está**: el diseño completo y el modelo de dominio (Task #188). **Lo que no está**: la migración `007-hero-progressions`, su adaptador y las pruebas (#189 y #190). Ver [la evidencia de HU-08](../evidence/HU-08-calculo-de-experiencia-requerida-por-nivel.md) y el [diseño](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-08-progresion.md).
-- El umbral es función del **nivel** y no de las estadísticas: **no** interviene en `computeEffectiveStats` ni en el contrato `equipped-hero`, que sigue sin llevar nivel. Ver la limitación correspondiente en §14.
+- **Lo que está**: el diseño, el modelo de dominio, la migración `008-hero-progressions`, los adaptadores y la suite de pruebas (Tasks #188, #189 y #190). Ver [la evidencia de HU-08](../evidence/HU-08-calculo-de-experiencia-requerida-por-nivel.md) y el [diseño](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-08-progresion.md).
+- La **experiencia solo crece**: subir de nivel no la descuenta, y en el nivel máximo sigue acumulándose sin descartarse. El nivel persistido es la tabla aplicada al acumulado, y esa coherencia se comprueba al leer el documento.
+- **La recompensa no se calcula aquí.** `10 × 1,2^(1d8)` es de Missions y la tirada `1d8` es de Combat ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)); Player/Inventory recibe un importe entero y lo acredita.
+- El umbral es función del **nivel** y no de las estadísticas: **no** interviene en `computeEffectiveStats` ni en el contrato `equipped-hero`, que sigue sin llevar nivel. Ver las limitaciones correspondientes en §14.
 
 ## 5. Arquitectura interna común
 
@@ -207,24 +210,36 @@ Se enumeran juntas porque quien lea este documento necesita conocerlas antes de 
 7. **Aceptación humana de HU-39 en curso.** La entrega técnica está desplegada;
    el ciclo real de TOTP, asignación, Catalog y retirada se conserva como
    evidencia pendiente de completar.
-8. **Decisión de redondeo del umbral de experiencia (HU-08) pendiente.** La fórmula
-   `100 × 1,2^(Nivel−1)` produce valores fraccionarios desde el nivel 4 (`172,8`;
-   `298,5984`). El diseño devuelve el valor **exacto** y **no** redondea, porque la
-   Task #188 prohíbe fijar una política de redondeo sin decisión del PO. No
-   bloquea nada mientras el umbral no se persista: cambiarlo después no exige
-   migración de datos.
-9. **`CA-06` de HU-08 sin resolver, y deja la historia formalmente inaceptable.** El
-   criterio exige que «el nivel del héroe actúe como factor multiplicador sobre el
-   resto de sus estadísticas», pero la propia HU declara que **no** recalcula reglas
-   de combate y **no existe fórmula en ninguna fuente**. Como `CA-08` establece que
-   un criterio obligatorio fallido impide aceptar la HU, HU-08 no puede aceptarse
-   mientras siga así. Requiere decisión de PO y arquitectura: definir la fórmula,
-   moverla a otra historia, o reformularla como no obligatoria. El precedente es
-   HU-07/`CA-09`, que se declaró fuera de alcance con cita textual.
+8. **`CA-03` de HU-08 quedó divergente, y bloquea la aceptación de la historia.** El
+   criterio sigue enunciando el umbral como `100 × 1,2^(Nivel−1)` —que da `100, 120,
+   144, 172,8, 207,36, 248,832, 298,5984`— y el código aplica la tabla aprobada
+   después por el PO. **No es una diferencia de redondeo**: el cociente entre las dos
+   series no es constante, así que ninguna precisión convierte una en la otra. La
+   tabla gobierna el cálculo y la divergencia está medida en la evidencia de HU-08.
+   Requiere que el Product Owner **reescriba `CA-03`**; el Issue no se ha modificado.
+9. **`CA-06` de HU-08 sin implementar, y bloquea la aceptación de la historia.** El
+   Product Owner **ya dio la regla**: la estadística del nivel 1 multiplicada por el
+   nivel actual, con el equipamiento aplicado después. Sigue fuera de HU-08 porque la
+   propia HU declara que **no** recalcula reglas de combate, y porque implementarla
+   tocaría `computeEffectiveStats` y el contrato `equipped-hero`. **Y hay un caso que
+   la aclaración no resuelve:** las estadísticas expresadas como **dados** —el `1d8`
+   que Combat documenta en su `AttackProfile`— no tienen definida la multiplicación
+   por nivel. Como `CA-08` establece que un criterio obligatorio fallido impide
+   aceptar la HU, HU-08 no puede aceptarse mientras `CA-06` siga asignado a esta
+   historia. Requiere decisión de PO y arquitectura: implementarlo aquí, moverlo a
+   otra historia, o reformularlo como no obligatorio. El precedente es HU-07/`CA-09`,
+   que se declaró fuera de alcance con cita textual.
 10. **`equipped-hero` no lleva el nivel del héroe.** El contrato interno que Combat
     consume es un subconjunto deliberado, y su propio código documenta que «si Combat
-    necesita escalar por nivel, es una decision de producto pendiente». Mientras
-    `CA-06` no se resuelva, el nivel no viaja a Combat.
+    necesita escalar por nivel, es una decision de producto pendiente». Con `CA-06` ya
+    con fórmula, esta decisión es el camino crítico de esa parte: ampliar
+    `EquippedHeroDto` es un cambio de contrato con su propio proceso.
+11. **La política de redondeo de la recompensa de experiencia sigue abierta, y no es
+    de Player/Inventory.** `10 × 1,2^(1d8)` —la XP por muerte de NPC en misiones
+    JvE— es de Missions, y su tirada `1d8` es de Combat ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)).
+    El PO describió el redondeo al entero más próximo y ofreció el truncamiento como
+    alternativa. La tabla de umbrales no tiene fracciones que redondear, así que esto
+    no afecta al cálculo del nivel.
 
 Ninguna es un descuido. Cada una tiene su motivo registrado y su condición de desbloqueo.
 
