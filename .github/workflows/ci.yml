@@ -117,6 +117,7 @@ jobs:
           docs/contracts/catalog-product-assets-v1.md
           docs/costs/catalog-events-sqs-estimate.md
           docs/contracts/catalog-events-v1.asyncapi.yaml
+          docs/contracts/auction-settlement-events-v1.asyncapi.yaml
           docs/contracts/event-catalog.md
           docs/governance/rulesets/main-protection.template.json
           compose/compose.example.yml
@@ -193,6 +194,13 @@ jobs:
             -v "$PWD:/app:ro" \
             asyncapi/cli:6.0.2 \
             validate /app/docs/contracts/catalog-events-v1.asyncapi.yaml
+
+      - name: Validar el contrato AsyncAPI de settlement de Auction
+        run: |
+          docker run --rm \
+            -v "$PWD:/app:ro" \
+            asyncapi/cli:6.0.2 \
+            validate /app/docs/contracts/auction-settlement-events-v1.asyncapi.yaml
 
       - name: Verificar contrato interno de evidencia MFA
         run: python3 scripts/verificar-contrato-mfa-catalog.py

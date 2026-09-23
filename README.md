@@ -83,6 +83,7 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | [catalog-product-v1.openapi.yaml](docs/contracts/catalog-product-v1.openapi.yaml) | Contrato canónico de Producto v1 |
 | [catalog-product-assets-v1.md](docs/contracts/catalog-product-assets-v1.md) | Contrato de diseño aprobado para carga, finalización y lectura de recursos visuales |
 | [catalog-events-v1.asyncapi.yaml](docs/contracts/catalog-events-v1.asyncapi.yaml) | AsyncAPI propuesto de `catalog.product.created` V1 |
+| [auction-settlement-events-v1.asyncapi.yaml](docs/contracts/auction-settlement-events-v1.asyncapi.yaml) | Contrato AsyncAPI de `auction.settled.v1` para HU-65.6 (Management #328) |
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
 
 ### Gobierno
@@ -171,4 +172,3 @@ Se aplican las convenciones descritas en [CONTRIBUTING.md](CONTRIBUTING.md) y la
 ## Licencia
 
 `Licensing pending project governance`. Este repositorio todavía no tiene una licencia asignada; su definición requiere autorización del gobierno del proyecto.
-
