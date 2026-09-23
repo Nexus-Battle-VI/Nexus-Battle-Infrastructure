@@ -1,0 +1,98 @@
+@startuml hu-70-domain
+title HU-70 — Fragmento de dominio de la matrícula
+hide empty members
+skinparam classAttributeIconSize 0
+
+package "Missions (Team Beta)" {
+  class MissionDefinition <<catálogo>> {
+    missionId
+    category : MissionCategory
+    name
+    narrative
+    objectives
+    estimatedDuration
+    recommendedPower
+    prerequisites : missionId[]
+    enemies
+    finalBoss
+    masterEncounter
+    rewards
+    active
+  }
+
+  class MissionEnrollment <<agregado>> {
+    enrollmentId
+    playerId
+    missionId
+    heroId
+    difficulty : Difficulty
+    status : EnrollmentStatus
+    operationId
+    idempotencyKey
+    commitmentId
+    rotations
+    requestedAt
+    startedAt
+    endsAt
+    version
+    --
+    confirm(commitmentId, now)
+    reject(code)
+    expire()
+  }
+
+  enum EnrollmentStatus {
+    PENDING
+    IN_PROGRESS
+    COMPLETED
+    FAILED
+    ABANDONED
+    REJECTED
+    EXPIRED
+  }
+
+  enum MissionCategory {
+    STORY
+    CHALLENGE
+    EXPLORATION
+  }
+
+  class EnrollmentPolicy <<dominio puro>> {
+    evaluate(definition, clears, activeEnrollments, request)
+  }
+
+  interface MissionCatalogRepository
+  interface EnrollmentRepository
+  interface DifficultyClearRepository <<HU-75>>
+  interface HeroCommitmentPort
+}
+
+package "Player/Inventory (Team Alfa)" {
+  class HeroCommitment <<propuesta>> {
+    commitmentId
+    heroId
+    purpose : CommitmentPurpose
+    reference
+    operationId
+    expiresAt
+  }
+
+  enum CommitmentPurpose {
+    MISSION
+    BATTLE
+    TOURNAMENT
+    AUCTION
+  }
+}
+
+MissionEnrollment "*" --> "1" MissionDefinition : missionId
+MissionEnrollment --> EnrollmentStatus
+MissionDefinition --> MissionCategory
+HeroCommitment --> CommitmentPurpose
+EnrollmentPolicy ..> MissionDefinition
+EnrollmentPolicy ..> MissionEnrollment
+EnrollmentRepository ..> MissionEnrollment
+MissionCatalogRepository ..> MissionDefinition
+HeroCommitmentPort ..> HeroCommitment : HTTP interno con HMAC
+MissionEnrollment ..> HeroCommitment : commitmentId (opaco)
+@enduml

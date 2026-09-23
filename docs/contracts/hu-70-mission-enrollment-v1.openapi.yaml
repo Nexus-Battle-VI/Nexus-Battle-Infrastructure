@@ -1,0 +1,398 @@
+openapi: 3.1.0
+info:
+  title: Missions - tablón y matriculación (HU-70)
+  version: 1.0.0-draft
+  description: >-
+    Borrador de diseño de HU-70 (Task #365). NO IMPLEMENTADO: en develop,
+    Nexus-Battle-Missions solo expone health y version. La prosa, los ejemplos y
+    las decisiones pendientes están en hu-70-mission-enrollment-v1.md. HU-75
+    extiende el cuerpo de la matrícula con difficulty; HU-71 fija rotations.
+    Las rutas internas de Player/Inventory son una propuesta para Team Alfa y no
+    forman parte de este documento.
+servers:
+  - url: /api
+security:
+  - cognitoJwt: []
+tags:
+  - name: missions
+    description: Tablón, detalle y matrícula de misiones JcE
+paths:
+  /v1/missions:
+    get:
+      tags: [missions]
+      operationId: listMissionBoard
+      summary: Tablón de misiones con el estado para el jugador autenticado
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/MissionCategory'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PlayerMissionStatus'
+      responses:
+        '200':
+          description: Misiones activas con su estado para el jugador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionBoard'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /v1/missions/{missionId}:
+    get:
+      tags: [missions]
+      operationId: getMissionDetail
+      summary: Detalle de una misión antes de matricularse (CA-06)
+      parameters:
+        - $ref: '#/components/parameters/MissionId'
+      responses:
+        '200':
+          description: Detalle completo de la misión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/MissionNotFound'
+  /v1/missions/{missionId}/enrollments:
+    post:
+      tags: [missions]
+      operationId: enrollInMission
+      summary: Matricular un héroe en una misión (CA-01 a CA-05 y CA-07)
+      parameters:
+        - $ref: '#/components/parameters/MissionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentRequest'
+      responses:
+        '201':
+          description: Matrícula en curso; héroe comprometido y temporizador iniciado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+        '400':
+          description: VALIDATION_ERROR, IDEMPOTENCY_KEY_REQUIRED o UNKNOWN_DIFFICULTY (HU-75)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/MissionNotFound'
+        '409':
+          description: HERO_BUSY, MISSION_ALREADY_IN_PROGRESS, IDEMPOTENCY_KEY_REUSED o ENROLLMENT_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: MISSION_LOCKED, PROGRESSION_LOCKED (HU-75), LOADOUT_INCOMPLETE, HERO_NOT_READY o HERO_NOT_OWNED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE; la matrícula sigue PENDING y se reintenta con la misma Idempotency-Key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    cognitoJwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token de Cognito con el rol PLAYER. El jugador es el sub del token.
+  parameters:
+    MissionId:
+      name: missionId
+      in: path
+      required: true
+      schema:
+        type: string
+        examples: [msn_templo_olvidado]
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID generado por Web al pulsar Iniciar misión y reutilizado en sus reintentos.
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Unauthenticated:
+      description: Sin token o token no válido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: El token no tiene el rol PLAYER
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    MissionNotFound:
+      description: La misión no existe o no está activa
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    MissionCategory:
+      type: string
+      enum: [STORY, CHALLENGE, EXPLORATION]
+    PlayerMissionStatus:
+      type: string
+      enum: [AVAILABLE, LOCKED, IN_PROGRESS, COMPLETED, FAILED, ABANDONED]
+    EnrollmentStatus:
+      type: string
+      enum: [PENDING, IN_PROGRESS, COMPLETED, FAILED, ABANDONED, REJECTED, EXPIRED]
+    Difficulty:
+      type: string
+      description: Vocabulario de HU-75.
+      enum: [NORMAL, HEROIC, LEGENDARY, MYTHIC]
+    RewardLabel:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+    MissionCard:
+      type: object
+      required: [missionId, name, category, summary, estimatedDuration, playerStatus, canEnroll]
+      properties:
+        missionId:
+          type: string
+        name:
+          type: string
+        category:
+          $ref: '#/components/schemas/MissionCategory'
+        summary:
+          type: string
+        imageRef:
+          type: [string, 'null']
+        estimatedDuration:
+          type: string
+          description: Duración ISO-8601, por ejemplo PT12H.
+        recommendedPower:
+          type: [integer, 'null']
+          description: Informativo; no bloquea la matrícula.
+        highlightedRewards:
+          type: array
+          items:
+            $ref: '#/components/schemas/RewardLabel'
+        playerStatus:
+          $ref: '#/components/schemas/PlayerMissionStatus'
+        canEnroll:
+          type: boolean
+        lockReason:
+          type: [string, 'null']
+        activeEnrollmentId:
+          type: [string, 'null']
+    MissionBoard:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MissionCard'
+    Objective:
+      type: object
+      required: [id, text, primary]
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        primary:
+          type: boolean
+    Enemy:
+      type: object
+      required: [name, count]
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+          minimum: 1
+        description:
+          type: string
+    FinalBoss:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        heroType:
+          type: string
+        description:
+          type: string
+        stats:
+          type: object
+          additionalProperties:
+            type: number
+    MasterCandidate:
+      type: object
+      required: [name, heroType, epic]
+      properties:
+        name:
+          type: string
+        heroType:
+          type: string
+        epic:
+          type: object
+          required: [name]
+          properties:
+            name:
+              type: string
+            generalEffect:
+              type: string
+            epicEffect:
+              type: string
+    PotentialReward:
+      type: object
+      required: [label, probability]
+      properties:
+        label:
+          type: string
+        probability:
+          type: number
+          minimum: 0
+          maximum: 1
+        rolls:
+          type: integer
+          minimum: 1
+    MissionDetail:
+      type: object
+      required: [missionId, name, category, narrative, objectives, estimatedDuration, prerequisites,
+        enemies, finalBoss, masterEncounter, rewards, playerStatus, canEnroll]
+      properties:
+        missionId:
+          type: string
+        name:
+          type: string
+        category:
+          $ref: '#/components/schemas/MissionCategory'
+        narrative:
+          type: string
+        objectives:
+          type: array
+          items:
+            $ref: '#/components/schemas/Objective'
+        estimatedDuration:
+          type: string
+        recommendedPower:
+          type: [integer, 'null']
+        prerequisites:
+          type: array
+          description: missionId de las misiones que hay que completar antes.
+          items:
+            type: string
+        enemies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Enemy'
+        finalBoss:
+          $ref: '#/components/schemas/FinalBoss'
+        masterEncounter:
+          type: object
+          required: [probability, candidates]
+          properties:
+            probability:
+              type: number
+              minimum: 0
+              maximum: 1
+            candidates:
+              type: array
+              items:
+                $ref: '#/components/schemas/MasterCandidate'
+        rewards:
+          type: object
+          required: [guaranteed, potential]
+          properties:
+            guaranteed:
+              type: array
+              items:
+                $ref: '#/components/schemas/RewardLabel'
+            potential:
+              type: array
+              items:
+                $ref: '#/components/schemas/PotentialReward'
+            objectiveBonuses:
+              type: array
+              items:
+                $ref: '#/components/schemas/RewardLabel'
+            firstTime:
+              type: array
+              items:
+                $ref: '#/components/schemas/RewardLabel'
+        playerStatus:
+          $ref: '#/components/schemas/PlayerMissionStatus'
+        canEnroll:
+          type: boolean
+        lockReason:
+          type: [string, 'null']
+    EnrollmentRequest:
+      type: object
+      required: [heroId, difficulty]
+      additionalProperties: false
+      properties:
+        heroId:
+          type: string
+          format: uuid
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+        rotations:
+          description: Forma y obligatoriedad pendientes de HU-71.
+          type: ['null', array, object]
+    Enrollment:
+      type: object
+      required: [enrollmentId, missionId, heroId, difficulty, status, startedAt, endsAt]
+      properties:
+        enrollmentId:
+          type: string
+        missionId:
+          type: string
+        heroId:
+          type: string
+          format: uuid
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+        status:
+          $ref: '#/components/schemas/EnrollmentStatus'
+        startedAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      additionalProperties: true

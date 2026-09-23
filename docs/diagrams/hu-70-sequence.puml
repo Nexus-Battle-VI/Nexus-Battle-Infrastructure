@@ -1,0 +1,47 @@
+@startuml hu-70-sequence
+title HU-70 — Matrícula con reserva del héroe (secuencia)
+autonumber
+
+actor "Jugador" as Player
+participant "Web" as Web
+participant "Missions" as Missions
+database "PostgreSQL\n(missions)" as DB
+participant "Player/Inventory\n(Team Alfa)" as Inventory
+
+Player -> Web : Iniciar misión
+Web -> Missions : POST /api/v1/missions/{missionId}/enrollments\nJWT, Idempotency-Key, heroId, difficulty
+Missions -> DB : Leer definición, clears y matrículas activas
+DB --> Missions : Datos
+Missions -> Missions : EnrollmentPolicy\n(requisitos, dificultad, héroe libre)
+Missions -> DB : INSERT matrícula PENDING\ncon un operationId nuevo
+note right of DB
+  Índice único parcial:
+  un héroe, una sola matrícula activa.
+end note
+Missions -> Inventory : POST /api/internal/v1/inventory/heroes/{heroId}/commitments\nHMAC, operationId, purpose MISSION,\nexpiresAt, completeLoadout
+
+alt Compromiso concedido
+  Inventory --> Missions : 201 commitmentId
+  Missions -> DB : UPDATE PENDING a IN_PROGRESS\nstartedAt, endsAt, commitmentId\ny hecho MissionEnrollmentStarted
+  Missions --> Web : 201 matrícula IN_PROGRESS
+  Web --> Player : Misión en progreso
+else Rechazo terminal
+  Inventory --> Missions : 422 HERO_COMMITTED, LOADOUT_INCOMPLETE,\nHERO_NOT_READY o HERO_NOT_OWNED
+  Missions -> DB : UPDATE PENDING a REJECTED
+  Missions --> Web : 409 HERO_BUSY o 422
+  Web --> Player : Motivo del rechazo
+else Sin respuesta, 409 o 503
+  Inventory --> Missions : Tiempo agotado o 503
+  Missions --> Web : 503 DEPENDENCY_UNAVAILABLE\n(matrícula PENDING)
+  Web --> Player : Reintentando
+  ... Reconciliador, cada pocos segundos ...
+  Missions -> DB : SELECT PENDING FOR UPDATE SKIP LOCKED
+  Missions -> Inventory : Mismo operationId
+  alt Concedido
+    Missions -> DB : PENDING a IN_PROGRESS
+  else Pasan 2 minutos sin confirmar
+    Missions -> Inventory : POST /api/internal/v1/inventory/commitments/{operationId}/release
+    Missions -> DB : PENDING a EXPIRED
+  end
+end
+@enduml

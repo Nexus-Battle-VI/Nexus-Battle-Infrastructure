@@ -25,6 +25,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [integration.md](docs/architecture/integration.md) | Comunicación entre contextos |
 | [security.md](docs/architecture/security.md) | Seguridad, identidad y RBAC desplegados |
 | [hu-39-role-management.md](docs/architecture/hu-39-role-management.md) | Diseño, matriz RBAC y contratos conceptuales de HU-39 |
+| [hu-70-matriculacion-mision.md](docs/architecture/hu-70-matriculacion-mision.md) | Diseño de HU-70: tablón, detalle y matrícula con reserva del héroe, y su contrato conceptual |
 | [observability.md](docs/architecture/observability.md) | Registro, sondas y qué no se mide todavía |
 | [testing.md](docs/architecture/testing.md) | Estrategia de pruebas y cobertura real |
 | [developer-workflow.md](docs/architecture/developer-workflow.md) | Flujo de trabajo, CI y OIDC futuro |

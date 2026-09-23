@@ -1,0 +1,265 @@
+{
+  "contract": "hu-70-mission-enrollment-v1",
+  "status": "design-draft",
+  "description": "Escenarios de diseño de HU-70 (Task #365). Datos sintéticos basados en el ejemplo del curso (§7.8.14); no son contenido aprobado. Las pruebas ejecutables son de HU-70.4.",
+  "now": "2026-10-01T15:00:00Z",
+  "player": "cognito-sub-jugador-demo",
+  "heroes": {
+    "free": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60",
+    "inOtherMission": "0b1c2d3e-4f50-4617-8a9b-0c1d2e3f4a5b",
+    "inTournament": "1c2d3e4f-5061-4728-9bac-1d2e3f4a5b6c",
+    "incompleteLoadout": "2d3e4f50-6172-4839-acbd-2e3f4a5b6c7d"
+  },
+  "missions": [
+    {
+      "missionId": "msn_templo_olvidado",
+      "name": "El Templo Olvidado",
+      "category": "STORY",
+      "estimatedDuration": "PT12H",
+      "recommendedPower": 15,
+      "prerequisites": [],
+      "active": true
+    },
+    {
+      "missionId": "msn_camara_sellada",
+      "name": "La Cámara Sellada",
+      "category": "STORY",
+      "estimatedDuration": "PT6H",
+      "recommendedPower": 18,
+      "prerequisites": ["msn_templo_olvidado"],
+      "active": true
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "P-01",
+      "ca": "CA-01",
+      "title": "Misión disponible y héroe libre con mazo completo",
+      "given": { "clears": [], "activeEnrollments": [] },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
+        "headers": { "Idempotency-Key": "3b9f6c1e-8d2a-4f7b-9c4e-5a6b7c8d9e0f" },
+        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "rotations": null }
+      },
+      "inventoryResponse": {
+        "status": 201,
+        "body": {
+          "commitmentId": "cmt_demo_1",
+          "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60",
+          "purpose": "MISSION",
+          "reference": "enr_demo_1",
+          "expiresAt": "2026-10-02T03:32:00Z"
+        }
+      },
+      "expected": {
+        "status": 201,
+        "body": {
+          "enrollmentId": "enr_demo_1",
+          "missionId": "msn_templo_olvidado",
+          "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60",
+          "difficulty": "NORMAL",
+          "status": "IN_PROGRESS",
+          "startedAt": "2026-10-01T15:00:00Z",
+          "endsAt": "2026-10-02T03:00:00Z"
+        },
+        "boardStatusAfter": "IN_PROGRESS",
+        "internalFact": "MissionEnrollmentStarted"
+      }
+    },
+    {
+      "id": "P-02",
+      "ca": "CA-02",
+      "title": "El héroe ya tiene otra matrícula activa",
+      "given": {
+        "clears": [],
+        "activeEnrollments": [
+          { "enrollmentId": "enr_demo_previa", "missionId": "msn_otra", "heroId": "0b1c2d3e-4f50-4617-8a9b-0c1d2e3f4a5b", "status": "IN_PROGRESS" }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
+        "headers": { "Idempotency-Key": "4c0a7d2f-9e3b-4a8c-8d5f-6b7c8d9e0f1a" },
+        "body": { "heroId": "0b1c2d3e-4f50-4617-8a9b-0c1d2e3f4a5b", "difficulty": "NORMAL", "rotations": null }
+      },
+      "inventoryResponse": null,
+      "expected": {
+        "status": 409,
+        "body": { "code": "HERO_BUSY", "busyWith": "MISSION" },
+        "newRows": 0,
+        "boardStatusAfter": "AVAILABLE"
+      }
+    },
+    {
+      "id": "P-03",
+      "ca": "CA-03",
+      "title": "El héroe está comprometido en un torneo activo",
+      "dependsOn": "Que Torneo registre compromisos TOURNAMENT en Player/Inventory (EPIC-09)",
+      "given": { "clears": [], "activeEnrollments": [] },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
+        "headers": { "Idempotency-Key": "5d1b8e3a-0f4c-4b9d-9e6a-7c8d9e0f1a2b" },
+        "body": { "heroId": "1c2d3e4f-5061-4728-9bac-1d2e3f4a5b6c", "difficulty": "NORMAL", "rotations": null }
+      },
+      "inventoryResponse": { "status": 422, "body": { "code": "HERO_COMMITTED", "purpose": "TOURNAMENT" } },
+      "expected": {
+        "status": 409,
+        "body": { "code": "HERO_BUSY", "busyWith": "TOURNAMENT" },
+        "enrollmentStatus": "REJECTED",
+        "boardStatusAfter": "AVAILABLE"
+      }
+    },
+    {
+      "id": "P-04",
+      "ca": "CA-04",
+      "title": "El héroe no tiene el mazo completo",
+      "pendingDecision": "Definición de mazo completo (decisión 1 del diseño; propuesta P-M7: 2 armas, 6 armaduras y 2 ítems)",
+      "given": { "clears": [], "activeEnrollments": [] },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
+        "headers": { "Idempotency-Key": "6e2c9f4b-1a5d-4cae-8f7b-8d9e0f1a2b3c" },
+        "body": { "heroId": "2d3e4f50-6172-4839-acbd-2e3f4a5b6c7d", "difficulty": "NORMAL", "rotations": null }
+      },
+      "inventoryResponse": {
+        "status": 422,
+        "body": { "code": "LOADOUT_INCOMPLETE", "missingSlots": [{ "family": "WEAPON", "missing": 1 }, { "family": "ITEM", "missing": 2 }] }
+      },
+      "expected": {
+        "status": 422,
+        "body": { "code": "LOADOUT_INCOMPLETE", "missingSlots": [{ "family": "WEAPON", "missing": 1 }, { "family": "ITEM", "missing": 2 }] },
+        "enrollmentStatus": "REJECTED"
+      }
+    },
+    {
+      "id": "P-05",
+      "ca": "CA-05",
+      "title": "Con la matrícula en curso, intentar JcJ, torneo o cambiar el equipamiento",
+      "dependsOn": "Compromisos en Player/Inventory (HU-29 ampliada a MISSION) y que Combat y Torneo pidan su compromiso",
+      "given": {
+        "activeEnrollments": [
+          { "enrollmentId": "enr_demo_1", "missionId": "msn_templo_olvidado", "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "status": "IN_PROGRESS", "endsAt": "2026-10-02T03:00:00Z" }
+        ]
+      },
+      "attempts": [
+        { "owner": "Player/Inventory", "action": "PUT /api/inventories/me/heroes/{heroId}/equipment/{slot}" },
+        { "owner": "Combat", "action": "Usar el héroe en una batalla JcJ" },
+        { "owner": "Torneo", "action": "Inscribir el héroe en un torneo" }
+      ],
+      "expected": {
+        "outcome": "Las tres operaciones se rechazan mientras el compromiso MISSION esté vigente",
+        "codes": "Los fija cada servicio dueño; no son parte de este contrato"
+      }
+    },
+    {
+      "id": "P-06",
+      "ca": "CA-06",
+      "title": "Consultar el detalle antes de confirmar",
+      "request": { "method": "GET", "path": "/api/v1/missions/msn_templo_olvidado" },
+      "expected": {
+        "status": 200,
+        "requiredFields": [
+          "narrative",
+          "objectives",
+          "estimatedDuration",
+          "prerequisites",
+          "enemies",
+          "finalBoss",
+          "masterEncounter.probability",
+          "masterEncounter.candidates[].epic",
+          "rewards.guaranteed",
+          "rewards.potential[].probability"
+        ]
+      }
+    },
+    {
+      "id": "P-07",
+      "ca": "CA-07",
+      "title": "Misión bloqueada por un requisito previo sin completar",
+      "given": { "clears": [], "activeEnrollments": [] },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/missions/msn_camara_sellada/enrollments",
+        "headers": { "Idempotency-Key": "7f3d0a5c-2b6e-4dbf-9a8c-9e0f1a2b3c4d" },
+        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "rotations": null }
+      },
+      "inventoryResponse": null,
+      "expected": {
+        "status": 422,
+        "body": { "code": "MISSION_LOCKED", "missionId": "msn_camara_sellada", "missingPrerequisites": ["msn_templo_olvidado"] },
+        "newRows": 0
+      }
+    },
+    {
+      "id": "T-01",
+      "ca": null,
+      "title": "Reintento con la misma Idempotency-Key tras un 201",
+      "given": { "previousScenario": "P-01" },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
+        "headers": { "Idempotency-Key": "3b9f6c1e-8d2a-4f7b-9c4e-5a6b7c8d9e0f" },
+        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "rotations": null }
+      },
+      "inventoryResponse": null,
+      "expected": { "status": 201, "body": { "enrollmentId": "enr_demo_1", "status": "IN_PROGRESS" }, "newRows": 0, "inventoryCalls": 0 }
+    },
+    {
+      "id": "T-02",
+      "ca": null,
+      "title": "Dos confirmaciones simultáneas con el mismo héroe y claves distintas",
+      "given": { "clears": [], "activeEnrollments": [] },
+      "concurrentRequests": [
+        { "missionId": "msn_templo_olvidado", "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "idempotencyKey": "8a4e1b6d-3c7f-4ec0-8b9d-0f1a2b3c4d5e" },
+        { "missionId": "msn_templo_olvidado", "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "idempotencyKey": "9b5f2c7e-4d80-4fd1-9cae-1a2b3c4d5e6f" }
+      ],
+      "expected": {
+        "statuses": [201, 409],
+        "loserBody": { "code": "HERO_BUSY", "busyWith": "MISSION" },
+        "activeRowsForHero": 1
+      }
+    },
+    {
+      "id": "T-03",
+      "ca": null,
+      "title": "Player/Inventory no responde",
+      "given": { "clears": [], "activeEnrollments": [] },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
+        "headers": { "Idempotency-Key": "ac6a3d8f-5e91-4a02-8dbf-2b3c4d5e6f70" },
+        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "rotations": null }
+      },
+      "inventoryResponse": { "status": 503 },
+      "expected": {
+        "status": 503,
+        "body": { "code": "DEPENDENCY_UNAVAILABLE", "enrollmentStatus": "PENDING" },
+        "reconciler": [
+          { "when": "Player/Inventory concede con el mismo operationId antes de 2 minutos", "enrollmentStatus": "IN_PROGRESS" },
+          { "when": "Pasan 2 minutos sin confirmación", "action": "POST /api/internal/v1/inventory/commitments/{operationId}/release", "enrollmentStatus": "EXPIRED" }
+        ]
+      }
+    },
+    {
+      "id": "T-04",
+      "ca": null,
+      "title": "Misión bloqueada y héroe ocupado a la vez: gana la misión",
+      "given": {
+        "clears": [],
+        "activeEnrollments": [
+          { "enrollmentId": "enr_demo_previa", "missionId": "msn_otra", "heroId": "0b1c2d3e-4f50-4617-8a9b-0c1d2e3f4a5b", "status": "IN_PROGRESS" }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/missions/msn_camara_sellada/enrollments",
+        "headers": { "Idempotency-Key": "bd7b4e90-6fa2-4b13-9ec0-3c4d5e6f7081" },
+        "body": { "heroId": "0b1c2d3e-4f50-4617-8a9b-0c1d2e3f4a5b", "difficulty": "NORMAL", "rotations": null }
+      },
+      "inventoryResponse": null,
+      "expected": { "status": 422, "body": { "code": "MISSION_LOCKED" }, "newRows": 0 }
+    }
+  ]
+}

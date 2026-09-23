@@ -218,6 +218,18 @@ Las tres rutas marcadas **diseño** las define el [contrato de HU-17](hu-17-batt
 
 **La aleatoriedad no tiene ruta pública ni interna**: el generador (HU-24) y la tabla de efectos (HU-25) los consume Combat internamente ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)). No existen `/random`, `/rng` ni `/seed`. El contrato interno de simulaciones para Missions (`POST /api/internal/v1/combat/simulations`) está **previsto y sin formalizar**, por eso no se documenta aquí.
 
+### Missions — `/api/v1/missions`
+
+Sin rutas de negocio implementadas (andamiaje, [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md)). Contrato de matrícula en **diseño**:
+
+| Método | Ruta | Códigos de éxito |
+| --- | --- | --- |
+| `GET` | `/api/v1/missions` (HU-70, **diseño** [contrato v1](hu-70-mission-enrollment-v1.md)) | `200` |
+| `GET` | `/api/v1/missions/:missionId` (HU-70, **diseño**) | `200` |
+| `POST` | `/api/v1/missions/:missionId/enrollments` (HU-70, **diseño**) | `201` |
+
+Las tres rutas las define el [contrato de HU-70](hu-70-mission-enrollment-v1.md) (Task #365) y **solo son capacidad cuando Missions las integre** (Task #366). Las rutas internas de compromisos del héroe en Player/Inventory que ese contrato describe son una **propuesta** para Team Alfa: no existen.
+
 ### Notifications
 
 Su entrada principal sigue siendo la cola de mensajes; el contrato de eventos está en [event-catalog.md](event-catalog.md). Desde HU-38 (Management #46) tiene además superficie HTTP propia, **implementada e integrada en `develop`**, detrás de `CATALOG_NOTIFICATIONS_HTTP_ENABLED` (opcional, `false` por defecto en el propio servicio -ver [Nexus-Battle-VI/Nexus-Battle-Notifications#20](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/20)-; la composición de referencia de este repositorio la habilita, ver `compose/compose.example.yml` y `compose/nodes/app.yml`).
