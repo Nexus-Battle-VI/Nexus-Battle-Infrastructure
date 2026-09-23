@@ -68,10 +68,12 @@ semilla -> MT19937 -> Box-Müller -> Z ~ N(0,1) -> Φ(Z) -> indice uniforme 1..8
 La recompensa de experiencia `10 × 1,2^(1d8)` se otorga **al derrotar a un rival NPC en una misión (JvE)**, según la aclaración funcional del Product Owner. **El PvP («Jugar Online») no la otorga.** La responsabilidad se reparte entre tres contextos, porque ninguna de las tres piezas puede vivir en los otros dos:
 
 ```text
-Combat    -> produce y PERSISTE el 1d8 con el motor centralizado (ADR-021); no conoce la fórmula
-Missions  -> calcula 10 x 1,2^(1d8), lo redondea a entero y coordina la recompensa
-Player/Inv-> acredita la experiencia y recalcula el nivel con la tabla de HU-08
+Combat    -> produce y PERSISTE un 1d8 por NPC derrotado (ADR-021); no conoce la fórmula
+Missions  -> calcula 10 x 1,2^(1d8) por derrota, lo redondea a entero y coordina la recompensa
+Player/Inv-> acredita cada derrota y recalcula el nivel con la tabla de HU-08
 ```
+
+- **Una recompensa, una tirada y una acreditación por cada NPC derrotado**, no una por misión. La clave es la **instancia real de la derrota** (encuentro + enemigo concreto del `combatLog` de HU-72), nunca el arquetipo: una misión puede enfrentar dos veces al mismo tipo de enemigo y el arquetipo colisionaría.
 
 - **Combat no calcula experiencia** y **Missions no genera aleatoriedad**: `ADR-021` da la exclusiva del azar a Combat y `ADR-019` da la propiedad del estado del héroe a Player/Inventory. La tirada se persiste **antes de responder**, de modo que un reintento no vuelve a consumir el cursor aleatorio.
 - La acreditación es **idempotente** por `operationId` determinista, con ledger propio en Player/Inventory (`_id = operationId`) y actualización de la progresión en la misma transacción. Un reintento nunca duplica experiencia.
@@ -216,12 +218,12 @@ Se enumeran juntas porque quien lea este documento necesita conocerlas antes de 
    (hoy entregada en PRs sin mergear). Consecuencia dicha sin adornos: **HU-09 no
    puede cerrarse en el Sprint 2** mientras esa cadena no exista. Ver el
    [contrato](../contracts/hu-09-experience-reward-v1.md).
-9. **Tres decisiones funcionales de HU-09 siguen abiertas y están registradas, no
-   resueltas en silencio:** si la tirada es **una por rival derrotado o una por
-   victoria**; si la recompensa se redondea **al entero más próximo o se trunca**;
-   y la corrección del enunciado del Issue #18, que no distingue modalidad y no
-   declara la cadena de Misiones como dependencia. El contrato adopta valores
-   provisionales explícitos para las dos primeras.
+9. **La decisión de redondeo de HU-09 sigue abierta y está marcada como provisional.**
+   Que la experiencia deba ser **entera** es una decisión tomada; **cómo** se convierte
+   `14,4` en entero no lo es hasta que se confirme **redondeo al entero más próximo**
+   frente a **truncamiento**. El contrato adopta el redondeo al más próximo con la marca
+   provisional visible, y la regla vive en un único punto para que confirmarla no toque
+   nada más. Ver el [contrato](../contracts/hu-09-experience-reward-v1.md) §15.
 10. **`missions` no está en el allow-list interno de Player/Inventory.** Hoy es
     `['commerce', 'notifications', 'combat']`. La ruta de acreditación de
     experiencia se acotará con `@InternalCallers('missions')` **sin** ampliar la

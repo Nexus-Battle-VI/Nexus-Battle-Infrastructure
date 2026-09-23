@@ -80,7 +80,7 @@ en el proxy, ver más abajo).
 | `GET` | `/api/internal/v1/inventory/products/:productId/owners` | `200`, `400`, `401` | `commerce`, `notifications` | HU-38 |
 | `POST` | `/api/internal/v1/players/:playerId/heroes/:heroId/experience` (**diseño**) | `200`, `400`, `401`, `409`, `422`, `503` | `missions` | HU-09 |
 
-La ruta de experiencia es **diseño de la Task #439**: acredita un importe **ya entero** al héroe, con ledger idempotente (`_id = operationId`) y actualización de la progresión en la misma transacción. Usa `@InternalOnly()` **y** `@InternalCallers('missions')`, de modo que **no amplía el allow-list global** (`commerce`, `notifications`, `combat`): el permiso se acota a esa ruta. Contrato: [hu-09-experience-reward-v1](hu-09-experience-reward-v1.md) §7.
+La ruta de experiencia es **diseño de la Task #439**: acredita un importe **ya entero** al héroe, con ledger idempotente (`_id = operationId`) y actualización de la progresión en la misma transacción. **Se invoca una vez por cada NPC derrotado**, y su clave incluye la instancia real de la derrota. Usa `@InternalOnly()` **y** `@InternalCallers('missions')`, de modo que **no amplía el allow-list global** (`commerce`, `notifications`, `combat`): el permiso se acota a esa ruta. Contrato: [hu-09-experience-reward-v1](hu-09-experience-reward-v1.md) §7.
 
 `.../products/:productId/owners` resuelve qué jugadores poseen actualmente un
 producto (`{ productId, owners: [{ playerId }] }`, sin correo, nombre ni
@@ -221,7 +221,7 @@ Las tres rutas marcadas **diseño** las define el [contrato de HU-17](hu-17-batt
 
 **La aleatoriedad no tiene ruta pública ni interna**: el generador (HU-24) y la tabla de efectos (HU-25) los consume Combat internamente ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)). No existen `/random`, `/rng` ni `/seed`. El contrato interno de simulaciones para Missions (`POST /api/internal/v1/combat/simulations`) está **previsto y sin formalizar**, por eso no se documenta aquí.
 
-**Previsto y sin implementar (HU-09, Task #439):** `POST /api/internal/v1/combat/experience-rolls` (servicio permitido: `missions`) devolvería la tirada `1d8` de la recompensa de experiencia, obtenida del motor centralizado y **persistida antes de responder**, con `operationId` determinista. **No es una ruta de azar**: no acepta rango, no devuelve el índice ni la semilla y es idempotente. Contrato: [hu-09-experience-reward-v1](hu-09-experience-reward-v1.md) §5.
+**Previsto y sin implementar (HU-09, Task #439):** `POST /api/internal/v1/combat/experience-rolls` (servicio permitido: `missions`) devolvería **una tirada `1d8` por cada NPC derrotado** de una misión, obtenidas del motor centralizado y **persistidas antes de responder**, con `operationId` de lote determinista y clave por instancia de derrota. **No es una ruta de azar**: no acepta rango, no devuelve el índice ni la semilla y es idempotente. Contrato: [hu-09-experience-reward-v1](hu-09-experience-reward-v1.md) §5.
 
 ### Notifications
 

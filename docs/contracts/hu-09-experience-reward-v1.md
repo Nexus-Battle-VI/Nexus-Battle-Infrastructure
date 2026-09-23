@@ -5,6 +5,7 @@
 - **Bloqueada por:** `HU-08` ([#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/17)), **entregada en los PRs [Nexus-Battle-Player-Inventory#42](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/42), [#43](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/43) y [#44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/44)**, pendientes de merge; y `HU-24` ([#71](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/71)), **cerrada**. Consume el umbral de niveles de HU-08 y el motor de aleatoriedad de HU-24 sin reabrir ninguno de los dos.
 - **Arquitectura aplicada, sin reabrirla:** [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md) (Player/Inventory es dueño del estado del héroe y solo él escribe su Mongo; HMAC interno; listas cerradas de servicios por ruta) y [ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md) (Combat es la única autoridad de aleatoriedad; no hay `/random`, `/rng` ni `/seed`, ni microservicio de RNG).
 - **Aclaración funcional del PO:** la fórmula `10 × 1,2^(1d8)` pertenece a la **muerte de un rival NPC en una misión (JvE)**; **no** se otorga por PvP ni por «Jugar Online». Missions coordina y calcula la recompensa; Combat no conoce la fórmula. Registrada en el comentario de trazabilidad de [#18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/18).
+- **Unidad de la recompensa (decidida):** **una recompensa, una tirada y una acreditación por cada NPC derrotado**, identificadas por la **instancia real de la derrota** (encuentro + enemigo), no por el arquetipo. Ver §4.
 - **Diagramas:** [caso de uso](../diagrams/hu-09-use-case.puml), [actividad](../diagrams/hu-09-activity.puml), [secuencia](../diagrams/hu-09-sequence.puml), [dominio](../diagrams/hu-09-domain.puml).
 - **Contratos vecinos, referenciados y no reabiertos:** [hu-72-mission-simulation-v1](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/132) (**propuesta abierta, sin mergear**), [hu-74-mission-report-v1](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/135) (**propuesta abierta, sin mergear**) y [hu-22-reward-contract-v1](hu-22-reward-contract-v1.md) §7, que es la **plantilla** del endpoint interno de acreditación.
 
@@ -52,21 +53,53 @@
 | # | Quién | Qué hace | Dónde vive |
 | --- | --- | --- | --- |
 | 1 | Missions | Ejecuta la misión JvE y pide la simulación a Combat | `HU-72` |
-| 2 | Combat | Simula y determina el resultado del enfrentamiento | `HU-72` |
-| 3 | **Combat** | Obtiene el `1d8` con el motor centralizado, **lo persiste** y lo devuelve | §5 (Task `#440`) |
-| 4 | **Missions** | Calcula `10 × 1,2^(1d8)`, lo redondea a entero y lo persiste | §6 (Task `#442`) |
-| 5 | **Player/Inventory** | Acredita la XP, acumula y recalcula el nivel con la tabla de HU-08 | §7 (Task `#441`) |
-| 6 | Missions | Marca la recompensa como acreditada y la refleja en el reporte | `HU-74` |
+| 2 | Combat | Simula y determina el resultado del enfrentamiento **y qué enemigos concretos cayeron** | `HU-72` |
+| 3 | **Combat** | Por **cada NPC derrotado**, obtiene un `1d8` del motor centralizado, lo persiste y lo devuelve | §5 (Task `#440`) |
+| 4 | **Missions** | Por cada derrota, calcula `10 × 1,2^(1d8)`, lo redondea a entero y lo persiste | §6 (Task `#442`) |
+| 5 | **Player/Inventory** | Por cada derrota, acredita la XP, acumula y recalcula el nivel con la tabla de HU-08 | §7 (Task `#441`) |
+| 6 | Missions | Marca cada recompensa como acreditada y las refleja en el reporte | `HU-74` |
+
+**Los pasos 3, 4 y 5 se ejecutan una vez por enemigo derrotado**, no una vez por misión (§4).
 
 **La frontera con HU-10.** HU-09 otorga la experiencia **por derrota de un rival**. HU-10 ([#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/19)) otorga la recompensa de **misión completada** (créditos, productos, épicas y su propia línea de experiencia). El diseño del reporte de misión sitúa esa línea bajo HU-10; este contrato **no** la implementa ni la reserva.
 
-## 4. Unidad de la recompensa (decisión abierta `P-1`)
+## 4. Unidad de la recompensa: una por rival derrotado
 
-**Pregunta al PO:** ¿un `1d8` **por rival derrotado** (el ejemplo de HU-72 enumera 19 NPC en cinco encuentros) o **uno por victoria** de combate/misión?
+**Decidido, y no provisional:** cada **NPC derrotado** produce **una recompensa**, **una tirada `1d8`** y **una acreditación** al héroe.
 
-**Propuesta, marcada como provisional:** **uno por victoria sobre un rival**. Es la lectura literal de `CA-01` («Resultado *victoria* de la batalla; identificador del héroe ganador») y de `CA-03`, que habla de **una** cantidad por ejecución de «Otorgar experiencia por derrota de un rival». No se ha encontrado en el Issue ninguna redacción que pida una tirada por enemigo.
+```text
+cada NPC derrotado
+  -> una recompensa de XP
+  -> una tirada 1d8
+  -> una acreditación al héroe
+```
 
-**Efecto en el contrato:** el `operationId` de la tirada (§5) incorpora `rivalRef`. Si el PO resuelve «una por victoria», `rivalRef` pasa a identificar al rival decisivo del encuentro y el resto del contrato **no cambia**; si resuelve «una por enemigo derrotado», el mismo esquema se aplica una vez por `enemyRef` de `summary.enemiesDefeated[]` y tampoco cambia nada más. Por eso la decisión puede quedar abierta sin bloquear el diseño.
+**No hay una sola tirada por ganar la misión.** La recompensa se devenga por **derrota**, no por victoria global: una misión cuyo resumen enumera 10 + 5 + 3 + 1 enemigos produce **19 recompensas**, cada una con su tirada y su acreditación.
+
+### 4.1 La clave es la instancia, no el arquetipo
+
+El identificador **no puede ser `rivalRef`** (el arquetipo del enemigo): una misma misión puede enfrentar dos veces al mismo tipo — en el ejemplo de HU-72, `sombra-corrompida` aparece con `count: 4` en un encuentro y con `count: 6` en otro. Identificar por arquetipo colisionaría y **duplicaría o perdería recompensas**.
+
+**HU-72 ya produce la identidad que hace falta, sin inventar nada:** su `combatLog` registra cada baja como
+
+```jsonc
+{ "seq": 4, "type": "combatantDefeated", "encounter": 1, "turn": 1, "combatant": "sombra-corrompida#1" }
+```
+
+donde `encounter` es el índice del encuentro y `combatant` es `<enemyRef>#<n>`, la instancia concreta. **La clave de una derrota es `encounter` + `combatant`.**
+
+- `summary.enemiesDefeated[]` (conteos por arquetipo) **no sirve** para identificar recompensas: agrega y pierde la instancia. Sirve para cuadrar totales, no para devengar.
+- El nombre exacto de los campos depende del contrato de HU-72, que sigue siendo una **propuesta abierta** (PR #132). Lo que este contrato exige es la **propiedad**, no el nombre: **la clave tiene que ser única por derrota real**, y si HU-72 renombra los campos, la clave se renombra con ellos.
+- Si el modelo de HU-72 cambiara y dejara de exponer las bajas una a una, **HU-09 no puede degradarse a una tirada por misión**: eso cambiaría la regla de negocio. Lo que habría que cambiar es HU-72.
+
+### 4.2 Consecuencia de escala, asumida
+
+Una misión con muchos enemigos produce muchas operaciones. El diseño lo reparte así:
+
+| Operación | Granularidad | Motivo |
+| --- | --- | --- |
+| Tirada (Missions → Combat) | **Un lote por misión**, con una tirada por derrota | El consumo del cursor de azar debe resolverse de una vez y persistirse junto; 19 llamadas sueltas permitirían conjuntos de tiradas a medias |
+| Acreditación (Missions → Player/Inventory) | **Una por derrota** | Cada recompensa tiene su propia clave de idempotencia y su propia traza; sumarlas en un importe único perdería ambas cosas |
 
 ## 5. La tirada: contrato Missions → Combat
 
@@ -80,6 +113,8 @@ BoundedRandom(sequence).nextInt(8) + 1   →   1d8 ∈ {1..8}, uniforme y sin se
 
 `BoundedRandom.nextInt(bound)` usa muestreo por rechazo, así que el reparto es uniforme. **No** hay una secuencia por batalla ni por misión: es la única secuencia del proceso, sembrada al arrancar con `COMBAT_RANDOM_SEED` (HU-26), y HU-09 consume de ella igual que HU-17, HU-18, HU-19 y HU-22. Consecuencia aceptada y escrita: **el orden de consumo importa** y el `1d8` de HU-09 comparte cursor con los turnos, los ataques y el cofre.
 
+**Se consume un `1d8` por cada NPC derrotado.** Como el orden de consumo forma parte del resultado, el lote (§5.2) se resuelve **en el orden de las derrotas** que Missions envía, y ese orden es el del `combatLog` de la simulación: mismo `operationId` y mismo cuerpo ⇒ mismas tiradas, en el mismo orden.
+
 ### 5.2 Operación interna
 
 ```text
@@ -88,27 +123,39 @@ POST /api/internal/v1/combat/experience-rolls
 
 Cabeceras del esquema vigente de ADR-019: `x-internal-service: missions`, `x-internal-timestamp`, `x-internal-signature` (HMAC-SHA256 sobre JSON canónico), secreto `INTERNAL_SERVICE_AUTH_SECRET` y lista cerrada de servicios por ruta. `/api/internal*` responde `404` desde Caddy.
 
+**Una llamada por misión, una tirada por derrota.** El lote lleva todas las derrotas de la misión y devuelve una tirada por cada una, en el mismo orden.
+
 ```jsonc
 {
   "schemaVersion": 1,
-  "operationId": "mission:{enrollmentId}:rival:{rivalRef}:xp-roll", // determinista, la cadena literal, SIN hashear
+  "operationId": "mission:{enrollmentId}:xp-rolls", // determinista, la cadena literal, SIN hashear
   "enrollmentId": "enr_01JB8Y3K7Q",
   "simulationId": "sim_01JB8Y4B",
   "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60",
-  "rivalRef": "guardian-eterno",
-  "defeatedAt": "2026-10-02T03:00:04Z"
+  "defeats": [
+    { "encounterId": "1", "enemyInstanceId": "sombra-corrompida#1", "rivalRef": "sombra-corrompida" },
+    { "encounterId": "1", "enemyInstanceId": "sombra-corrompida#2", "rivalRef": "sombra-corrompida" },
+    { "encounterId": "5", "enemyInstanceId": "guardian-eterno#1", "rivalRef": "guardian-eterno" }
+  ]
 }
 ```
 
 ```jsonc
 {
   "schemaVersion": 1,
-  "operationId": "mission:{enrollmentId}:rival:{rivalRef}:xp-roll",
-  "roll": 5,                        // entero 1..8
+  "operationId": "mission:{enrollmentId}:xp-rolls",
   "applied": true,                  // false si es un replay idempotente del mismo operationId+cuerpo
-  "persistedAt": "2026-10-02T03:00:04.120Z"
+  "rolls": [
+    { "encounterId": "1", "enemyInstanceId": "sombra-corrompida#1", "roll": 5, "persistedAt": "2026-10-02T03:00:04.120Z" },
+    { "encounterId": "1", "enemyInstanceId": "sombra-corrompida#2", "roll": 1, "persistedAt": "2026-10-02T03:00:04.121Z" },
+    { "encounterId": "5", "enemyInstanceId": "guardian-eterno#1", "roll": 8, "persistedAt": "2026-10-02T03:00:04.122Z" }
+  ]
 }
 ```
+
+- **Cada tirada se persiste con su propia clave**, `mission:{enrollmentId}:encounter:{encounterId}:enemy:{enemyInstanceId}:xp-roll`, **antes de responder**. El `operationId` del lote es la clave de idempotencia de la llamada; la clave por derrota es la de la tirada.
+- Un lote de **una** derrota es un caso particular del mismo contrato: no hay una operación aparte.
+- `enemyInstanceId` es el `combatant` de HU-72 (`<enemyRef>#<n>`), y `encounterId` su `encounter`. Los dos juntos identifican la derrota real.
 
 | HTTP | `code` | Cuándo | Qué hace Missions |
 | --- | --- | --- | --- |
@@ -165,15 +212,19 @@ POST /api/internal/v1/players/{playerId}/heroes/{heroId}/experience
 
 Mismas cabeceras internas que §5.2, con `x-internal-service: missions`.
 
+**Una llamada por derrota.** Cada NPC derrotado tiene su propia acreditación, con su importe y su clave; no se suman en un importe único porque eso perdería la traza y la idempotencia por derrota.
+
 ```jsonc
 {
   "schemaVersion": 1,
-  "operationId": "mission:{enrollmentId}:rival:{rivalRef}:hero:{heroId}:xp", // determinista, sin hashear
+  "operationId": "mission:{enrollmentId}:encounter:{encounterId}:enemy:{enemyInstanceId}:hero:{heroId}:xp",
   "amount": 25,                       // entero; ya redondeado por Missions
   "source": {
     "kind": "MISSION_RIVAL_DEFEAT",
     "enrollmentId": "enr_01JB8Y3K7Q",
     "simulationId": "sim_01JB8Y4B",
+    "encounterId": "5",
+    "enemyInstanceId": "guardian-eterno#1",
     "rivalRef": "guardian-eterno",
     "roll": 5
   }
@@ -215,8 +266,9 @@ Mismas cabeceras internas que §5.2, con `x-internal-service: missions`.
 
 | Operación | Clave | Mismo cuerpo | Cuerpo distinto |
 | --- | --- | --- | --- |
-| Missions → Combat (tirada) | `mission:{enrollmentId}:rival:{rivalRef}:xp-roll` | Misma tirada, `applied:false`. **No se vuelve a tirar** | `409 OPERATION_ID_REUSED` |
-| Missions → Player/Inventory (acreditación) | `mission:{enrollmentId}:rival:{rivalRef}:hero:{heroId}:xp` | Mismo resultado, `applied:false`. **No se vuelve a acreditar** | `409 EXPERIENCE_GRANT_CONFLICT` |
+| Missions → Combat (lote de tiradas) | `mission:{enrollmentId}:xp-rolls` | Mismas tiradas, `applied:false`. **No se vuelve a tirar** | `409 OPERATION_ID_REUSED` |
+| — tirada de una derrota (persistida) | `mission:{enrollmentId}:encounter:{encounterId}:enemy:{enemyInstanceId}:xp-roll` | Se relee la tirada guardada de esa instancia | — |
+| Missions → Player/Inventory (acreditación) | `mission:{enrollmentId}:encounter:{encounterId}:enemy:{enemyInstanceId}:hero:{heroId}:xp` | Mismo resultado, `applied:false`. **No se vuelve a acreditar** | `409 EXPERIENCE_GRANT_CONFLICT` |
 
 **Semántica de entrega: al menos una vez, con efectos idempotentes.** No se promete transporte exactamente-una-vez, igual que HU-21 y HU-22. La regla que no se puede romper: **un reintento nunca cambia el resultado**.
 
@@ -230,23 +282,43 @@ PENDING ──► ROLLED ──► CREDITED
 
 | Estado | Significa | Se recupera tras reinicio |
 | --- | --- | --- |
-| `PENDING` | Recompensa creada; aún no se pidió la tirada | Reintenta `POST §5.2` con el mismo `operationId` |
-| `ROLLED` | Tirada persistida en Combat; falta acreditar | Reintenta `POST §7` con el importe **ya calculado** y el mismo `operationId`; **no** vuelve a tirar |
-| `CREDITED` | Terminal. La acreditación está confirmada | No-op |
+**Hay una recompensa por cada NPC derrotado**, y cada una tiene su propio estado, su propia clave y su propio ciclo de recuperación. No hay una recompensa agregada por misión.
+
+| `PENDING` | Recompensa de esa derrota creada; aún no se pidió su tirada | Reintenta `POST §5.2` con el mismo `operationId` del lote |
+| `ROLLED` | La tirada de esa derrota está persistida en Combat; falta acreditar | Reintenta `POST §7` con el importe **ya calculado** y el mismo `operationId`; **no** vuelve a tirar |
+| `CREDITED` | Terminal. La acreditación de esa derrota está confirmada | No-op |
 | `FAILED` | Terminal. Rechazo definitivo (`422`) o cuerpo incoherente (`409`) | No reintenta solo; queda visible en observabilidad |
 
 Cada transición se persiste **antes** de avanzar al paso siguiente, para que un reinicio recupere la recompensa donde quedó.
 
+### 9.1 La garantía que sí se puede prometer
+
+Una versión anterior de este contrato decía que no podía existir una tirada sin recompensa. **Eso es demasiado fuerte y no es lo que hace falta.** Una caída entre persistir la tirada y acreditarla deja, por definición, una tirada guardada sin acreditar; eso **no es un defecto**.
+
+Lo que se exige es esto:
+
+> **Una tirada persistida sin acreditar es aceptable mientras exista una recompensa en estado no terminal que la reclame y el barrido pueda terminarla. Lo que no puede existir es una tirada huérfana: guardada en Combat, sin ninguna recompensa que la reclame y sin camino de recuperación.**
+
+De ahí la **regla de orden**, que es la que sostiene la garantía:
+
+```text
+1. Missions persiste la recompensa de cada derrota (PENDING)   <- ANTES de pedir nada
+2. Missions pide el lote de tiradas y las guarda (ROLLED)
+3. Missions acredita cada derrota (CREDITED)
+```
+
+Persistir **antes** es lo que hace imposible la tirada huérfana: toda tirada que Combat llegue a guardar corresponde a una recompensa que ya existe y que el barrido recogerá. Si el paso 1 se hiciera después, una caída dejaría tiradas sin dueño.
+
 | Punto de falla | Estado persistido | Reintento | Resultado visible |
 | --- | --- | --- | --- |
-| Missions cae antes de pedir la tirada | `PENDING` | Sí, mismo `operationId` | Recompensa pendiente |
-| Combat tira pero Missions cae antes de leer la respuesta | La tirada **ya está persistida** en Combat | Sí; el replay devuelve la **misma** tirada | Ninguno perdido |
-| Missions calcula pero cae antes de acreditar | `ROLLED`, con el importe ya persistido | Sí, mismo `operationId` | Recompensa pendiente |
-| Player/Inventory acredita pero Missions cae antes de leer la respuesta | Player/Inventory ya aplicó (idempotente) | Sí; el replay devuelve el mismo resultado | Ninguno perdido |
-| Player/Inventory rechaza con `422` | `FAILED` | No automático | Sin experiencia; la misión no se revierte |
-| Combat o Player/Inventory devuelven `503` | Se queda en el estado de origen | Sí, mismo `operationId` | Recompensa pendiente |
+| Missions cae antes de pedir el lote de tiradas | Las recompensas de esa misión en `PENDING` | Sí, mismo `operationId` del lote | Recompensas pendientes |
+| Combat persiste las tiradas pero Missions cae antes de leer la respuesta | Las tiradas **ya están persistidas**, una por derrota | Sí; el replay devuelve las **mismas** tiradas | Ninguna perdida |
+| Missions guarda las tiradas pero cae antes de acreditar alguna | Esa derrota queda en `ROLLED`, con su importe persistido | Sí, mismo `operationId`; **no** vuelve a tirar | Recompensas pendientes |
+| Player/Inventory acredita pero Missions cae antes de leer la respuesta | Player/Inventory ya aplicó (idempotente) | Sí; el replay devuelve el mismo resultado | Ninguna perdida |
+| Player/Inventory rechaza una derrota con `422` | Esa derrota queda `FAILED`; **las demás siguen su curso** | No automático | Sin experiencia para esa derrota; la misión no se revierte |
+| Combat o Player/Inventory devuelven `503` | Las recompensas se quedan en su estado de origen | Sí, mismo `operationId` | Recompensas pendientes |
 
-**Ningún fallo revierte la misión ni el resultado de la batalla**: la recompensa es un efecto posterior, no una condición del cierre.
+**Ningún fallo revierte la misión ni el resultado de la batalla**: la recompensa es un efecto posterior, no una condición del cierre. Y **una derrota que falla no arrastra a las demás**: cada recompensa es independiente.
 
 ## 10. Cómo se entera Web
 
@@ -288,23 +360,26 @@ La representación del **estado** es obligatoria: mostrar como concedida una rec
 
 | Caso | Comportamiento exigido |
 | --- | --- |
-| Sin victoria válida (`CA-08`) | No se crea recompensa, no se pide tirada, no se acredita |
-| Participante `AI` o `heroId` nulo | No hay beneficiario: no hay recompensa |
+| Sin victoria válida ni NPC derrotado (`CA-08`) | No se crean recompensas, no se pide tirada, no se acredita |
+| Participante `AI` o `heroId` nulo | No hay beneficiario: no hay recompensas |
+| **Dos enemigos del mismo arquetipo en la misma misión** | **Dos recompensas distintas**, con claves distintas por `encounter` + `enemyInstanceId`; identificar por `rivalRef` está prohibido |
+| El mismo arquetipo repetido dentro del mismo encuentro | La instancia (`#1`, `#2`, …) los separa |
 | Reintento con el mismo `operationId` | Misma tirada y misma acreditación; nunca se vuelve a tirar |
 | `operationId` repetido con otro cuerpo | `409` en la frontera correspondiente |
 | Una acreditación cruza dos o más umbrales | Sube al nivel más alto alcanzado (HU-08, `levelFromTotalXp`) |
+| Varias derrotas seguidas elevan el acumulado | Cada una acredita sobre el acumulado de la anterior; la última deja el nivel que corresponda |
 | Héroe ya en nivel 8 | La experiencia sigue creciendo y **no se descarta**; no se rechaza |
 | Importe no entero | `422`: el redondeo ocurre en Missions, antes de la frontera |
 | El héroe no pertenece al jugador indicado | `422`; no se acredita a un héroe ajeno |
-| Combat o Player/Inventory caídos | Reintento con el mismo `operationId`; la recompensa queda pendiente |
-| Rechazo terminal (`422`) | `FAILED`; no se reintenta solo y la misión no se revierte |
+| Una derrota falla con `422` | Esa recompensa queda `FAILED`; **las demás no se arrastran** |
+| Combat o Player/Inventory caídos | Reintento con el mismo `operationId`; las recompensas quedan pendientes y el barrido las termina |
 
 ## 15. Decisiones abiertas
 
-| # | Decisión | Estado en este contrato | Efecto si cambia |
+| # | Decisión | Estado | Efecto si cambia |
 | --- | --- | --- | --- |
-| `P-1` | Una tirada **por rival derrotado** o **una por victoria** | Provisional: **una por victoria sobre un rival** | Solo cambia cuántas veces se invoca §5.2; el resto del contrato no se mueve |
-| `P-2` | Redondeo **al más próximo** o **truncamiento** | Provisional: **al más próximo** | Cambia un valor por cada `1d8` (`21`↔`20`, `25`↔`24`, `30`↔`29`, `36`↔`35`, `43`↔`42`); la regla vive en un único punto |
-| `P-3` | Corrección del enunciado de #18 (restringir a JvE y añadir la cadena de Misiones como dependencia) | Pendiente del PO | No afecta al diseño; afecta a la trazabilidad |
+| `P-1` | Una recompensa por **rival derrotado** o una por victoria | **CERRADA: una por rival derrotado**, con clave por instancia real (§4) | — |
+| `P-2` | Redondeo **al más próximo** o **truncamiento** | **PROVISIONAL: al más próximo** | Cambia un valor por cada `1d8` (`21`↔`20`, `25`↔`24`, `30`↔`29`, `36`↔`35`, `43`↔`42`); la regla vive en un único punto |
+| `P-3` | Corrección del enunciado del Issue #18 | **Ejecutada** el 2026-09-23: el cuerpo dice ya Missions/JvE y declara la cadena de Misiones | — |
 
-**Las tres se registran aquí en lugar de resolverse en silencio.** Si el PO confirma los valores provisionales, este contrato pasa a `v1` cerrado sin cambiar ninguna forma.
+**`P-2` sigue marcada como provisional a propósito.** Que la experiencia tenga que ser entera **sí** es una decisión tomada; **cómo** se convierte `14,4` en un entero no lo es hasta que se confirme «redondeo al entero más cercano» frente a truncamiento. La marca no se retira por conveniencia: mientras siga ahí, la política vive en un único punto para que confirmarla o cambiarla no toque nada más.

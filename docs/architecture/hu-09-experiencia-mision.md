@@ -28,14 +28,15 @@ HU-09 es esa pieza, y su dificultad no está en la fórmula —que es trivial—
   - el héroe beneficiario está identificado (`heroId`) y pertenece a un jugador (`playerId`);
   - el motor de aleatoriedad de Combat está disponible.
 - **Entrada:** el hecho de la derrota del rival (misión, simulación, héroe, rival y momento).
-- **Flujo principal (victoria válida):**
-  1. Missions determina que hubo **victoria válida** sobre un rival y crea la recompensa en estado `PENDING`.
-  2. Missions pide la tirada a Combat con un `operationId` determinista.
-  3. Combat obtiene el `1d8` del motor centralizado, **lo persiste** y lo devuelve.
-  4. Missions calcula `10 × 1,2^(1d8)`, lo redondea a entero y persiste el importe (`ROLLED`).
-  5. Missions acredita el importe en Player/Inventory con el `operationId` determinista.
-  6. Player/Inventory acumula la experiencia, recalcula el nivel con la tabla de HU-08 y confirma.
-  7. Missions marca la recompensa como `CREDITED` y la refleja en el reporte.
+- **Flujo principal (derrota de un rival):**
+  1. Missions cierra el enfrentamiento JvE y **enumera cada enemigo derrotado** a partir de la simulación (encuentro + instancia).
+  2. Por **cada derrota**, Missions persiste una recompensa en estado `PENDING`. **Se persiste antes de pedir nada**: es lo que impide que exista una tirada sin dueño.
+  3. Missions pide a Combat el **lote de tiradas** de esa misión, con un `operationId` determinista.
+  4. Combat consume un `1d8` del motor centralizado **por derrota**, lo persiste con su propia clave y devuelve el lote en el mismo orden.
+  5. Por cada derrota, Missions calcula `10 × 1,2^(1d8)`, lo redondea a entero y persiste el importe (`ROLLED`).
+  6. Por cada derrota, Missions acredita el importe en Player/Inventory con el `operationId` determinista de esa instancia.
+  7. Player/Inventory acumula la experiencia, recalcula el nivel con la tabla de HU-08 y confirma.
+  8. Missions marca cada recompensa como `CREDITED` y las refleja en el reporte.
 - **Flujos alternativos:**
   - **A1 — Sin victoria válida (`CA-08`):** no se crea recompensa, no se pide tirada y no se acredita nada.
   - **A2 — Beneficiario inexistente (`heroId` nulo o participante `AI`):** no hay recompensa.
@@ -49,8 +50,9 @@ HU-09 es esa pieza, y su dificultad no está en la fórmula —que es trivial—
 
 ```text
 Missions
-  ExperienceReward                 (agregado propio, por recompensa)
+  ExperienceReward                 (agregado propio, UNA POR NPC DERROTADO)
     enrollmentId, simulationId, heroId, playerId
+    encounterId, enemyInstanceId    <- la instancia real; NO el arquetipo
     rivalRef, roll?, amount?, state, attempts, failureReason?
 
   ExperienceRewardPolicy           (política pura, dueño único de la fórmula)
@@ -67,7 +69,8 @@ Player/Inventory
 
 Decisiones de modelado:
 
-- **La recompensa es un agregado de Missions**, no un campo del reporte ni del héroe. Tiene ciclo de vida propio (pendiente mientras se reintenta) y estado que sobrevive al reinicio, exactamente como el `RewardWorkflow` de HU-22 en Combat.
+- **La recompensa es un agregado de Missions**, no un campo del reporte ni del héroe, y hay **una por NPC derrotado**. Tiene ciclo de vida propio (pendiente mientras se reintenta) y estado que sobrevive al reinicio, exactamente como el `RewardWorkflow` de HU-22 en Combat.
+- **La clave de una recompensa es la instancia de la derrota** (`encounterId` + `enemyInstanceId`), nunca el arquetipo del enemigo: una misión puede enfrentar dos veces al mismo tipo y el arquetipo colisionaría.
 - **La tirada no se guarda en Missions como fuente de verdad**: se guarda el importe calculado. La tirada vive en Combat, que es quien la produjo y quien debe poder repetirla sin volver a consumir el cursor.
 - **El importe se persiste antes de acreditar.** Si Missions cae entre el cálculo y la acreditación, el reintento usa el importe guardado y **no** vuelve a tirar ni a calcular distinto.
 - **Missions no guarda el nivel ni el acumulado del héroe.** Es estado de otro contexto; lo devuelve Player/Inventory y se representa, no se copia.
@@ -93,6 +96,9 @@ Decisiones de modelado:
 | D-4 | El endpoint interno se acota con `@InternalCallers('missions')` en lugar de ampliar el allow-list global | Permiso mínimo suficiente sobre una ruta concreta | Añadir `missions` a la lista global: daría acceso a todas las rutas internas |
 | D-5 | La recompensa se persiste antes de cada efecto remoto | Sin eso, un reinicio dejaría una tirada sin recompensa o una recompensa sin traza | Reintentar recalculando: volvería a consumir el cursor de azar |
 | D-6 | El `operationId` es determinista y se reutiliza en cada reintento | Es lo que hace que un reintento no duplique experiencia | Un identificador por intento: duplicaría la recompensa |
+| D-7 | La clave de una recompensa es `encounterId` + `enemyInstanceId`, no `rivalRef` | Una misión puede enfrentar dos veces al mismo arquetipo; identificarlo por arquetipo colisionaría y perdería o duplicaría recompensas | Identificar por `rivalRef`: colisiona con `sombra-corrompida` en los encuentros 1 y 2 del ejemplo de HU-72 |
+| D-8 | Las tiradas de una misión se piden **en un lote**, las acreditaciones **una por derrota** | Un lote resuelve el consumo del cursor de azar de una vez y evita conjuntos de tiradas a medias; una acreditación por derrota conserva traza e idempotencia | Una llamada de tirada por derrota: 19 viajes y riesgo de lote parcial; una acreditación agregada: pierde la clave por derrota |
+| D-9 | La recompensa se persiste **antes** de pedir la tirada | Es lo que hace imposible la tirada huérfana: toda tirada guardada tiene una recompensa que la reclama | Pedir primero la tirada: una caída dejaría tiradas sin dueño |
 
 ## 7. Riesgos
 
@@ -105,11 +111,13 @@ Decisiones de modelado:
 | R-5 | Dar la recompensa por concedida antes de estarlo | Medio: el jugador ve algo que no ocurrió | Estado explícito (`PENDING`/`CREDITED`/`FAILED`) en el reporte |
 | R-6 | Implementar antes de que exista el flujo de misión | Alto: trabajo que no se puede integrar | HU-09.4 bloqueada por `HU-72.2` y `HU-74.2` |
 | R-7 | Asumir que una victoria sube de nivel | Medio: `1d8 = 8` da `43` y el primer umbral es `200` | Documentado en el contrato; la prueba lo fija |
+| R-8 | Identificar la recompensa por el arquetipo del enemigo | **Alto**: dos enemigos del mismo tipo colisionarían y se perdería o duplicaría experiencia | La clave es `encounterId` + `enemyInstanceId`, tomados del `combatLog` de HU-72 |
+| R-9 | Dejar una tirada sin recompensa que la reclame | **Alto**: azar consumido sin efecto recuperable | La recompensa se persiste **antes** de pedir la tirada; el barrido termina lo pendiente |
 
 ## 8. Lo que este diseño NO afirma
 
 - **No** afirma que HU-09 esté implementada: no hay código en `develop` en ningún repositorio.
 - **No** declara la HU aceptada: eso exige revisión por pares y del PO.
 - **No** da por aprobado el contrato de simulación de HU-72 ni el reporte de HU-74: ambos son propuestas abiertas y aquí solo se referencian.
-- **No** cierra `P-1`, `P-2` ni `P-3`: quedan registradas como decisiones abiertas del PO.
+- **No** cierra `P-2` (redondeo) ni `P-3` (corrección del enunciado): `P-2` sigue **provisional** en el contrato hasta que se confirme «redondeo al entero más cercano» frente a truncamiento.
 - **No** promete que HU-09 pueda cerrarse en el Sprint 2 con el alcance acordado, porque la cadena de Misiones de la que depende no está implementada.

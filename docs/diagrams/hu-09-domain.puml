@@ -6,23 +6,25 @@ package "Combat" #EEF5FF {
     + rollFor(sequence) : 1..8
     ..no conoce la fórmula..
   }
-  class ExperienceRoll <<persistido>> {
+  class ExperienceRoll <<persistido, UNO POR DERROTA>> {
     + operationId : string (clave _id)
+    + enrollmentId : string
+    + encounterId : string
+    + enemyInstanceId : string
     + roll : 1..8
-    + simulationId : string
-    + heroId : string
-    + rivalRef : string
     + persistedAt : Date
   }
-  ExperienceRollPolicy ..> ExperienceRoll : produce
+  ExperienceRollPolicy ..> ExperienceRoll : produce, en el orden del lote
 }
 
 package "Missions" #EFFAEF {
-  class ExperienceReward <<agregado>> {
+  class ExperienceReward <<agregado, UNO POR DERROTA>> {
     + enrollmentId : string
     + simulationId : string
     + playerId : string
     + heroId : string
+    + encounterId : string
+    + enemyInstanceId : string
     + rivalRef : string
     + roll : 1..8 | null
     + amount : integer | null
@@ -38,13 +40,15 @@ package "Missions" #EFFAEF {
 }
 
 package "Player / Inventory" #FFF7EE {
-  class ExperienceGrant <<ledger insert-only>> {
+  class ExperienceGrant <<ledger insert-only, UNO POR DERROTA>> {
     + operationId : string (clave _id)
     + ownerId : string
     + heroId : string
     + amount : integer
     + roll : 1..8
     + enrollmentId : string
+    + encounterId : string
+    + enemyInstanceId : string
     + createdAt : Date
   }
   class HeroProgression <<HU-08, ya implementado>> {
@@ -56,9 +60,17 @@ package "Player / Inventory" #FFF7EE {
   ExperienceGrant ..> HeroProgression : acredita en la misma transacción
 }
 
-ExperienceReward --> ExperienceRoll : consume (no la posee)
+ExperienceReward --> ExperienceRoll : consume por instancia\n(no la posee)
 ExperienceReward --> ExperienceGrant : produce (idempotente por operationId)
 ExperienceReward ..> HeroProgression : NUNCA la copia\n(estado de otro contexto)
+
+note bottom of ExperienceReward
+  La clave es la INSTANCIA de la derrota
+  (encuentro + enemigo concreto),
+  nunca el arquetipo: dos
+  "sombra-corrompida" en encuentros
+  distintos son dos recompensas.
+end note
 
 note bottom of ExperienceRewardPolicy
   La fórmula vive SOLO aquí.
