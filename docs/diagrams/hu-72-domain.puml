@@ -1,0 +1,89 @@
+@startuml hu-72-domain
+title HU-72 — Fragmento de dominio de la ejecución
+hide empty members
+skinparam classAttributeIconSize 0
+
+package "Missions (Team Beta)" {
+  class MissionEnrollment <<agregado de HU-70>> {
+    enrollmentId
+    status
+    endsAt
+    commitmentOperationId
+  }
+
+  class MissionExecution <<agregado>> {
+    enrollmentId
+    operationId
+    status : ExecutionStatus
+    attempts
+    nextAttemptAt
+    simulationId
+    seedRef
+    combatOutcome : CombatOutcome
+    summary
+    combatLog
+    simulatedAt
+    settledAt
+    heroReleasedAt
+    version
+    --
+    markRequested(now)
+    recordResult(result, now)
+    scheduleRetry(now)
+    void(reason)
+    settle(missionOutcome, now)
+  }
+
+  enum ExecutionStatus {
+    QUEUED
+    REQUESTED
+    SIMULATED
+    SETTLED
+    VOIDED
+  }
+
+  enum CombatOutcome {
+    HERO_VICTORIOUS
+    HERO_DEFEATED
+    TIME_BUDGET_EXHAUSTED
+  }
+
+  class ObjectiveEvaluator <<dominio puro>> {
+    evaluate(objectives, summary)
+  }
+
+  class SimulationRequestBuilder <<aplicación>> {
+    build(enrollment, definition, heroProfile, rotations)
+  }
+
+  class MissionFact {
+    type
+    enrollmentId
+    payload
+  }
+
+  interface CombatSimulationPort
+  interface HeroCommitmentPort
+  interface ExecutionRepository
+  interface FactRepository
+}
+
+package "Combat (Team Alfa)" {
+  class Simulation <<propuesta>> {
+    simulationId
+    operationId
+    seed : privada, nunca sale de Combat
+    result
+  }
+}
+
+MissionExecution "1" --> "1" MissionEnrollment : enrollmentId
+MissionExecution --> ExecutionStatus
+MissionExecution --> CombatOutcome
+ObjectiveEvaluator ..> MissionExecution
+SimulationRequestBuilder ..> MissionEnrollment
+CombatSimulationPort ..> Simulation : HTTP interno con HMAC
+MissionExecution ..> Simulation : simulationId y seedRef, opacos
+ExecutionRepository ..> MissionExecution
+FactRepository ..> MissionFact
+@enduml
