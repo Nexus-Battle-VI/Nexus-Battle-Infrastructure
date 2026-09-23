@@ -28,6 +28,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [hu-70-matriculacion-mision.md](docs/architecture/hu-70-matriculacion-mision.md) | Diseño de HU-70: tablón, detalle y matrícula con reserva del héroe, y su contrato conceptual |
 | [hu-71-rotaciones-habilidades.md](docs/architecture/hu-71-rotaciones-habilidades.md) | Diseño de HU-71: estrategia de hasta tres rotaciones, versión optimista y decisión de la IA por turno |
 | [hu-72-simulacion-mision.md](docs/architecture/hu-72-simulacion-mision.md) | Diseño de HU-72: simulación asíncrona en Combat, cierre en `endsAt`, liberación del héroe y propuesta de contrato |
+| [hu-73-encuentro-master.md](docs/architecture/hu-73-encuentro-master.md) | Diseño de HU-73: aparición del Máster con la aleatoriedad de Combat, evidencia del encuentro y entrega idempotente de la épica |
 | [observability.md](docs/architecture/observability.md) | Registro, sondas y qué no se mide todavía |
 | [testing.md](docs/architecture/testing.md) | Estrategia de pruebas y cobertura real |
 | [developer-workflow.md](docs/architecture/developer-workflow.md) | Flujo de trabajo, CI y OIDC futuro |

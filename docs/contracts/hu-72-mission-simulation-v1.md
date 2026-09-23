@@ -73,8 +73,9 @@ Esquema interno vigente de ADR-019: HMAC, lista cerrada de servicios autorizados
     }
   ],
   "master": {
-    "probability": 0.15,
-    "candidates": [{ "masterRef": "sombra-del-olvido", "subtype": "PICARO_VENENO", "epicRef": "velo-de-sombras", "profile": null }]
+    "evaluationPoints": [{ "afterEncounter": 3 }],
+    "maxAppearances": 1,
+    "candidates": [{ "masterRef": "sombra-del-olvido", "subtype": "PICARO_VENENO", "probability": 0.15, "levelOffset": 2, "profile": null, "epicRef": "velo-de-sombras" }]
   }
 }
 ```
@@ -90,7 +91,7 @@ Qué significa cada bloque y quién lo define:
 | `strategy` | HU-71 | Forma del [contrato de HU-71](hu-71-mission-strategy-v1.md#bloque-strategy-en-la-simulación-hu-72); el ejemplo es el del curso (§7.8.5) |
 | `encounters[].enemies[].profile` | Contenido de la misión | **Pendiente de contenido** (§7.8.4); `null` en el ejemplo |
 | `encounters[].powerStep` | Contenido de la misión | **Pendiente** (decisión 8) |
-| `master` | HU-73 | Propuesta mínima; la amplía HU-73 |
+| `master` | HU-73 | Forma del [contrato de HU-73](hu-73-master-encounter-v1.md#fragmento-de-la-solicitud-de-simulación-hu-72) |
 
 El reparto de enemigos en cinco encuentros es ilustrativo: el curso da las cantidades (10, 5 y 3) y «las 5 cámaras», no el orden.
 
