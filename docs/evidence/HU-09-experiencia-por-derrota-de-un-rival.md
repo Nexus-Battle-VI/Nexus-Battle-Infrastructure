@@ -79,7 +79,8 @@ Y un límite que queda escrito en lugar de tácito: **Combat no valida que la mi
 | --- | --- | --- |
 | **HU-08** (#17) | `open`; entregada en los PRs [#42](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/42), [#43](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/43) y [#44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/44), con CI en verde | **#441 no puede compilar**: `HeroProgression` y `ExperiencePolicy` no están en `develop` |
 | **HU-24** (#71) | `closed` | El motor existe: `BoundedRandom.nextInt(8) + 1` |
-| **Cadena de Misiones** | `HU-70`, `HU-71`, `HU-72`, `HU-73`, `HU-74`, `HU-75` y `HU-76` `open`, con sus Tasks (#365–#390) `open` y **solo diseñadas** | **Missions no tiene ninguna ruta de negocio ni ninguna tabla**: `#442` no puede existir antes que `HU-72.2` (#374) y `HU-74.2` (#380) |
+| **Cadena de Misiones** | `HU-70`, `HU-71`, `HU-72`, `HU-73`, `HU-74`, `HU-75` y `HU-76` `open`, con sus Tasks (#365–#390) `open` y **solo diseñadas** | **Missions no tiene hoy ninguna ruta de negocio, ninguna tabla, ningún cliente HTTP saliente ni URLs de otros servicios**, y sus migraciones se declaran **en código** (registro `MIGRATIONS`), no como ficheros. `#442` crearía las tres primeras piezas del servicio, y no puede existir antes que `HU-72.2` (#374) y `HU-74.2` (#380) |
+| **Web** | Nada de misiones | **Web no tiene ninguna feature de misión** ni consumo del reporte: `#443` sería la primera pantalla de misión del cliente, y depende de `HU-74.2` |
 
 **Consecuencia dicha sin adornos:** con el alcance acordado (JvE), HU-09 **no puede cerrarse en el Sprint 2** mientras la cadena de Misiones siga sin implementar. Lo que puede avanzar ya es este diseño, y `#441` en cuanto HU-08 se mergee.
 

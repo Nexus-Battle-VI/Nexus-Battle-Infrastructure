@@ -263,7 +263,7 @@ Mismas cabeceras internas que §5.2, con `x-internal-service: missions`.
 
 **Servicio permitido.** El allow-list global de Player/Inventory es hoy `['commerce', 'notifications', 'combat']` y **no incluye `missions`**. La ruta se protege con `@InternalOnly()` **y** `@InternalCallers('missions')`, que acota el permiso a esta ruta concreta **sin** ampliar el allow-list global: el mecanismo ya existe (`INTERNAL_CALLERS`) y es el de menor privilegio.
 
-**Ledger y transacción.** La acreditación escribe un documento de ledger con `_id = operationId` (único) y actualiza la progresión **en la misma transacción**, como `GrantPurchasedItems`. El `_id` del documento de progresión sigue siendo `"<ownerId>::<heroId>"` (HU-08) y el bloqueo optimista sigue siendo responsabilidad del repositorio.
+**Ledger y transacción.** La acreditación escribe un documento de ledger con `_id = operationId` (único), un `fingerprint` del contenido y el resultado ya producido, y actualiza la progresión **en la misma transacción**. El patrón exacto a imitar es `MongoInventoryRepository.grant` —`withSession` + `session.withTransaction`, comparación de `fingerprint` para decidir entre devolver el resultado guardado o `409`—; el caso de uso `GrantPurchasedItems` solo valida y delega, así que la atomicidad **no** vive ahí. El `_id` del documento de progresión sigue siendo `"<ownerId>::<heroId>"` (HU-08) y el bloqueo optimista sigue siendo responsabilidad del repositorio.
 
 **Creación perezosa.** Un héroe sin documento de progresión se interpreta como nivel 1 con 0 (HU-08) y la acreditación crea el documento. No hay backfill.
 
