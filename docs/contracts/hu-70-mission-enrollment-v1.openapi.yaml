@@ -6,7 +6,7 @@ info:
     Borrador de diseño de HU-70 (Task #365). NO IMPLEMENTADO: en develop,
     Nexus-Battle-Missions solo expone health y version. La prosa, los ejemplos y
     las decisiones pendientes están en hu-70-mission-enrollment-v1.md. HU-75
-    extiende el cuerpo de la matrícula con difficulty; HU-71 fija rotations.
+    extiende el cuerpo de la matrícula con difficulty; HU-71, con strategyVersion.
     Las rutas internas de Player/Inventory son una propuesta para Team Alfa y no
     forman parte de este documento.
 servers:
@@ -98,7 +98,7 @@ paths:
         '404':
           $ref: '#/components/responses/MissionNotFound'
         '409':
-          description: HERO_BUSY, MISSION_ALREADY_IN_PROGRESS, IDEMPOTENCY_KEY_REUSED o ENROLLMENT_EXPIRED
+          description: HERO_BUSY, MISSION_ALREADY_IN_PROGRESS, IDEMPOTENCY_KEY_REUSED, ENROLLMENT_EXPIRED o STRATEGY_VERSION_MISMATCH (HU-71)
           content:
             application/json:
               schema:
@@ -363,9 +363,10 @@ components:
           format: uuid
         difficulty:
           $ref: '#/components/schemas/Difficulty'
-        rotations:
-          description: Forma y obligatoriedad pendientes de HU-71.
-          type: ['null', array, object]
+        strategyVersion:
+          description: Versión de la estrategia guardada (HU-71), o null si el jugador no guardó ninguna.
+          type: [integer, 'null']
+          minimum: 1
     Enrollment:
       type: object
       required: [enrollmentId, missionId, heroId, difficulty, status, startedAt, endsAt]

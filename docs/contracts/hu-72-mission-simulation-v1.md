@@ -47,10 +47,11 @@ Esquema interno vigente de ADR-019: HMAC, lista cerrada de servicios autorizados
     "profile": { "$ref": "EquippedHeroDto de Player/Inventory (HU-15), congelado al comprometer al héroe" }
   },
   "strategy": {
+    "version": 1,
     "rotations": [
-      { "priority": 1, "steps": ["golpe-de-tormenta", "embate-sangriento", "BASIC_ATTACK"] },
-      { "priority": 2, "steps": ["lanza-de-los-dioses", "BASIC_ATTACK", "BASIC_ATTACK"] },
-      { "priority": 3, "steps": ["embate-sangriento", "BASIC_ATTACK", "BASIC_ATTACK"] }
+      { "priority": "HIGH", "steps": [{ "kind": "ABILITY", "abilityId": "golpe-de-tormenta" }, { "kind": "ABILITY", "abilityId": "embate-sangriento" }, { "kind": "BASIC_ATTACK" }] },
+      { "priority": "MEDIUM", "steps": [{ "kind": "ABILITY", "abilityId": "lanza-de-los-dioses" }, { "kind": "BASIC_ATTACK" }, { "kind": "BASIC_ATTACK" }] },
+      { "priority": "LOW", "steps": [{ "kind": "ABILITY", "abilityId": "embate-sangriento" }, { "kind": "BASIC_ATTACK" }, { "kind": "BASIC_ATTACK" }] }
     ],
     "fallback": "BASIC_ATTACK"
   },
@@ -86,7 +87,7 @@ Qué significa cada bloque y quién lo define:
 | `difficulty`, `enemyStatMultiplier` | HU-75 | Propuesta de HU-75; `MYTHIC` sin número |
 | `timeBudget` | Duración de la misión (HU-70) | Semántica pendiente (decisión 1 del diseño) |
 | `hero.profile` | Player/Inventory, congelado al comprometer | **Pendiente de Team Alfa** (decisión 10) |
-| `strategy.rotations` | HU-71 | Forma pendiente de HU-71; el ejemplo es el del curso (§7.8.5) |
+| `strategy` | HU-71 | Forma del [contrato de HU-71](hu-71-mission-strategy-v1.md#bloque-strategy-en-la-simulación-hu-72); el ejemplo es el del curso (§7.8.5) |
 | `encounters[].enemies[].profile` | Contenido de la misión | **Pendiente de contenido** (§7.8.4); `null` en el ejemplo |
 | `encounters[].powerStep` | Contenido de la misión | **Pendiente** (decisión 8) |
 | `master` | HU-73 | Propuesta mínima; la amplía HU-73 |
@@ -129,7 +130,7 @@ Valores ilustrativos:
   },
   "combatLog": [
     { "seq": 1, "type": "encounterStarted", "encounter": 1 },
-    { "seq": 2, "type": "skillUsed", "encounter": 1, "turn": 1, "actor": "hero", "rotation": 1, "abilityRef": "golpe-de-tormenta", "target": "sombra-corrompida#1", "damage": 18, "targetHealthAfter": 0 },
+    { "seq": 2, "type": "skillUsed", "encounter": 1, "turn": 1, "actor": "hero", "abilityId": "golpe-de-tormenta", "strategy": { "rotation": "HIGH", "step": 1, "fallback": false, "skipped": [] }, "target": "sombra-corrompida#1", "damage": 18, "targetHealthAfter": 0 },
     { "seq": 3, "type": "randomEffectApplied", "encounter": 1, "turn": 1, "actor": "hero", "effect": "CRITICAL", "critical": true },
     { "seq": 4, "type": "combatantDefeated", "encounter": 1, "turn": 1, "combatant": "sombra-corrompida#1" },
     { "seq": 611, "type": "simulationFinished", "combatOutcome": "HERO_VICTORIOUS" }
@@ -138,7 +139,7 @@ Valores ilustrativos:
 ```
 
 - `seedRef` es una referencia opaca para auditoría. **La semilla nunca sale de Combat** (ADR-019 y ADR-021).
-- `rotation` en cada acción del héroe permite verificar CA-02 en la bitácora.
+- El bloque `strategy` de cada acción del héroe (forma de HU-71) permite verificar CA-02 en la bitácora.
 - Toda la aleatoriedad (dados, efectos, aparición del Máster) sale del generador de Combat (CA-03).
 
 ### Idempotencia y errores

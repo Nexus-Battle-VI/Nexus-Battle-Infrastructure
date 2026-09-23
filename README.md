@@ -26,6 +26,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [security.md](docs/architecture/security.md) | Seguridad, identidad y RBAC desplegados |
 | [hu-39-role-management.md](docs/architecture/hu-39-role-management.md) | Diseño, matriz RBAC y contratos conceptuales de HU-39 |
 | [hu-70-matriculacion-mision.md](docs/architecture/hu-70-matriculacion-mision.md) | Diseño de HU-70: tablón, detalle y matrícula con reserva del héroe, y su contrato conceptual |
+| [hu-71-rotaciones-habilidades.md](docs/architecture/hu-71-rotaciones-habilidades.md) | Diseño de HU-71: estrategia de hasta tres rotaciones, versión optimista y decisión de la IA por turno |
 | [hu-72-simulacion-mision.md](docs/architecture/hu-72-simulacion-mision.md) | Diseño de HU-72: simulación asíncrona en Combat, cierre en `endsAt`, liberación del héroe y propuesta de contrato |
 | [observability.md](docs/architecture/observability.md) | Registro, sondas y qué no se mide todavía |
 | [testing.md](docs/architecture/testing.md) | Estrategia de pruebas y cobertura real |

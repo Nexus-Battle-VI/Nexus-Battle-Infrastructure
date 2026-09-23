@@ -40,7 +40,7 @@
         "method": "POST",
         "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
         "headers": { "Idempotency-Key": "3b9f6c1e-8d2a-4f7b-9c4e-5a6b7c8d9e0f" },
-        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "rotations": null }
+        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "strategyVersion": null }
       },
       "inventoryResponse": {
         "status": 201,
@@ -81,7 +81,7 @@
         "method": "POST",
         "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
         "headers": { "Idempotency-Key": "4c0a7d2f-9e3b-4a8c-8d5f-6b7c8d9e0f1a" },
-        "body": { "heroId": "0b1c2d3e-4f50-4617-8a9b-0c1d2e3f4a5b", "difficulty": "NORMAL", "rotations": null }
+        "body": { "heroId": "0b1c2d3e-4f50-4617-8a9b-0c1d2e3f4a5b", "difficulty": "NORMAL", "strategyVersion": null }
       },
       "inventoryResponse": null,
       "expected": {
@@ -101,7 +101,7 @@
         "method": "POST",
         "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
         "headers": { "Idempotency-Key": "5d1b8e3a-0f4c-4b9d-9e6a-7c8d9e0f1a2b" },
-        "body": { "heroId": "1c2d3e4f-5061-4728-9bac-1d2e3f4a5b6c", "difficulty": "NORMAL", "rotations": null }
+        "body": { "heroId": "1c2d3e4f-5061-4728-9bac-1d2e3f4a5b6c", "difficulty": "NORMAL", "strategyVersion": null }
       },
       "inventoryResponse": { "status": 422, "body": { "code": "HERO_COMMITTED", "purpose": "TOURNAMENT" } },
       "expected": {
@@ -121,7 +121,7 @@
         "method": "POST",
         "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
         "headers": { "Idempotency-Key": "6e2c9f4b-1a5d-4cae-8f7b-8d9e0f1a2b3c" },
-        "body": { "heroId": "2d3e4f50-6172-4839-acbd-2e3f4a5b6c7d", "difficulty": "NORMAL", "rotations": null }
+        "body": { "heroId": "2d3e4f50-6172-4839-acbd-2e3f4a5b6c7d", "difficulty": "NORMAL", "strategyVersion": null }
       },
       "inventoryResponse": {
         "status": 422,
@@ -183,7 +183,7 @@
         "method": "POST",
         "path": "/api/v1/missions/msn_camara_sellada/enrollments",
         "headers": { "Idempotency-Key": "7f3d0a5c-2b6e-4dbf-9a8c-9e0f1a2b3c4d" },
-        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "rotations": null }
+        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "strategyVersion": null }
       },
       "inventoryResponse": null,
       "expected": {
@@ -201,7 +201,7 @@
         "method": "POST",
         "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
         "headers": { "Idempotency-Key": "3b9f6c1e-8d2a-4f7b-9c4e-5a6b7c8d9e0f" },
-        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "rotations": null }
+        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "strategyVersion": null }
       },
       "inventoryResponse": null,
       "expected": { "status": 201, "body": { "enrollmentId": "enr_demo_1", "status": "IN_PROGRESS" }, "newRows": 0, "inventoryCalls": 0 }
@@ -230,7 +230,7 @@
         "method": "POST",
         "path": "/api/v1/missions/msn_templo_olvidado/enrollments",
         "headers": { "Idempotency-Key": "ac6a3d8f-5e91-4a02-8dbf-2b3c4d5e6f70" },
-        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "rotations": null }
+        "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "strategyVersion": null }
       },
       "inventoryResponse": { "status": 503 },
       "expected": {
@@ -256,7 +256,7 @@
         "method": "POST",
         "path": "/api/v1/missions/msn_camara_sellada/enrollments",
         "headers": { "Idempotency-Key": "bd7b4e90-6fa2-4b13-9ec0-3c4d5e6f7081" },
-        "body": { "heroId": "0b1c2d3e-4f50-4617-8a9b-0c1d2e3f4a5b", "difficulty": "NORMAL", "rotations": null }
+        "body": { "heroId": "0b1c2d3e-4f50-4617-8a9b-0c1d2e3f4a5b", "difficulty": "NORMAL", "strategyVersion": null }
       },
       "inventoryResponse": null,
       "expected": { "status": 422, "body": { "code": "MISSION_LOCKED" }, "newRows": 0 }

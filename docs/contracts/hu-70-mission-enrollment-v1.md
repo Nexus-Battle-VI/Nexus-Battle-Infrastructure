@@ -4,7 +4,7 @@
 
 Trazabilidad: [HU-70 #55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/55) y [TASK HU-70.1 #365](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/365). Diseño: [hu-70-matriculacion-mision.md](../architecture/hu-70-matriculacion-mision.md). Borrador OpenAPI de las rutas públicas: [hu-70-mission-enrollment-v1.openapi.yaml](hu-70-mission-enrollment-v1.openapi.yaml). Escenarios: [hu-70-mission-enrollment-fixtures-v1.json](hu-70-mission-enrollment-fixtures-v1.json).
 
-La matrícula es de HU-70. HU-75 la **extiende** con `difficulty`, `400 UNKNOWN_DIFFICULTY` y `422 PROGRESSION_LOCKED` ([Infrastructure#125](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/125)); HU-71 fija la forma de `rotations`.
+La matrícula es de HU-70. HU-75 la **extiende** con `difficulty`, `400 UNKNOWN_DIFFICULTY` y `422 PROGRESSION_LOCKED` ([Infrastructure#125](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/125)); HU-71 añade `strategyVersion` y `409 STRATEGY_VERSION_MISMATCH` ([contrato de HU-71](hu-71-mission-strategy-v1.md#extensión-de-la-matrícula-de-hu-70)).
 
 Los datos de ejemplo salen de la misión «El Templo Olvidado» del documento del curso (§7.8.14). Son una muestra, no contenido aprobado.
 
@@ -148,13 +148,13 @@ Idempotency-Key: 3b9f6c1e-8d2a-4f7b-9c4e-5a6b7c8d9e0f
 {
   "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60",
   "difficulty": "NORMAL",
-  "rotations": null
+  "strategyVersion": 1
 }
 ```
 
 - `Idempotency-Key`: UUID que Web genera al pulsar «Iniciar misión» y reutiliza en los reintentos de esa misma pulsación.
 - `difficulty`: obligatorio; su vocabulario y su validación son de HU-75.
-- `rotations`: su forma y si es obligatorio los decide HU-71. HU-70 solo lo guarda con la matrícula.
+- `strategyVersion`: versión de la estrategia de rotaciones que el jugador tiene delante (HU-71), o `null` si no guardó ninguna. La matrícula congela esa estrategia para la simulación.
 
 Respuesta `201`:
 
@@ -182,9 +182,10 @@ Missions evalúa en este orden y responde con el **primer** fallo (propuesta P-M
 4. La `Idempotency-Key` ya se usó: se responde lo guardado (ver [reintentos](#reintentos-con-la-misma-clave)).
 5. Requisitos previos (`422 MISSION_LOCKED`, CA-07).
 6. Progresión de dificultad (`422 PROGRESSION_LOCKED`, HU-75).
-7. El jugador ya tiene esta misión en curso (`409 MISSION_ALREADY_IN_PROGRESS`, propuesta P-M2).
-8. El héroe tiene otra matrícula activa en Missions (`409 HERO_BUSY`, CA-02).
-9. Compromiso `MISSION` en Player/Inventory (`409 HERO_BUSY`, `422` o `503`, CA-03 y CA-04).
+7. La versión de la estrategia coincide con la guardada (`409 STRATEGY_VERSION_MISMATCH`, HU-71).
+8. El jugador ya tiene esta misión en curso (`409 MISSION_ALREADY_IN_PROGRESS`, propuesta P-M2).
+9. El héroe tiene otra matrícula activa en Missions (`409 HERO_BUSY`, CA-02).
+10. Compromiso `MISSION` en Player/Inventory (`409 HERO_BUSY`, `422` o `503`, CA-03 y CA-04).
 
 ## Errores
 
@@ -192,7 +193,7 @@ Todos los errores tienen la forma `{ "code": "…", "message": "…" }` más los
 
 | HTTP | `code` | Cuándo | CA |
 | --- | --- | --- | --- |
-| `400` | `VALIDATION_ERROR` | Falta `heroId`, no es un UUID o `rotations` está mal formado | — |
+| `400` | `VALIDATION_ERROR` | Falta `heroId`, no es un UUID o `strategyVersion` no es un entero positivo ni `null` | — |
 | `400` | `IDEMPOTENCY_KEY_REQUIRED` | Falta la cabecera `Idempotency-Key` o no es un UUID | — |
 | `400` | `UNKNOWN_DIFFICULTY` | `difficulty` ausente o fuera del vocabulario (HU-75) | — |
 | `401` | `UNAUTHENTICATED` | Sin token o token no válido | — |
@@ -202,6 +203,7 @@ Todos los errores tienen la forma `{ "code": "…", "message": "…" }` más los
 | `409` | `MISSION_ALREADY_IN_PROGRESS` | El jugador ya tiene esta misión en curso (P-M2) | — |
 | `409` | `IDEMPOTENCY_KEY_REUSED` | La misma clave llegó con otro cuerpo o para otra misión | — |
 | `409` | `ENROLLMENT_EXPIRED` | La matrícula de esa clave caducó sin confirmarse; hay que empezar con una clave nueva | — |
+| `409` | `STRATEGY_VERSION_MISMATCH` | `strategyVersion` no coincide con la estrategia guardada (HU-71) | — |
 | `422` | `MISSION_LOCKED` | Falta completar un requisito previo | CA-07 |
 | `422` | `PROGRESSION_LOCKED` | Falta el clear del nivel anterior (HU-75) | — |
 | `422` | `LOADOUT_INCOMPLETE` | El héroe no tiene el mazo completo | CA-04 |
@@ -244,7 +246,7 @@ La clave es única por jugador. Cuando llega una `Idempotency-Key` ya usada con 
 | `PENDING` | `503 DEPENDENCY_UNAVAILABLE` con `enrollmentStatus: PENDING` |
 | `EXPIRED` | `409 ENROLLMENT_EXPIRED` |
 
-Con otro cuerpo u otra misión: `409 IDEMPOTENCY_KEY_REUSED`. Los rechazos anteriores a guardar la matrícula (pasos 1 a 8 del orden de validación) no se guardan: un reintento se vuelve a evaluar.
+Con otro cuerpo u otra misión: `409 IDEMPOTENCY_KEY_REUSED`. Los rechazos anteriores a guardar la matrícula (pasos 1 a 9 del orden de validación) no se guardan: un reintento se vuelve a evaluar.
 
 ## Operación interna propuesta hacia Player/Inventory
 
@@ -314,7 +316,7 @@ Es un hecho **interno** de Missions: no sale a otra cola ni a otro servicio. Con
 ## Fuera de este contrato
 
 - Simulación, bitácora y liberación al terminar: HU-72.
-- Rotaciones: HU-71.
+- Guardar y validar las rotaciones: HU-71.
 - Niveles de dificultad: HU-75.
 - Reporte e historial: HU-74.
 - Montos de recompensas: HU-10.

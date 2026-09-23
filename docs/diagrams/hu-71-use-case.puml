@@ -1,0 +1,33 @@
+@startuml hu-71-use-case
+title HU-71 — Rotaciones de habilidades (casos de uso)
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Jugador" as Player
+actor "Player/Inventory\n(Team Alfa)" as Inventory
+actor "Combat\n(Team Alfa)" as Combat
+
+rectangle "Missions (Team Beta)" {
+  usecase "Consultar la estrategia" as UC1
+  usecase "Guardar la estrategia\n(CA-01, CA-04)" as UC2
+  usecase "Validar habilidades del héroe" as UC3
+  usecase "Congelar la estrategia\nal matricular (HU-70)" as UC4
+  usecase "Enviar la estrategia\na la simulación (HU-72)" as UC5
+}
+
+usecase "Decidir la acción de cada turno\n(CA-02, CA-03)" as UC6
+
+Player --> UC1
+Player --> UC2
+UC2 ..> UC3 : <<include>>
+UC3 --> Inventory
+UC4 ..> UC5 : <<precede>>
+UC5 --> Combat
+Combat --> UC6
+
+note right of UC6
+  Lo ejecuta Combat en la simulación:
+  Poder, recarga y salud por turno.
+  Missions no decide acciones.
+end note
+@enduml

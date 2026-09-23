@@ -69,7 +69,7 @@ Tomadas de HU-70 sin reinterpretar:
 ### CU-70.3 Matricular un héroe (CA-01 a CA-05 y CA-07)
 
 - **Precondiciones:** jugador autenticado; misión activa; el jugador eligió héroe, dificultad (HU-75) y, si HU-71 lo exige, rotaciones.
-- **Entradas:** `missionId` (ruta), `heroId`, `difficulty`, `rotations` (opcional, lo define HU-71) y la cabecera `Idempotency-Key`.
+- **Entradas:** `missionId` (ruta), `heroId`, `difficulty`, `strategyVersion` (HU-71; `null` sin estrategia) y la cabecera `Idempotency-Key`.
 - **Flujo principal:**
   1. Missions valida el cuerpo y la cabecera.
   2. Comprueba que la misión existe y está activa.
@@ -149,6 +149,7 @@ CREATE TABLE mission_enrollments (
   idempotency_key  text NOT NULL,
   request_hash     text NOT NULL,
   commitment_id    text,
+  strategy_version integer,
   rotations        jsonb,
   rejection_code   text,
   requested_at     timestamptz NOT NULL,
@@ -253,7 +254,7 @@ Los escenarios con datos de ejemplo están en los [fixtures](../contracts/hu-70-
 1. **Qué es «mazo completo».** Propuesta P-M7 (2/6/2). Alternativas: al menos un arma, o solo *readiness*. Decide el PO.
 2. **Qué nivel se exige.** No existe nivel de héroe en Player/Inventory y el nivel de jugador (HU-08 y HU-09) aún no está. Propuesta P-M11: informativo.
 3. **¿Una matrícula activa por jugador y misión?** Propuesta P-M2.
-4. **¿Las rotaciones son obligatorias para confirmar?** Lo decide HU-71. Sin rotaciones, la IA solo tendría el ataque básico (§7.8.5).
+4. **¿Las rotaciones son obligatorias para confirmar?** [HU-71](hu-71-rotaciones-habilidades.md) propone que no (P-R9): sin estrategia, la IA solo usa el ataque básico (§7.8.5).
 5. **Cómo se libera una reserva fallida.** Propuesta P-M8: 2 minutos para `PENDING` y caducidad del compromiso con 30 minutos de margen.
 6. **Qué respuesta distingue héroe ocupado de misión bloqueada.** Propuestas P-M4 y P-M5.
 7. **Contenido de las misiones.** El curso (§7.8.4) pide dos misiones completas por equipo y no hay issue. Sin definiciones, el tablón sale vacío.
