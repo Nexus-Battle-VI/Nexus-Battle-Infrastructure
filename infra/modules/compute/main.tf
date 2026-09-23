@@ -384,6 +384,28 @@ resource "aws_iam_role_policy" "catalog_lifecycle_queue" {
   policy = data.aws_iam_policy_document.catalog_lifecycle_queue_access[0].json
 }
 
+data "aws_iam_policy_document" "auction_settlement_queue_access" {
+  count = var.auction_settlement_queue_arn != "" ? 1 : 0
+  statement {
+    sid       = "AuctionSendSettlement"
+    effect    = "Allow"
+    actions   = ["sqs:SendMessage"]
+    resources = [var.auction_settlement_queue_arn]
+  }
+  statement {
+    sid       = "NotificationsConsumeAuctionSettlement"
+    effect    = "Allow"
+    actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:ChangeMessageVisibility", "sqs:GetQueueAttributes"]
+    resources = [var.auction_settlement_queue_arn]
+  }
+}
+resource "aws_iam_role_policy" "auction_settlement_queue" {
+  count  = var.auction_settlement_queue_arn != "" ? 1 : 0
+  name   = "${var.name}-auction-settlement-queue"
+  role   = aws_iam_role.node.name
+  policy = data.aws_iam_policy_document.auction_settlement_queue_access[0].json
+}
+
 resource "aws_iam_instance_profile" "node" {
   name = "${var.name}-node"
   role = aws_iam_role.node.name
