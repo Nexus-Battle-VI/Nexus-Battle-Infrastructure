@@ -1,0 +1,104 @@
+@startuml HU-57 Modelo de dominio - Vitrina de E-commerce
+' HU-57 / RF-57 - Task de diseno #217
+' Solo los conceptos necesarios para HU-57. No se crean entidades de
+' deseos, carrito, transaccion ni correo, ni entidad de cache por RNF-23.
+
+hide empty members
+
+class "Producto" as Producto <<concepto de catalogo consumido>> {
+  --
+  nombre
+  imagen
+  descripcion
+  habilidades
+  tipo
+  estadoDePromocion
+  --
+  precioPublicado()
+}
+
+class "Precio" as Precio {
+  --
+  importe
+  moneda
+}
+
+class "MonedaAplicable" as MonedaAplicable {
+  --
+  codigo
+  --
+  origen: NO DEFINIDO (D-1)
+}
+
+class "MarcadorPromocion" as MarcadorPromocion {
+  --
+  porcentajeDescuento
+  --
+  DATO INEXISTENTE HOY (D-4)
+}
+
+class "PaginaVitrina" as PaginaVitrina {
+  --
+  numeroDePagina
+  tamanoDePagina = 16
+  total
+  --
+  hayPaginaSiguiente()
+  estaVacia()
+}
+
+class "CriterioConsulta" as CriterioConsulta {
+  --
+  terminoDeBusqueda
+  filtrosActivos
+  --
+  esConjuncion()
+}
+
+class "FiltroRangoPrecio" as FiltroRangoPrecio {
+  --
+  importeMinimo
+  importeMaximo
+  moneda
+}
+
+class "FiltroTipoProducto" as FiltroTipoProducto {
+  --
+  tipo
+  --
+  conjunto vigente: RF-33 (D-2)
+}
+
+class "FiltroEstadoPromocion" as FiltroEstadoPromocion {
+  --
+  estado
+  --
+  valores oficiales PENDIENTES (D-3)
+}
+
+Producto "1" *-- "1" Precio : se presenta con
+Producto "0..1" *-- "0..1" MarcadorPromocion : si esta en promocion
+Precio "1" --> "1" MonedaAplicable : se expresa en
+PaginaVitrina "1" o-- "0..16" Producto : contiene
+CriterioConsulta "1" o-- "0..1" FiltroRangoPrecio
+CriterioConsulta "1" o-- "0..1" FiltroTipoProducto
+CriterioConsulta "1" o-- "0..1" FiltroEstadoPromocion
+CriterioConsulta "1" --> "1" PaginaVitrina : produce
+
+note right of PaginaVitrina
+  Restricciones de HU-57:
+  - 16 items por pagina
+  - la conjuncion de termino y filtros
+    nunca devuelve productos que incumplan
+  - el vacio es un resultado VALIDO
+  - NO se persiste: es derivado de la
+    consulta al catalogo
+end note
+
+note bottom of Producto
+  Habilitades y tipo provienen del catalogo
+  canonico (RF-33). Este diseno NO rediseña
+  el producto ni inventa la lista de tipos.
+end note
+
+@enduml

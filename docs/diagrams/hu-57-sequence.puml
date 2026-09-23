@@ -1,0 +1,78 @@
+@startuml HU-57 Secuencia - Consulta de vitrina de E-commerce
+' HU-57 / RF-57 - Task de diseno #217
+' Participantes CONCEPTUALES. No se fija HTTP, ni firmas, ni microservicio nuevo.
+
+actor "Cliente" as Cliente
+participant "Vitrina\n(vista E-commerce)" as Vitrina
+participant "Servicio de consulta\nde catalogo en vitrina" as Servicio
+participant "Regla de criterios\nde busqueda y filtro" as Regla
+database "Catalogo de productos\n(RF-33)" as Catalogo
+
+== Consulta sin criterios adicionales ==
+Cliente -> Vitrina : accede a la vitrina
+Vitrina -> Servicio : solicita la pagina 1 sin criterios
+Servicio -> Catalogo : productos publicados y disponibles
+alt Hay productos
+  Catalogo --> Servicio : conjunto publicado
+  Servicio --> Vitrina : pagina de hasta 16 items
+  Vitrina --> Cliente : banner + cards con\nnombre, imagen, descripcion,\nhabilidades y precio
+else Catalogo no disponible
+  Catalogo --> Servicio : error de disponibilidad
+  Servicio --> Vitrina : error de consulta
+  Vitrina --> Cliente : estado de error\n(sin datos inventados)
+end
+
+== Busqueda con coincidencia ==
+Cliente -> Vitrina : escribe un termino
+Vitrina -> Servicio : consulta con termino
+Servicio -> Regla : localizar coincidencias\nen la informacion disponible\n(incluido el precio)
+Regla -> Catalogo : candidatos coincidentes
+Catalogo --> Regla : productos
+Regla --> Servicio : coincidencias
+Servicio --> Vitrina : pagina de resultados
+Vitrina --> Cliente : productos que coinciden
+
+== Busqueda o filtro SIN coincidencias (CA-12) ==
+Cliente -> Vitrina : termino o filtros sin resultado
+Vitrina -> Servicio : consulta con criterios
+Servicio -> Regla : aplicar criterios
+Regla -> Catalogo : buscar
+Catalogo --> Regla : sin coincidencias
+Regla --> Servicio : resultado vacio
+Servicio --> Vitrina : pagina vacia
+Vitrina --> Cliente : ausencia de resultados\n(sin mostrar incumplidores)
+
+== Filtros combinados y conjuncion con la busqueda (CA-11) ==
+Cliente -> Vitrina : rango de precio + tipo\n(+ estado de promocion)
+Vitrina -> Servicio : consulta con termino y filtros
+Servicio -> Regla : exigir el termino Y todos los filtros
+Regla -> Catalogo : consulta conjuntiva
+Catalogo --> Regla : productos que cumplen todo
+Regla --> Servicio : resultado
+Servicio --> Vitrina : pagina filtrada
+Vitrina --> Cliente : solo productos que cumplen\nel termino y todos los filtros
+
+== Apertura del detalle (CA-05) ==
+Cliente -> Vitrina : pasa el raton sobre una card
+Vitrina --> Cliente : resalta la card\n(regla de presentacion)
+Cliente -> Vitrina : selecciona el producto
+Vitrina -> Vitrina : abre la vista de detalle del producto
+
+== Frontera explicita ==
+note over Vitrina
+  La vitrina NO ejecuta:
+  - agregar a la lista de deseos (HU-56)
+  - agregar al carrito (HU-58)
+  - pago ni transferencia (HU-59)
+end note
+
+note over Regla
+  Decisiones ABIERTAS que este diseno no cierra:
+  - moneda aplicable y su origen geografico (D-1)
+  - valores del estado de promocion (D-3)
+  - regla comercial del porcentaje (D-4)
+  - tecnologia de indexacion y minimo de
+    caracteres (D-5): no se imponen aqui.
+end note
+
+@enduml

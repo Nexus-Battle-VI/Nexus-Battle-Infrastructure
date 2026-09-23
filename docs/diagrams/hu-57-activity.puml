@@ -1,0 +1,85 @@
+@startuml HU-57 Actividad - Consulta, busqueda y filtros de la vitrina
+' HU-57 / RF-57 - Task de diseno #217
+' No se fija motor de busqueda ni minimo de caracteres (decision D-5).
+
+start
+
+:Recibir la solicitud de consulta de vitrina;
+
+:Comprobar que existen productos
+disponibles para E-commerce (RF-33);
+
+if (Hay productos disponibles?) then (no)
+  :Informar que la vitrina no esta
+  disponible en este momento;
+  stop
+else (si)
+endif
+
+:Recibir, si aplica, el termino de busqueda
+y los filtros activos
+(rango de precio, tipo, estado de promocion);
+
+if (Hay termino de busqueda?) then (si)
+  :Localizar candidatos cuya informacion
+  disponible -incluido el precio- contiene
+  el termino;
+  note right
+    Sin imponer tecnologia de indexacion
+    ni un minimo de caracteres no documentado.
+  end note
+else (no)
+  :Tomar todos los productos publicados;
+endif
+
+if (Hay filtros activos?) then (si)
+  :Retener unicamente los productos que
+  cumplen TODOS los filtros activos;
+  if (Coexisten termino y filtros?) then (si)
+    :Exigir el cumplimiento simultaneo
+    (conjuncion, CA-11);
+  else (no)
+  endif
+else (no)
+endif
+
+if (El resultado es vacio?) then (si)
+  :Representar la ausencia de resultados
+  sin mostrar productos que incumplan (CA-12);
+  stop
+else (no)
+endif
+
+:Paginar el resultado en paginas
+de hasta dieciseis items (CA-01);
+
+:Componer cada card con los campos
+documentados: nombre, imagen, descripcion,
+habilidades y precio (CA-02);
+
+:Aplicar la moneda aplicable al Cliente
+sin cerrar el mecanismo de ubicacion (CA-03);
+
+if (El producto esta en promocion?) then (si)
+  :Asociar el marcador con el porcentaje
+  de descuento (CA-04);
+  note right
+    BLOQUEADO: no existe hoy el dato de
+    porcentaje ni de precio anterior (D-4).
+  end note
+else (no)
+endif
+
+:Devolver la pagina solicitada;
+
+if (El Cliente selecciona un producto?) then (si)
+  :Dirigir a la vista de detalle (CA-05);
+else (no)
+endif
+
+:NO ejecutar agregar a deseos
+ni agregar al carrito;
+
+stop
+
+@enduml

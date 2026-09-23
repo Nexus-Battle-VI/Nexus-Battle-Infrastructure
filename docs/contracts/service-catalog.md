@@ -114,6 +114,7 @@ temporal. Su especificación está en
 | `POST` | `/api/v1/catalog/products` | `201`, `400`, `401`, `403`, `409`, `422`, `503` | **Accepted; implementación trazada en Management #136** |
 | `GET` | `/api/v1/catalog/products/:reference` | `200`, `404` | **Implementado (HU-27):** lectura pública por `productId` o alias `sku`; devuelve `lifecycleStatus` para ACTIVE y SUSPENDED |
 | `POST` | `/api/v1/catalog/products/lookup` | `200`, `400` | **Implementado (HU-27):** resuelve hasta 500 referencias en una consulta (sin N+1), con filtro opcional por nombre normalizado y por tipo canónico. Es una lectura, no muta |
+| `GET` | `/api/v1/catalog/products` | `200`, `400` | **Implementado (HU-57):** consulta pública de vitrina, paginada de 16 en 16, con término de búsqueda sobre la información disponible —incluido el precio— y filtros de rango de precio, tipo y moneda. `currency` es obligatoria al filtrar por precio: **no se convierten divisas**. Diseño y decisiones pendientes en [hu-57-storefront-query-v1.md](hu-57-storefront-query-v1.md) |
 
 La ruta nueva no sustituye todavía `/api/products`. Durante la transición, la
 superficie heredada se conserva como adaptador hacia los mismos casos de uso
@@ -123,13 +124,23 @@ y aprobación del Product Owner.
 Las dos rutas de LECTURA canónica se añadieron para HU-27 (consumidor:
 Player/Inventory). Son `@Public()`, igual que `GET /api/products`: la información
 de producto, una vez creado el producto canónico, es de lectura pública
-(`SECURITY.md` de Catalog). **No habilitan enumeración del catálogo**: ambas
-exigen que el consumidor aporte referencias exactas (`productId` o `sku`); no
-hay endpoint de listado. Devuelven `lifecycleStatus` para ACTIVE y SUSPENDED
+(`SECURITY.md` de Catalog). **Esas dos no habilitan enumeración del catálogo**:
+exigen que el consumidor aporte referencias exactas (`productId` o `sku`).
+Devuelven `lifecycleStatus` para ACTIVE y SUSPENDED
 porque un jugador puede poseer un producto suspendido y RF-27 pide su
 información vigente; en el modelo canónico no existe el estado `DRAFT`, que es el
 único que Catalog oculta a las consultas públicas. No sustituyen a la superficie
 heredada; son aditivas.
+
+La afirmación anterior —«no hay endpoint de listado»— dejó de ser cierta al
+implementarse HU-57: `GET /api/v1/catalog/products` **sí enumera** el catálogo
+publicado, y lo hace de forma acotada (paginación de 16 ítems) y solo sobre
+productos publicados y disponibles. Esa enumeración es el propósito de la
+vitrina, no un efecto colateral: sin ella el Cliente no puede explorar la
+oferta. La distinción que se conserva es la que importa: la lectura por
+referencia sigue sin exponer el catálogo, y la consulta de vitrina sigue sin
+exponer borradores ni productos archivados. El diseño está en
+[`docs/architecture/hu-57-busqueda-filtros-vitrina.md`](../architecture/hu-57-busqueda-filtros-vitrina.md).
 
 El contrato objetivo reserva `imageUrl`, pero el almacenamiento y ownership de
 la imagen dependen de EN-027.3.

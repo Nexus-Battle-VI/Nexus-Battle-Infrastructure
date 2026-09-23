@@ -25,6 +25,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [integration.md](docs/architecture/integration.md) | Comunicación entre contextos |
 | [security.md](docs/architecture/security.md) | Seguridad, identidad y RBAC desplegados |
 | [hu-39-role-management.md](docs/architecture/hu-39-role-management.md) | Diseño, matriz RBAC y contratos conceptuales de HU-39 |
+| [hu-57-busqueda-filtros-vitrina.md](docs/architecture/hu-57-busqueda-filtros-vitrina.md) | Diseño de la consulta, búsqueda y filtros de la vitrina de E-commerce (HU-57) |
 | [observability.md](docs/architecture/observability.md) | Registro, sondas y qué no se mide todavía |
 | [testing.md](docs/architecture/testing.md) | Estrategia de pruebas y cobertura real |
 | [developer-workflow.md](docs/architecture/developer-workflow.md) | Flujo de trabajo, CI y OIDC futuro |
@@ -80,6 +81,7 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | [product-assets-s3-estimate.md](docs/costs/product-assets-s3-estimate.md) | Estimación aceptada de recursos visuales en S3 |
 | [catalog-events-sqs-estimate.md](docs/costs/catalog-events-sqs-estimate.md) | Estimación propuesta de eventos de Producto en SQS |
 | [service-catalog.md](docs/contracts/service-catalog.md) | Superficie HTTP de cada servicio |
+| [hu-57-storefront-query-v1.md](docs/contracts/hu-57-storefront-query-v1.md) | Contrato conceptual de la consulta de vitrina de E-commerce (HU-57) |
 | [catalog-product-v1.openapi.yaml](docs/contracts/catalog-product-v1.openapi.yaml) | Contrato canónico de Producto v1 |
 | [catalog-product-assets-v1.md](docs/contracts/catalog-product-assets-v1.md) | Contrato de diseño aprobado para carga, finalización y lectura de recursos visuales |
 | [catalog-events-v1.asyncapi.yaml](docs/contracts/catalog-events-v1.asyncapi.yaml) | AsyncAPI propuesto de `catalog.product.created` V1 |

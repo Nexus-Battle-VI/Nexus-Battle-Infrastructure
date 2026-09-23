@@ -1,0 +1,49 @@
+@startuml HU-57 Casos de uso - Consulta de vitrina de E-commerce
+' HU-57 / RF-57 - Task de diseno #217
+' Actor principal: Cliente. La vitrina es PUBLICa: la consulta no exige sesion.
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Cliente" as Cliente
+
+rectangle "E-commerce - vitrina" {
+  usecase "Consultar, buscar y filtrar\nproductos en la vitrina" as UC_PRINCIPAL
+  usecase "Consultar vitrina paginada\n(16 items por pagina)" as UC_PAGINADA
+  usecase "Buscar productos por\ninformacion disponible\n(incluido el precio)" as UC_BUSCAR
+  usecase "Filtrar resultados\n(rango de precio, tipo,\nestado de promocion)" as UC_FILTRAR
+  usecase "Abrir vista de detalle" as UC_DETALLE
+  usecase "Representar ausencia\nde resultados" as UC_VACIO
+}
+
+actor "Catalogo de productos\n(RF-33)" as Catalogo
+
+Cliente --> UC_PRINCIPAL
+
+UC_PRINCIPAL ..> UC_PAGINADA : <<include>>
+UC_PRINCIPAL ..> UC_BUSCAR : <<include>>
+UC_PRINCIPAL ..> UC_FILTRAR : <<include>>
+UC_PRINCIPAL ..> UC_VACIO : <<extend>>\n(sin coincidencias)
+UC_PAGINADA ..> UC_DETALLE : <<extend>>\n(seleccion del Cliente)
+
+UC_BUSCAR --> Catalogo : productos publicados
+UC_FILTRAR --> Catalogo : productos publicados
+UC_PAGINADA --> Catalogo : productos publicados
+
+note right of UC_PRINCIPAL
+  FUERA DE ALCANCE de HU-57:
+  - incorporar a la lista de deseos (HU-56)
+  - agregar al carrito (HU-58)
+  - pago, transferencia y vaciado (HU-59)
+  - persistencia del carrito (HU-61)
+  La vitrina puede PRESENTAR esas acciones,
+  pero su comportamiento no se especifica aqui.
+end note
+
+note bottom of UC_FILTRAR
+  El filtro por ESTADO DE PROMOCION no tiene
+  valores oficiales ni dato de porcentaje:
+  queda pendiente de decision (D-3, D-4).
+end note
+
+@enduml
