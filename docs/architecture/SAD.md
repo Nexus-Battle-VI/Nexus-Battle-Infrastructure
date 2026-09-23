@@ -63,6 +63,19 @@ semilla -> MT19937 -> Box-Müller -> Z ~ N(0,1) -> Φ(Z) -> indice uniforme 1..8
 - **Implementado** en Combat: motor HU-24, tabla y resolución HU-25, `CRITICAL_CHANCE` sobre la tabla y salas/lobby. **Pendiente:** política de semilla por batalla o simulación (la semilla 3.000.000 es la validada por HU-26, no una semilla global), Missions → Combat y el consumo por HU-20.
 - Diagrama: [combat-randomness.puml](../diagrams/combat-randomness.puml).
 
+### Bloqueo de equipamiento en combate (HU-29)
+
+Con una batalla **activa**, el equipamiento con el que el héroe **entró** permanece fijo: toda mutación del loadout —arma, armadura o ítem— se **rechaza** con un mensaje explicativo y el loadout **no se modifica**. Al terminar la batalla la restricción **deja de aplicarse**. La regla **precede** a la operación de equipar de HU-28; no la reimplementa ni toca las capacidades 2/6/2.
+
+```text
+estado de batalla publicado -> RestriccionEquipamientoEnCombate -> procede | rechazado con motivo
+```
+
+- **El estado de batalla lo publica Combat**, no Player/Inventory. El diseño lo modela como un **estado que se recibe**, y no prescribe transporte ni firmas: el enmarcado arquitectónico ya lo decidió [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md), que asigna a Player/Inventory los **compromisos** del héroe (`BATTLE`, `MISSION`, `AUCTION`, `TOURNAMENT`) y hace que Combat publique el compromiso **al iniciar** y lo **libere al terminar**.
+- **El loadout no se clona.** Como la mutación no se aplica, no hace falta un snapshot que demuestre «sin modificaciones»: una copia sería una segunda versión de la misma verdad.
+- **Sin lock permanente.** No hay nada que «desbloquear»: hay una condición que se cumple mientras dure la batalla.
+- **Estado:** **solo diseño** (Task #231). La implementación es #232 y las pruebas #233, y **no se dan por desbloqueadas** mientras los bloqueos declarados del issue no estén disponibles. Ver el [diseño](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-29-bloqueo-equipamiento-combate.md) y [la evidencia](../evidence/HU-29-bloqueo-equipamiento-en-combate.md).
+
 ## 5. Arquitectura interna común
 
 Los seis servicios comparten la misma estructura: **Clean + Hexagonal**.
@@ -194,6 +207,13 @@ Se enumeran juntas porque quien lea este documento necesita conocerlas antes de 
 7. **Aceptación humana de HU-39 en curso.** La entrega técnica está desplegada;
    el ciclo real de TOTP, asignación, Catalog y retirada se conserva como
    evidencia pendiente de completar.
+8. **El bloqueo de equipamiento en combate (HU-29) está solo diseñado, y su decisión
+   funcional sigue abierta.** No existe guard en `develop`: hay dos Pull Requests en
+   borrador y con conflicto desde el 10 de septiembre. Falta decidir **qué cuenta
+   como «batalla activa»** —la lectura literal apunta a `IN_BATTLE`; ampliarlo a
+   `PREPARING` rompería el lobby de preparación de HU-15.3— y el **texto del
+   mensaje**. La épica **no** entra en el bloqueo: la HU nombra arma, armadura e
+   ítem, y HU-28 excluye `EPICA` de las categorías equipables.
 
 Ninguna es un descuido. Cada una tiene su motivo registrado y su condición de desbloqueo.
 
