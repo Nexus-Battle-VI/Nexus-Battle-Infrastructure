@@ -78,9 +78,13 @@ en el proxy, ver más abajo).
 | --- | --- | --- | --- | --- |
 | `POST` | `/api/internal/v1/inventory/grants` | `200`, `400`, `409`, `422`, `503` | `commerce` | HU-59 |
 | `GET` | `/api/internal/v1/inventory/products/:productId/owners` | `200`, `400`, `401` | `commerce`, `notifications` | HU-38 |
-| `POST` | `/api/internal/v1/players/:playerId/heroes/:heroId/experience` (**diseño**) | `200`, `400`, `401`, `409`, `422`, `503` | `missions` | HU-09 |
+| `GET` | `/api/internal/v1/players/:playerId/equipped-hero` | `200`, `400`, `401`, `404`, `503` | `combat` | HU-15, HU-19, HU-25 |
+| `POST` | `/api/internal/v1/players/:playerId/heroes/:heroId/experience` | `200`, `400`, `401`, `409`, `422`, `503` | `missions` | HU-09 |
+| `GET` | `/api/internal/v1/players/:playerId/heroes/:heroId` | `200`, `400`, `401`, `404`, `503` | `missions` | HU-71 |
 
-La ruta de experiencia es **diseño de la Task #439**: acredita un importe **ya entero** al héroe, con ledger idempotente (`_id = operationId`) y actualización de la progresión en la misma transacción. **Se invoca una vez por cada NPC derrotado**, y su clave incluye la instancia real de la derrota. Usa `@InternalOnly()` **y** `@InternalCallers('missions')`, de modo que **no amplía el allow-list global** (`commerce`, `notifications`, `combat`): el permiso se acota a esa ruta. Contrato: [hu-09-experience-reward-v1](hu-09-experience-reward-v1.md) §7.
+La ruta de experiencia acredita un importe **ya entero** al héroe, con ledger idempotente (`_id = operationId`) y actualización de la progresión en la misma transacción. **Se invoca una vez por cada NPC derrotado**, y su clave incluye la instancia real de la derrota. Usa `@InternalOnly()` **y** `@InternalCallers('missions')`, de modo que **no amplía el allow-list global** (`commerce`, `notifications`, `combat`): el permiso se acota a esa ruta. Contrato: [hu-09-experience-reward-v1](hu-09-experience-reward-v1.md) §7.
+
+La ruta del perfil por `heroId` es la que necesita Missions para **validar las habilidades de una estrategia de rotaciones** al guardarla (HU-71, P-R4 del diseño) y para congelar el perfil del héroe que enviará a Combat en HU-72. Es **hermana** de `equipped-hero`, no su sustituta: aquella sirve al héroe **seleccionado** y esta a **cualquier héroe** del jugador, y el `404` de esta lleva `code: HERO_NOT_OWNED` (el consumidor solo lo interpreta como «no es suyo» si trae ese código). Se autoriza con `@InternalCallers('missions')` sin ampliar el allow-list global. Contrato: `Nexus-Battle-Player-Inventory/docs/equipped-hero-contract.md`.
 
 `.../products/:productId/owners` resuelve qué jugadores poseen actualmente un
 producto (`{ productId, owners: [{ playerId }] }`, sin correo, nombre ni
