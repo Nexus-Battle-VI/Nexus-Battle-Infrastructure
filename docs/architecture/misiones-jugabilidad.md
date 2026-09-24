@@ -1,6 +1,6 @@
 # Misiones jugables — diseño P-J1 a P-J11
 
-**Estado de este documento:** diseño contrastado con el código de las ramas `feat/misiones-jugabilidad` de Missions, Combat, Web e Infrastructure (2026-09-24). Nada de esto está en `develop` todavía. Las cifras de balance salen del motor real de Combat. Incluye las decisiones que el PO tomó el 2026-09-24 (ver «Decisiones del PO»); lo que sigue marcado como **pendiente del PO** son propuestas del equipo.
+**Estado de este documento:** diseño contrastado con el código de las ramas `feat/misiones-jugabilidad` de Missions, Combat, Web e Infrastructure (2026-09-24), que se integran a `develop` con sus PR. Las cifras de balance salen del motor real de Combat. Incluye las decisiones que el PO tomó el 2026-09-24 (ver «Decisiones del PO»); lo que sigue marcado como **pendiente del PO** son propuestas del equipo.
 
 ## Trazabilidad
 
