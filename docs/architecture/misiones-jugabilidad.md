@@ -75,7 +75,7 @@ La prueba de punta a punta sobre `develop` (2026-09-24) mostró un módulo que f
   - El Coloso pasó del Templo a la Cámara para que el Templo quede como en el curso.
   - `GET /missions/{id}` publica en `masterEncounter.probability` la probabilidad de que aparezca algún Máster en la misión, calculada por Missions: `1 − ((1 − p₁)(1 − p₂)…)^puntos`, la mayor según el tipo de héroe. Antes era la mayor probabilidad configurada de un candidato. Web la muestra en el detalle.
 - El resumen del historial añade `epicAlbum`: cada épica entregable, con su Máster, su misión y si el jugador ya la tiene. Una entrega en camino cuenta como obtenida; una fallida no.
-- Logros (HU-76): Missions lista todo su catálogo, conseguido o no. Con el catálogo vacío, Web muestra «Aún no disponible» y no «Aún no tienes logros».
+- Logros (HU-76): el catálogo aprobado trae los 7 logros del contrato (decisión del PO). Missions lista todo su catálogo, conseguido o no. Si el catálogo estuviera vacío, Web mostraría «Aún no disponible» y no «Aún no tienes logros».
 
 ### P-J4 — Habilidades con semántica de misión
 
@@ -107,7 +107,7 @@ La prueba de punta a punta sobre `develop` (2026-09-24) mostró un módulo que f
 - Missions: `GET /api/v1/missions/{missionId}/estimate?heroId=&difficulty=`.
   - Arma la solicitud real con el perfil actual del héroe, la estrategia guardada y la composición del nivel.
   - La operación es determinista por jugador, misión, héroe, nivel y versión de estrategia: la misma pregunta da la misma respuesta, y nunca coincide con la operación aleatoria de una matrícula, así que no adelanta el resultado real.
-- Riesgo (pendiente del PO): Favorable desde 80 %, Pareja desde 50 %, Arriesgada desde 20 % y Muy arriesgada por debajo.
+- Riesgo (propuesta del equipo, aceptada por el PO): Favorable desde 80 %, Pareja desde 50 %, Arriesgada desde 20 % y Muy arriesgada por debajo.
 - Sin respuesta de Combat es `503 ESTIMATE_UNAVAILABLE` y la matrícula no se bloquea.
 
 ### P-J8 — Dificultad que cambia la misión
@@ -175,7 +175,7 @@ Todos son compatibles: añaden campos o rutas y no quitan ni renombran nada. La 
 | HU-73 | Una épica oficial por Máster, varios candidatos por misión y un 15 % por misión (P-J3). |
 | HU-74 | Reporte: `strategy`, `healingDone`, `abilityDamage` y líneas `PRODUCT` de origen `HU-72`. Resumen: nombres y `epicAlbum`. Rutas nuevas `GET /missions/me/active` y `GET /missions/me/progress/{id}`. |
 | HU-75 | `GET /missions/{id}/difficulties`: `extraEnemiesPerEncounter`, `bossEnrageBonus` y `lootBonusPercent`. |
-| HU-76 | Sin cambios. Un catálogo vacío se lee como «sin logros definidos». |
+| HU-76 | Sin cambios de forma. El catálogo aprobado trae los 7 logros del contrato; un catálogo vacío se lee como «sin logros definidos». |
 
 Base de datos de Missions:
 - **011:** tabla `mission_loot_grants` y el origen `HU-72` en las líneas del reporte.
@@ -193,14 +193,15 @@ El PO respondió las preguntas abiertas de los diseños de HU-70 a HU-76. Estas 
 | Créditos, cofres y títulos | HU-10 (#19) la hace Beta. | Siguen ocultos hasta que HU-10 los entregue (P-J2). Los créditos necesitan una ruta nueva en Wallet (Gama). |
 | Nombres de la dificultad | Normal, Heroico, Legendario y Mítico, también en el filtro del tablón. Mítico se queda en ×2,5. | Los niveles ya usan esos nombres y el ×2,5. El tablón aún no tiene filtro por dificultad (pregunta 10 del diseño de HU-70): está fuera de este alcance. |
 | Tiempo agotado sin el objetivo principal | Misión fallida. | Ya es así: `FAILED` con `TIME_LIMIT`. |
-| Botín | Pasa al inventario al terminar y también se vende en la tienda. Solo las épicas son exclusivas de las misiones y no se venden. | El botín ya se entrega (P-J1) y sus productos quedan a la venta. Falta confirmar que las épicas de producción no se puedan comprar (ver el runbook). |
-| Logros | Los 5 del curso (7.8.11). | Falta cargarlos en el catálogo de HU-76. Mientras esté vacío, Web muestra «Aún no disponible» (P-J3). |
+| Botín | Pasa al inventario al terminar y también se vende en la tienda. Solo las épicas son exclusivas de las misiones y no se venden. | El botín ya se entrega (P-J1) y sus productos quedan a la venta. Por indicación del PO, no se revisa ni se cambia la venta de las épicas en producción. |
+| Logros | Los 5 del curso (7.8.11), con los 7 logros del contrato de HU-76. | Cargados en `APPROVED_ACHIEVEMENTS` de Missions. «Paso veloz» no se evalúa hasta fijar su umbral de tiempo, y la entrega del «Estandarte del Coleccionista» espera a que su cosmético exista en Catalog. |
 | Cancelar una misión | El héroe queda cansado un tercio de la duración y no recibe recompensas. | Fuera de este diseño. |
+| Valores de la dificultad (P-J8) y escala de riesgo (P-J7) | Se quedan como los propuso el equipo. | Aplicados. |
 
 **Sigue pendiente del PO:**
 
-1. Los valores de P-J8 (enemigos de más, ataque de más del jefe y mejora del botín) y la escala de riesgo de la estimación (P-J7). Son propuestas del equipo.
-2. La confirmación del profesor sobre el 15 %.
+1. La confirmación del profesor sobre el 15 %.
+2. El umbral de tiempo de «Paso veloz» (decisión 3 del diseño de HU-76).
 
 ## Verificación
 

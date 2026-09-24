@@ -122,4 +122,5 @@ El mismo jugador y logro producen siempre el mismo `operationId`: nunca dos entr
 Diseño: [misiones-jugabilidad.md](../architecture/misiones-jugabilidad.md). Solo añade campos y rutas; nada se quita ni se renombra.
 
 - Sin cambios de forma.
+- El PO aprobó el 2026-09-24 los siete logros de este contrato como catálogo de producción (`APPROVED_ACHIEVEMENTS` de Missions). «Paso veloz» no se evalúa hasta fijar su umbral.
 - Un catálogo vacío (`items: []`) significa que no hay logros definidos: Web lo muestra como «Aún no disponible» y no promete ninguno (P-J3).

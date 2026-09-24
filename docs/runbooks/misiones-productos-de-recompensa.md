@@ -39,7 +39,7 @@ La dificultad sube estas probabilidades (+25 %, +50 % y +100 % en Heroico, Legen
 **Decisión del PO (2026-09-24): el botín también se vende en la tienda; solo las épicas son exclusivas de las misiones y no se venden.**
 
 - Los productos de botín quedan activos, a la venta por su precio en créditos.
-- Falta comprobar en el Catalog de producción que las 8 épicas no se puedan comprar. Si se pueden, un administrador las retira de la venta desde Catalog, después de confirmar que Player/Inventory sigue aceptando la entrega de un producto retirado y que el inventario sigue mostrando las ya entregadas.
+- Por indicación del PO, no se revisa ni se cambia la venta de las épicas en producción.
 
 ## Orden en producción
 
