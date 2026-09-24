@@ -197,3 +197,11 @@ El primero demuestra CA-02 (se saltó la rotación alta y se usó la media); el 
 - Cómo calcula Combat el Poder, la recarga, la salud y el daño: HU-11, HU-18, HU-19 y HU-20.
 - El editor en Web: HU-71.3.
 - Borrar una estrategia: no lo pide la HU.
+
+## Extensión «misiones jugables» (compatible)
+
+Diseño: [misiones-jugabilidad.md](../architecture/misiones-jugabilidad.md). Solo añade campos y rutas; nada se quita ni se renombra.
+
+- Sin cambios de forma.
+- La estimación de HU-70 (P-J7) dice qué habilidades del héroe sirven en misiones y por qué no: `abilities[].usable` y `reason`. Web las marca en el editor.
+- Una habilidad que no sirve se salta con `UNSUPPORTED_EFFECT` y la rotación sigue (P-J4).

@@ -155,3 +155,16 @@ GET /api/v1/missions/me/history/summary
 - Calcular y entregar créditos, productos y experiencia: HU-10.
 - Acreditar las épicas: HU-32 y Player/Inventory.
 - Exponer la bitácora completa: no se incluye en el reporte (decisión 7 del diseño).
+
+## Extensión «misiones jugables» (compatible)
+
+Diseño: [misiones-jugabilidad.md](../architecture/misiones-jugabilidad.md). Solo añade campos y rutas; nada se quita ni se renombra.
+
+- El reporte añade:
+  - `strategy` (P-J5);
+  - `combatStats.healingDone` y `combatStats.abilityDamage` (P-J4);
+  - líneas `PRODUCT` de origen `HU-72`, el botín del jefe (P-J1).
+- El resumen del historial añade `bestTimes[].missionName`, `epicCollection[].masterName` y `narrativeProgress[].missionNames` (P-J10), además de `epicAlbum` (P-J3).
+- Rutas nuevas (P-J6):
+  - `GET /api/v1/missions/me/active`;
+  - `GET /api/v1/missions/me/progress/{enrollmentId}?after=`, que responde `404 ENROLLMENT_NOT_FOUND` para una matrícula ajena o inexistente.

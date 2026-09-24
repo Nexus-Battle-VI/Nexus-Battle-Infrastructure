@@ -321,3 +321,18 @@ Es un hecho **interno** de Missions: no sale a otra cola ni a otro servicio. Con
 - Reporte e historial: HU-74.
 - Montos de recompensas: HU-10.
 - Cancelar una misión con penalización y el panel de misiones activas: sin HU en Sprint 2.
+
+## Extensión «misiones jugables» (compatible)
+
+Diseño: [misiones-jugabilidad.md](../architecture/misiones-jugabilidad.md). Solo añade campos y rutas; nada se quita ni se renombra.
+
+- `GET /api/v1/missions/{missionId}` añade:
+  - `imageRef` (P-J11);
+  - `prerequisiteMissions: [{ missionId, name }]` (P-J10);
+  - `rewards` con la forma de P-J2: `experience`, y `potential` solo con botín enlazado a un producto;
+  - `masterEncounter.candidates[].epic` en `null` si la épica aún no es un producto.
+- `masterEncounter.probability` pasa a ser la probabilidad de que aparezca algún Máster en la misión, calculada por Missions: el 15 % que fijó el PO, la mayor según el tipo de héroe. Antes era la mayor probabilidad configurada de un candidato; con un solo candidato vale lo mismo.
+- `GET /api/v1/missions`: `highlightedRewards` son la experiencia, las épicas posibles y los dos botines más probables (P-J2).
+- Nueva `GET /api/v1/missions/{missionId}/estimate?heroId=&difficulty=` (P-J7).
+  - Respuesta: `{ missionId, heroId, difficulty, strategyVersion, runs, successPercent, defeatPercent, timeoutPercent, risk, riskLabel, averageTurns, averageMinHealthPercent, masterAppearancePercent, abilities: [{ abilityId, name, usable, reason }] }`.
+  - Errores: `400 UNKNOWN_DIFFICULTY`, `400 VALIDATION_ERROR` (`heroId` no es un UUID), `404 MISSION_NOT_FOUND`, `422 HERO_NOT_OWNED` y `503 ESTIMATE_UNAVAILABLE`, que no bloquea la matrícula.
