@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "kind": "hu-09-chain-e2e",
+  "startedAt": "2026-09-24T05:14:53.289Z",
+  "finishedAt": "2026-09-24T05:15:44.479Z",
+  "repositories": [
+    {
+      "repository": "Nexus-Battle-Missions",
+      "commit": "f7c1e154b2673d7cbbade3f1bf8366ffc92d5dc9",
+      "dirty": false
+    },
+    {
+      "repository": "Nexus-Battle-Combat",
+      "commit": "c77aae943c5d267d7004a6538d002cb648cc0dc4",
+      "dirty": false
+    },
+    {
+      "repository": "Nexus-Battle-Player-Inventory",
+      "commit": "614acb91a9b0d855068667844b22393730494573",
+      "dirty": false
+    }
+  ],
+  "environment": {
+    "node": "v24.19.0",
+    "platform": "win32",
+    "postgres": "postgres:17-alpine (Testcontainers)",
+    "mongo": "mongo:8.0 (Testcontainers, replica)",
+    "combatSeed": "3000000",
+    "internalSecret": "secreto del escenario, no un secreto real"
+  },
+  "cases": [
+    {
+      "id": "S-00",
+      "name": "Las tres piezas reales y arriba",
+      "result": "PASS",
+      "observed": {
+        "combat": {
+          "commit": "c77aae943c5d267d7004a6538d002cb648cc0dc4",
+          "dirty": false
+        },
+        "playerInventory": {
+          "commit": "614acb91a9b0d855068667844b22393730494573",
+          "dirty": false
+        },
+        "missionsDrivers": "postgres + http + http"
+      }
+    },
+    {
+      "id": "S-01",
+      "name": "Cadena completa con Combat real",
+      "result": "PASS",
+      "observed": {
+        "defeats": 19,
+        "faces": [
+          8,
+          1,
+          6,
+          6,
+          3,
+          4,
+          1,
+          6,
+          4,
+          3,
+          5,
+          7,
+          3,
+          4,
+          7,
+          5,
+          1,
+          4,
+          4
+        ],
+        "amounts": [
+          43,
+          12,
+          30,
+          30,
+          17,
+          21,
+          12,
+          30,
+          21,
+          17,
+          25,
+          36,
+          17,
+          21,
+          36,
+          25,
+          12,
+          21,
+          21
+        ],
+        "totalXp": 447,
+        "level": 3,
+        "grants": 19
+      }
+    },
+    {
+      "id": "S-02",
+      "name": "Los ocho valores de 1d8 con acreditacion real",
+      "result": "PASS",
+      "observed": {
+        "defeats": 19,
+        "amountsByFace": {
+          "1": 12,
+          "2": 14,
+          "3": 17,
+          "4": 21,
+          "5": 25,
+          "6": 30,
+          "7": 36,
+          "8": 43
+        },
+        "totalXp": 439
+      }
+    },
+    {
+      "id": "S-03",
+      "name": "Subida de uno, de varios y nivel maximo",
+      "result": "PASS",
+      "observed": {
+        "single": {
+          "before": 195,
+          "after": 207,
+          "level": 2
+        },
+        "multiple": {
+          "before": 190,
+          "after": 629,
+          "level": 3,
+          "levelsGained": 2
+        },
+        "maxLevel": {
+          "after": 13239,
+          "level": 8
+        }
+      }
+    },
+    {
+      "id": "S-04",
+      "name": "Idempotencia del cierre",
+      "result": "PASS",
+      "observed": {
+        "defeats": 19,
+        "rewards": 19,
+        "grants": 19
+      }
+    },
+    {
+      "id": "S-05",
+      "name": "Replay de la acreditacion",
+      "result": "PASS",
+      "observed": {
+        "replay": "applied:false",
+        "grants": 19
+      }
+    },
+    {
+      "id": "S-06",
+      "name": "409 con la misma clave y otro contenido",
+      "result": "PASS",
+      "observed": {
+        "combat": "409 OPERATION_ID_REUSED",
+        "playerInventory": "409 EXPERIENCE_GRANT_CONFLICT",
+        "overwritten": false
+      }
+    },
+    {
+      "id": "S-07",
+      "name": "CA-08: sin victoria valida no se devenga nada",
+      "result": "PASS",
+      "observed": {
+        "defeat": {
+          "rewards": 0,
+          "rolls": 0,
+          "grants": 0
+        },
+        "voided": {
+          "report": 404,
+          "rewards": 0,
+          "grants": 0
+        }
+      }
+    },
+    {
+      "id": "S-08",
+      "name": "Dos derrotas del mismo arquetipo",
+      "result": "PASS",
+      "observed": {
+        "sameArchetype": 10,
+        "encounters": 2,
+        "distinctKeys": 10
+      }
+    },
+    {
+      "id": "S-09",
+      "name": "Recuperacion de una tirada sin acreditar",
+      "result": "PASS",
+      "observed": {
+        "afterFailure": "ROLLED sin acreditar",
+        "afterRecovery": "CREDITED",
+        "rerolled": false,
+        "grants": 19
+      }
+    },
+    {
+      "id": "S-10",
+      "name": "Auditoria cruzada y controles del informe",
+      "result": "PASS",
+      "observed": {
+        "rolls": 19,
+        "rewards": 19,
+        "lines": 19,
+        "grants": 19,
+        "orphanRolls": 0,
+        "reportsWithoutExperience": 1
+      }
+    },
+    {
+      "id": "S-11",
+      "name": "Guardas de no-duplicacion (formula y azar)",
+      "result": "PASS",
+      "observed": {
+        "missions": "npm run test:unit -- --testPathPatterns hu-09-reward-policy",
+        "combat": "npm run test:unit -- --testPathPatterns hu-09-no-alternative-randomness",
+        "controlNegativo": "ejecutado en las dos guardas"
+      }
+    }
+  ],
+  "failed": 0,
+  "passed": 12,
+  "limitations": [
+    "El resultado de la simulacion de Combat se sustituye por el doble de desarrollo: Combat todavia no produce bitacoras de simulacion (su ingreso responde 503).",
+    "El perfil y el compromiso del heroe se sustituyen por los dobles de desarrollo: la ruta interna de perfil (HU-71.2) todavia no esta en develop.",
+    "El testimonio del jugador se sustituye: no hay Cognito en la cadena.",
+    "En el escenario de los ocho valores de 1d8 se sustituye el puerto de tirada por caras 1..8; la acreditacion sigue siendo la real de Player/Inventory.",
+    "Combat corre con sus planificadores reales encendidos: no hacen nada porque su base de batallas esta vacia.",
+    "La ventana de la matricula se desplaza al pasado para cerrar la mision sin esperar su duracion real: mide UNA HORA EXACTA y termina un segundo antes del cierre, porque la duracion viaja a Combat en minutos enteros y el reloj no se puede mover (los sellos internos caducan a los 30 s).",
+    "Las guardas de no-duplicacion se ejecutan en un proceso hijo por repositorio, con `--testPathPatterns`: aqui se comprueba que estan en verde y que su control negativo corre, no se repite su matriz."
+  ]
+}
