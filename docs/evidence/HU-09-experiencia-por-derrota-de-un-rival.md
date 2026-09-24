@@ -116,23 +116,37 @@ Que estén en verde no basta: una guarda que solo afirma «ninguno coincide» pa
 
 ### Defectos del andamiaje, encontrados y corregidos en esta Task
 
-Ninguno es un defecto de producción: los cuatro estaban **en el andamiaje de la prueba o del reporte**, y los dos primeros hacían que la cadena no llegara a probarse.
+Ninguno es un defecto de producción: los seis primeros estaban **en el andamiaje de la prueba o del reporte**, y los dos primeros hacían que la cadena no llegara a probarse.
 
 | # | Defecto | Efecto real | Corrección |
 | --- | --- | --- | --- |
-| 1 | La ventana de la matrícula se desplazaba al pasado con **dos llamadas separadas a `now()`**, así que medía `59,9` minutos | El presupuesto de tiempo que viaja a Combat es esa resta en minutos y `toIsoDuration` solo admite enteros: el cierre moría con `mission_execution_error`, la misión **no se cerraba**, el informe daba `404` y **no se devengaba ninguna recompensa**. Los doce casos en rojo | Las dos fechas salen de **una sola lectura del reloj**, separadas por una hora exacta y con el fin un segundo en el pasado (`b2d6e4f`) |
-| 2 | `S-11` ejecutaba las guardas con un **patrón posicional** (`npm run test:unit -- hu-09-reward-policy`) | **Jest 30 retiró el patrón posicional**: esa orden corre el proyecto unitario **entero**. El caso afirmaba «la guarda está en verde» sin haber ejecutado la guarda | Se pasa a `--testPathPatterns`, se afirma que corre **una sola suite** y que su **control negativo** se ejecuta; `runNpmScript` lee también `stderr`, que es donde Jest escribe el resumen (`b3c39a8`) |
-| 3 | `S-09` contaba solo los asientos de *esa* matrícula | Con la base sucia, «no se acreditó» y «se acreditó a otra matrícula» se ven igual: el fallo diría lo primero cuando pasó lo segundo | Se añade `countGrants` y el caso compara las dos cifras (`b3c39a8`) |
-| 4 | `dirty` se encendía en CI sobre un árbol recién clonado | El workflow clona los dos hermanos **dentro** del espacio de trabajo de Missions, y esos dos directorios sin seguir bastaban. El campo dejaba de significar «el código que se probó tiene cambios» para significar «aquí se clonó algo» | `isDirty` acepta rutas que ignorar y el escenario le pasa los dos directorios hermanos cuando caen dentro (`04a868e`) |
+| 1 | La ventana de la matrícula se desplazaba al pasado con **dos llamadas separadas a `now()`**, así que medía `59,9` minutos | El presupuesto de tiempo que viaja a Combat es esa resta en minutos y `toIsoDuration` solo admite enteros: el cierre moría con `mission_execution_error`, la misión **no se cerraba**, el informe daba `404` y **no se devengaba ninguna recompensa**. Los doce casos en rojo | Las dos fechas salen de **una sola lectura del reloj**, separadas por una hora exacta y con el fin un segundo en el pasado |
+| 2 | `S-11` ejecutaba las guardas con un **patrón posicional** (`npm run test:unit -- hu-09-reward-policy`) | **Jest 30 retiró el patrón posicional**: esa orden corre el proyecto unitario **entero**. El caso afirmaba «la guarda está en verde» sin haber ejecutado la guarda | Se pasa a `--testPathPatterns`, se afirma que corre **una sola suite** y que su **control negativo** se ejecuta; `runNpmScript` lee también `stderr`, que es donde Jest escribe el resumen |
+| 3 | `S-09` contaba solo los asientos de *esa* matrícula | Con la base sucia, «no se acreditó» y «se acreditó a otra matrícula» se ven igual: el fallo diría lo primero cuando pasó lo segundo | Se añade `countGrants` y el caso compara las dos cifras |
+| 4 | `dirty` se encendía en CI sobre un árbol recién clonado | El workflow clona los dos hermanos **dentro** del espacio de trabajo de Missions, y esos dos directorios sin seguir bastaban. El campo dejaba de significar «el código que se probó tiene cambios» para significar «aquí se clonó algo» | `isDirty` acepta rutas que ignorar y el escenario le pasa los dos directorios hermanos cuando caen dentro |
+| 5 | La lista de tablas a **truncar** entre escenarios estaba escrita a mano | La migración `009-mission-achievements` añadió tablas que referencian a las de la lista, y el síntoma **no fue «faltan filas»**: fue un `truncate` que revienta con «cannot truncate a table referenced in a foreign key constraint», con **11 de 12 casos en rojo** | Las tablas se descubren de `information_schema` y se conserva solo `mission_definitions`, que es el catálogo que siembran las migraciones `010-playable-missions` y `012-content-v2` |
+| 6 | `S-03(a)` daba por hecho que la Cámara Sellada tenía **un** enemigo | El contenido v2 la dejó en siete: el caso fallaba **por el contenido, no por la cadena** | Comprueba la aritmética —que la **primera** acreditación es la que cruza el umbral y que el nivel final es el que asigna la tabla de HU-08— y vale con cualquier contenido |
 
 Y **dos afirmaciones falsas en la documentación de Missions**, del mismo tipo que el hallazgo de abajo y corregidas en el mismo PR:
 
 | # | Decía | Es |
 | --- | --- | --- |
-| 5 | `README.md`: «La bitácora de la simulación todavía no registra las bajas: hasta que la ruta de simulación de Combat exista, el camino se recorre con el doble de desarrollo» | La ruta **existe**; el motivo es el perfil del héroe |
-| 6 | `docs/hu-09-experiencia.md`: «su ingreso responde `503`» y «hoy solo existe el **ingreso** de solicitudes, que responde `503 SIMULATION_UNAVAILABLE`» | Ídem. Además, ese documento apuntaba a `HU-09-verificacion-extremo-a-extremo.md`, **un fichero que no existe**: el real es este |
+| 7 | `README.md`: «La bitácora de la simulación todavía no registra las bajas: hasta que la ruta de simulación de Combat exista, el camino se recorre con el doble de desarrollo» | La ruta **existe**; el motivo es el perfil del héroe |
+| 8 | `docs/hu-09-experiencia.md`: «su ingreso responde `503`» y «hoy solo existe el **ingreso** de solicitudes, que responde `503 SIMULATION_UNAVAILABLE`» | Ídem. Además, ese documento apuntaba a `HU-09-verificacion-extremo-a-extremo.md`, **un fichero que no existe**: el real es este |
 
-Las dos importan por lo mismo: hacían creer que el pendiente era «que Combat exista», cuando el pendiente es «que el perfil del héroe sea real», que es otra Task y otro repositorio.
+Las dos últimas importan por lo mismo: hacían creer que el pendiente era «que Combat exista», cuando el pendiente es «que el perfil del héroe sea real», que es otra Task y otro repositorio.
+
+### La cadena se re-verificó tras el contenido v2
+
+Mientras esta Task estaba abierta, `develop` de Missions recibió dos PRs grandes (misiones jugables, contenido editable y logros: [#15](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/15) y [#20](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/20)) y los dos hermanos avanzaron. La rama se rebasó y **se volvió a medir todo**:
+
+| Qué cambió | Efecto en la cadena |
+| --- | --- |
+| Migración `009-mission-achievements` | Rompió el truncado entre escenarios: los defectos 5 y 6 de la tabla de arriba |
+| Migración `012-content-v2`: la Cámara Sellada pasa de 1 a 7 enemigos | Rompió `S-03(a)`, que ya no depende del contenido |
+| El Templo Olvidado **no cambió**: 10 + 5 + 3 + 1 = **19 derrotas**, con `sombra-corrompida` repartida en dos encuentros | `S-01`, `S-02` y `S-08` siguen afirmando lo mismo y siguen en verde **sin tocarlos** |
+
+Que el escenario aguantara el contenido v2 sin cambiar sus afirmaciones de fondo —salvo donde daba por hecho un contenido concreto— es parte del resultado.
 
 ### Un hallazgo: por qué se sigue sustituyendo la simulación
 
@@ -158,21 +172,21 @@ El reporte completo, con commits, ambiente, casos, valores observados, cobertura
 | Comando | `npm run test:e2e:chain` (Missions) |
 | Plataforma | Windows 11, Node `v24.19.0` |
 | Bases | `postgres:17-alpine` y `mongo:8.0` (réplica), Testcontainers |
-| Commits | Missions `197218f` · Combat `1374a47` · Player/Inventory `9d6a9f7` — **los tres sin cambios pendientes** |
+| Commits | Missions `7d9462e` · Combat `05b3914` · Player/Inventory `ae680dc` — **los tres sin cambios pendientes** |
 | Casos | **12/12 en verde** |
-| Cobertura de la cadena (informativa) | Sentencias `60,31 %` · Ramas `35,67 %` · Funciones `53,26 %` · Líneas `58,79 %` |
-| Duración | 56 s |
+| Cobertura de la cadena (informativa) | Sentencias `56,79 %` · Ramas `30,81 %` · Funciones `45,93 %` · Líneas `55,66 %` |
+| Duración | 43 s |
 | Límites declarados | 9, en el propio reporte |
 
 Y las otras dos suites de Missions, sobre **el mismo commit**, para que «suites» no sea una promesa:
 
 | Suite | Comando | Resultado |
 | --- | --- | --- |
-| Unitaria | `npm run test:unit` | **30 suites, 712 pruebas** en verde |
-| Contra PostgreSQL real | `npm run test:db` | **10 suites, 160 pruebas** en verde · `97,98 %` sentencias · `90,36 %` ramas · `100 %` funciones |
-| De la cadena | `npm run test:e2e:chain` | **1 suite, 12 casos** en verde · `60,31 %` sentencias |
+| Unitaria | `npm run test:unit` | **41 suites, 952 pruebas** en verde |
+| Contra PostgreSQL real | `npm run test:db` | **13 suites, 217 pruebas** en verde · `96,71 %` sentencias · `89,7 %` ramas · `98,36 %` funciones |
+| De la cadena | `npm run test:e2e:chain` | **1 suite, 12 casos** en verde · `56,79 %` sentencias |
 
-En Combat, sobre su `develop` (`1374a47`): `npm run test:unit` → **113 suites, 2.762 pruebas** en verde.
+Las dos primeras crecieron con el contenido v2 (de 30 suites y 712 pruebas a 41 y 952; de 10 y 160 a 13 y 217), y la cobertura de la cadena bajó porque el servicio tiene más código que la cadena no ejerce: **la suite mide la cadena, no la superficie del servicio**, y sus umbrales viven en las otras dos configuraciones.
 
 La cobertura es **informativa y deliberadamente sin umbral**: los umbrales viven donde se pueden exigir sin contenedores (`jest.config.ts` y `jest.db.config.ts`). Esta suite mide la cadena, no la superficie del servicio.
 
@@ -182,7 +196,7 @@ El workflow [`cadena-hu-09.yml`](https://github.com/Nexus-Battle-VI/Nexus-Battle
 
 | Ejecución | Ref de los hermanos | Resultado |
 | --- | --- | --- |
-| [PR #19, `pull_request`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/35961160277) | `develop` de los dos | **12/12 en verde** en Linux |
+| [PR #19, `pull_request`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/36001296059) | `develop` de los dos | **12/12 en verde** en Linux, sobre el commit rebasado tras el contenido v2 |
 | [Lanzada a mano](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/35959730007) | Combat `test/hu-09-6-control-guarda-azar` | **12/12 en verde**, antes de que ese PR estuviera mergeado |
 
 Tres cosas que conviene saber al leer el artefacto de CI:
@@ -283,11 +297,12 @@ Los que había el 2026-09-23 y lo que ha pasado con cada uno. **Ninguno bloquea 
 ## Qué falta para cerrar HU-09
 
 1. **Confirmación de `P-2`** por el PO (redondeo al más próximo o truncamiento); hasta entonces el contrato mantiene la marca provisional. Es la única decisión funcional abierta.
-2. **Merge de los PRs que siguen abiertos:** Missions [#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/17) (HU-09.4) y [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19) (esta verificación). `#440`, `#441`, `#442` (vía #18) y el PR de la guarda de Combat ya están mergeados.
+2. **Merge de los PRs que siguen abiertos:** Missions [#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/17) (HU-09.4) y [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19) (esta verificación). `#440`, `#441`, `#442` (vía #18), el PR de la guarda de Combat y los tres de esta evidencia ya están mergeados.
 3. **Revisión por pares** de lo entregado, que es lo que la Task `#444` **no** puede darse a sí misma.
 4. **Aceptación del PO** (`CA-09`), que es lo que convierte la verificación en aceptación.
 5. **Opcional, si el PO la pide:** la visualización en Web (`#443`), que no forma parte de esta verificación.
 6. **Cuando `HU-71.2` entre en `develop`:** pasar `COMBAT_SIMULATION_DRIVER` a `http` y quitar del escenario las dos sustituciones que dependen de él —el resultado de la simulación y el perfil del héroe—. Es el primer candidato a caer de la tabla de límites, y el cambio está medido: hoy, con `http`, la misión se anula con `MISSION_CONTENT_INVALID`.
+7. **Mantener la cadena verde cuando `develop` se mueva.** El escenario ya se rompió una vez por el contenido v2 y las dos roturas eran del andamiaje, no de HU-09: conviene que el job `Cadena HU-09` siga siendo obligatorio en los PRs que tocan el contenido de misión o las migraciones.
 
 
 ## Alineación con la progresión de HU-08
@@ -318,7 +333,7 @@ Sin decimales en ningún punto, y con el nivel máximo 8 sin descarte de experie
 | `#443` visualización de la experiencia en Web | Web | — | **sin empezar**; fuera de esta verificación |
 | `#444` control negativo de la guarda del azar | Combat | [#49](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/49) | mergeado |
 | `#444` cadena E2E, guardas y workflow | Missions | [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19) | **abierto** |
-| `#444` esta evidencia y el reporte | Infrastructure | [#157](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/157) y [#158](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/158) (correcciones) | #157 mergeado, #158 **abierto** |
+| `#444` esta evidencia y el reporte | Infrastructure | [#157](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/157), [#158](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/158) | mergeados |
 
 **Ninguno de estos PRs cierra la User Story #18.** Cierran Tasks subordinadas; la aceptación de la HU exige la revisión por pares y la aprobación del PO.
 
