@@ -1,0 +1,151 @@
+{
+  "contract": "hu-71-mission-strategy-v1",
+  "status": "design-draft",
+  "description": "Escenarios de diseño de HU-71 (Task #369). La configuración es la del curso para un Guerrero Armas (§7.8.5). Los costos de Poder y las recargas son ilustrativos para la tabla de decisión: los reales los publica Player/Inventory.",
+  "missionId": "msn_templo_olvidado",
+  "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60",
+  "heroAbilities": [
+    { "abilityId": "golpe-de-tormenta", "powerCost": 3, "chargeTurns": 1 },
+    { "abilityId": "embate-sangriento", "powerCost": 2, "chargeTurns": 1 },
+    { "abilityId": "lanza-de-los-dioses", "powerCost": 4, "chargeTurns": 1 }
+  ],
+  "courseStrategy": [
+    { "priority": "HIGH", "steps": [{ "kind": "ABILITY", "abilityId": "golpe-de-tormenta" }, { "kind": "ABILITY", "abilityId": "embate-sangriento" }, { "kind": "BASIC_ATTACK" }] },
+    { "priority": "MEDIUM", "steps": [{ "kind": "ABILITY", "abilityId": "lanza-de-los-dioses" }, { "kind": "BASIC_ATTACK" }, { "kind": "BASIC_ATTACK" }] },
+    { "priority": "LOW", "steps": [{ "kind": "ABILITY", "abilityId": "embate-sangriento" }, { "kind": "BASIC_ATTACK" }, { "kind": "BASIC_ATTACK" }] }
+  ],
+  "saveScenarios": [
+    {
+      "id": "P-01",
+      "ca": "CA-01",
+      "title": "Guardar las tres rotaciones del curso por primera vez",
+      "given": { "savedVersion": null },
+      "request": { "method": "PUT", "path": "/api/v1/missions/msn_templo_olvidado/strategies/7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "body": { "expectedVersion": null, "rotations": "courseStrategy" } },
+      "expected": { "status": 201, "version": 1 }
+    },
+    {
+      "id": "P-04",
+      "ca": "CA-04",
+      "title": "Intentar guardar una cuarta rotación",
+      "given": { "savedVersion": 1 },
+      "request": {
+        "method": "PUT",
+        "body": {
+          "expectedVersion": 1,
+          "rotations": [
+            { "priority": "HIGH", "steps": [{ "kind": "BASIC_ATTACK" }] },
+            { "priority": "MEDIUM", "steps": [{ "kind": "BASIC_ATTACK" }] },
+            { "priority": "LOW", "steps": [{ "kind": "BASIC_ATTACK" }] },
+            { "priority": "LOW", "steps": [{ "kind": "BASIC_ATTACK" }] }
+          ]
+        }
+      },
+      "expected": { "status": 422, "body": { "code": "TOO_MANY_ROTATIONS", "max": 3, "received": 4 }, "savedVersionAfter": 1 }
+    },
+    {
+      "id": "T-01",
+      "ca": null,
+      "title": "Dos ediciones con la misma versión leída",
+      "given": { "savedVersion": 1 },
+      "concurrentRequests": [
+        { "expectedVersion": 1, "rotations": [{ "priority": "HIGH", "steps": [{ "kind": "BASIC_ATTACK" }] }] },
+        { "expectedVersion": 1, "rotations": [{ "priority": "HIGH", "steps": [{ "kind": "ABILITY", "abilityId": "golpe-de-tormenta" }] }] }
+      ],
+      "expected": { "statuses": [200, 409], "loserBody": { "code": "VERSION_CONFLICT", "expectedVersion": 1, "currentVersion": 2 }, "savedVersionAfter": 2 }
+    },
+    {
+      "id": "T-02",
+      "ca": null,
+      "title": "Una acción con una habilidad que el héroe no tiene",
+      "given": { "savedVersion": null },
+      "request": { "method": "PUT", "body": { "expectedVersion": null, "rotations": [{ "priority": "HIGH", "steps": [{ "kind": "ABILITY", "abilityId": "furia-del-dragon" }] }] } },
+      "expected": { "status": 422, "body": { "code": "UNKNOWN_ABILITY", "abilityIds": ["furia-del-dragon"] } }
+    },
+    {
+      "id": "T-03",
+      "ca": null,
+      "title": "Prioridades con hueco",
+      "given": { "savedVersion": null },
+      "request": {
+        "method": "PUT",
+        "body": {
+          "expectedVersion": null,
+          "rotations": [
+            { "priority": "HIGH", "steps": [{ "kind": "BASIC_ATTACK" }] },
+            { "priority": "LOW", "steps": [{ "kind": "BASIC_ATTACK" }] }
+          ]
+        }
+      },
+      "expected": { "status": 422, "body": { "code": "INVALID_ROTATION", "violations": [{ "field": "rotations[1].priority", "reason": "PRIORITY_GAP" }] } }
+    },
+    {
+      "id": "T-04",
+      "ca": null,
+      "title": "Matricular con una versión de estrategia vieja",
+      "given": { "savedVersion": 2 },
+      "request": { "method": "POST", "path": "/api/v1/missions/msn_templo_olvidado/enrollments", "body": { "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60", "difficulty": "NORMAL", "strategyVersion": 1 } },
+      "expected": { "status": 409, "body": { "code": "STRATEGY_VERSION_MISMATCH", "expectedVersion": 1, "currentVersion": 2 }, "newEnrollments": 0 }
+    }
+  ],
+  "turnDecisions": [
+    {
+      "id": "D-1",
+      "ca": "CA-01",
+      "title": "La rotación alta es viable",
+      "hero": { "power": 5, "cooldowns": {}, "cursors": { "HIGH": 0, "MEDIUM": 0, "LOW": 0 } },
+      "expected": { "action": { "kind": "ABILITY", "abilityId": "golpe-de-tormenta" }, "rotation": "HIGH", "powerSpent": 3, "cursorsAfter": { "HIGH": 1, "MEDIUM": 0, "LOW": 0 } }
+    },
+    {
+      "id": "D-2",
+      "ca": "CA-02",
+      "title": "La alta está en recarga y la media es viable",
+      "hero": { "power": 4, "cooldowns": { "golpe-de-tormenta": 1 }, "cursors": { "HIGH": 0, "MEDIUM": 0, "LOW": 0 } },
+      "expected": { "action": { "kind": "ABILITY", "abilityId": "lanza-de-los-dioses" }, "rotation": "MEDIUM", "skipped": [{ "rotation": "HIGH", "reason": "ON_COOLDOWN" }], "powerSpent": 4 }
+    },
+    {
+      "id": "D-3",
+      "ca": "CA-02",
+      "title": "Solo la baja es viable",
+      "hero": { "power": 2, "cooldowns": { "golpe-de-tormenta": 1 }, "cursors": { "HIGH": 0, "MEDIUM": 0, "LOW": 0 } },
+      "expected": {
+        "action": { "kind": "ABILITY", "abilityId": "embate-sangriento" },
+        "rotation": "LOW",
+        "skipped": [{ "rotation": "HIGH", "reason": "ON_COOLDOWN" }, { "rotation": "MEDIUM", "reason": "NOT_ENOUGH_POWER" }],
+        "powerSpent": 2
+      }
+    },
+    {
+      "id": "D-4",
+      "ca": "CA-03",
+      "title": "Ninguna rotación es viable",
+      "hero": { "power": 1, "cooldowns": { "embate-sangriento": 1 }, "cursors": { "HIGH": 0, "MEDIUM": 0, "LOW": 0 } },
+      "expected": {
+        "action": { "kind": "BASIC_ATTACK" },
+        "rotation": null,
+        "fallback": true,
+        "skipped": [
+          { "rotation": "HIGH", "reason": "NOT_ENOUGH_POWER" },
+          { "rotation": "MEDIUM", "reason": "NOT_ENOUGH_POWER" },
+          { "rotation": "LOW", "reason": "ON_COOLDOWN" }
+        ],
+        "powerSpent": 0,
+        "cursorsAfter": { "HIGH": 0, "MEDIUM": 0, "LOW": 0 }
+      }
+    },
+    {
+      "id": "D-5",
+      "ca": "CA-01",
+      "title": "La acción actual de la rotación alta es el ataque básico",
+      "hero": { "power": 0, "cooldowns": {}, "cursors": { "HIGH": 2, "MEDIUM": 0, "LOW": 0 } },
+      "expected": { "action": { "kind": "BASIC_ATTACK" }, "rotation": "HIGH", "fallback": false, "powerSpent": 0, "cursorsAfter": { "HIGH": 0, "MEDIUM": 0, "LOW": 0 } }
+    },
+    {
+      "id": "D-6",
+      "ca": "CA-03",
+      "title": "Solo hay una rotación y no es viable",
+      "strategy": [{ "priority": "HIGH", "steps": [{ "kind": "ABILITY", "abilityId": "lanza-de-los-dioses" }] }],
+      "hero": { "power": 2, "cooldowns": {}, "cursors": { "HIGH": 0 } },
+      "expected": { "action": { "kind": "BASIC_ATTACK" }, "rotation": null, "fallback": true, "skipped": [{ "rotation": "HIGH", "reason": "NOT_ENOUGH_POWER" }], "powerSpent": 0 }
+    }
+  ]
+}

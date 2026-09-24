@@ -1,0 +1,37 @@
+@startuml hu-70-use-case
+title HU-70 — Matriculación en una misión (casos de uso)
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Jugador" as Player
+actor "Player/Inventory\n(Team Alfa)" as Inventory
+
+rectangle "Missions (Team Beta)" {
+  usecase "Consultar el tablón" as UC1
+  usecase "Ver el detalle de la misión\n(CA-06)" as UC2
+  usecase "Matricular un héroe\n(CA-01)" as UC3
+  usecase "Validar requisitos previos\n(CA-07)" as UC4
+  usecase "Validar que el héroe\nno está en otra misión (CA-02)" as UC5
+  usecase "Reservar al héroe:\ncompromiso MISSION\n(CA-03, CA-04)" as UC6
+  usecase "Iniciar el temporizador" as UC7
+  usecase "Elegir dificultad\n(HU-75)" as UC8
+  usecase "Configurar rotaciones\n(HU-71)" as UC9
+}
+
+Player --> UC1
+Player --> UC2
+Player --> UC3
+UC3 ..> UC4 : <<include>>
+UC3 ..> UC5 : <<include>>
+UC3 ..> UC6 : <<include>>
+UC3 ..> UC7 : <<include>>
+UC8 ..> UC3 : <<extend>>
+UC9 ..> UC3 : <<extend>>
+UC6 --> Inventory
+
+note right of Inventory
+  Combat y Torneo deben registrar aquí
+  su propio compromiso (CA-03 y CA-05).
+  Hoy no lo hacen: dependencia externa.
+end note
+@enduml

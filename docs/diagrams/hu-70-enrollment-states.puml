@@ -1,0 +1,23 @@
+@startuml hu-70-enrollment-states
+title HU-70 — Estados de MissionEnrollment
+hide empty description
+
+[*] --> PENDING : confirmar\n(validaciones locales superadas)
+PENDING --> IN_PROGRESS : compromiso MISSION concedido\n/ startedAt y endsAt
+PENDING --> REJECTED : Player/Inventory rechaza (422)
+PENDING --> EXPIRED : 2 minutos sin confirmar\n/ liberar el compromiso
+IN_PROGRESS --> COMPLETED : simulación con éxito (HU-72)
+IN_PROGRESS --> FAILED : héroe derrotado (HU-72)
+IN_PROGRESS --> ABANDONED : cancelación con penalización\n(sin HU en Sprint 2)
+REJECTED --> [*]
+EXPIRED --> [*]
+COMPLETED --> [*]
+FAILED --> [*]
+ABANDONED --> [*]
+
+note right of PENDING
+  Estados activos: PENDING e IN_PROGRESS.
+  Índice único parcial por héroe y,
+  como propuesta, por jugador y misión.
+end note
+@enduml

@@ -1,0 +1,173 @@
+{
+  "contract": "hu-72-mission-simulation-v1",
+  "status": "design-draft",
+  "description": "Escenarios de diseño de HU-72 (Task #373). Datos sintéticos basados en el ejemplo del curso (§7.8.14). Los resúmenes de Combat son ilustrativos; las pruebas ejecutables son de HU-72.3.",
+  "enrollment": {
+    "enrollmentId": "enr_01JB8Y3K7Q",
+    "missionId": "msn_templo_olvidado",
+    "heroId": "7f3c2a9e-2d4b-4c1a-9e7f-1b2c3d4e5f60",
+    "difficulty": "NORMAL",
+    "status": "IN_PROGRESS",
+    "startedAt": "2026-10-01T15:00:00Z",
+    "endsAt": "2026-10-02T03:00:00Z",
+    "commitmentOperationId": "op_01JB8Y3K7R"
+  },
+  "objectives": [
+    { "id": "obj_guardian", "type": "DEFEAT_BOSS", "primary": true },
+    { "id": "obj_camaras", "type": "CLEAR_ENCOUNTERS", "count": 5, "primary": true },
+    { "id": "obj_vida", "type": "MIN_HEALTH_PERCENT", "percent": 50, "primary": false },
+    { "id": "obj_master", "type": "DEFEAT_MASTER", "primary": false }
+  ],
+  "simulationOperationId": "op_sim_01JB8Y4A",
+  "scenarios": [
+    {
+      "id": "P-01",
+      "ca": ["CA-01", "CA-06"],
+      "title": "Objetivos principales cumplidos a tiempo",
+      "combatResponses": [
+        {
+          "status": 200,
+          "body": {
+            "simulationId": "sim_01JB8Y4B",
+            "operationId": "op_sim_01JB8Y4A",
+            "seedRef": "seed_7Q2M",
+            "combatOutcome": "HERO_VICTORIOUS",
+            "summary": {
+              "encountersCompleted": 5,
+              "encountersTotal": 5,
+              "totalTurns": 142,
+              "damageDealt": 1830,
+              "damageTaken": 640,
+              "minHealthPercent": 41.5,
+              "criticalEffects": 9,
+              "bossDefeated": true,
+              "master": { "appeared": false, "masterRef": null, "defeated": false },
+              "simulatedDuration": "PT9H40M"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "executionStatus": "SETTLED",
+        "enrollmentStatus": "COMPLETED",
+        "settledAt": "2026-10-02T03:00:00Z",
+        "objectives": { "obj_guardian": true, "obj_camaras": true, "obj_vida": false, "obj_master": null },
+        "clearInserted": { "missionId": "msn_templo_olvidado", "difficulty": "NORMAL" },
+        "facts": ["MissionSettled"],
+        "heroReleasesConfirmed": 1
+      }
+    },
+    {
+      "id": "P-04",
+      "ca": ["CA-04", "CA-05"],
+      "title": "El héroe cae antes de cumplir los objetivos",
+      "combatResponses": [
+        {
+          "status": 200,
+          "body": {
+            "simulationId": "sim_01JB8Y4C",
+            "operationId": "op_sim_01JB8Y4A",
+            "seedRef": "seed_8R3N",
+            "combatOutcome": "HERO_DEFEATED",
+            "summary": {
+              "encountersCompleted": 3,
+              "encountersTotal": 5,
+              "totalTurns": 88,
+              "damageDealt": 910,
+              "damageTaken": 1200,
+              "minHealthPercent": 0,
+              "criticalEffects": 4,
+              "bossDefeated": false,
+              "master": { "appeared": false, "masterRef": null, "defeated": false },
+              "simulatedDuration": "PT6H10M"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "executionStatus": "SETTLED",
+        "enrollmentStatus": "FAILED",
+        "combatLogEndsWith": "simulationFinished",
+        "clearInserted": null,
+        "facts": ["MissionSettled"],
+        "heroReleasesConfirmed": 1
+      }
+    },
+    {
+      "id": "T-01",
+      "ca": [],
+      "title": "Combat no responde y después sí",
+      "combatResponses": [
+        { "status": 503, "body": { "code": "SIMULATION_UNAVAILABLE" } },
+        { "timeout": true },
+        { "status": 200, "body": { "simulationId": "sim_01JB8Y4B", "operationId": "op_sim_01JB8Y4A", "combatOutcome": "HERO_VICTORIOUS" } }
+      ],
+      "expected": {
+        "attempts": 3,
+        "operationIdsSent": ["op_sim_01JB8Y4A", "op_sim_01JB8Y4A", "op_sim_01JB8Y4A"],
+        "retryDelays": ["PT5S", "PT30S"],
+        "executionStatus": "SIMULATED",
+        "resultsStored": 1
+      }
+    },
+    {
+      "id": "T-02",
+      "ca": [],
+      "title": "Combat responde dos veces al mismo operationId",
+      "combatResponses": [
+        { "status": 200, "body": { "simulationId": "sim_01JB8Y4B", "operationId": "op_sim_01JB8Y4A", "combatOutcome": "HERO_VICTORIOUS" } },
+        { "status": 200, "body": { "simulationId": "sim_01JB8Y4B", "operationId": "op_sim_01JB8Y4A", "combatOutcome": "HERO_VICTORIOUS" } }
+      ],
+      "expected": { "resultsStored": 1, "simulationId": "sim_01JB8Y4B", "secondResponse": "coincide y se descarta" }
+    },
+    {
+      "id": "T-03",
+      "ca": ["CA-05"],
+      "title": "Caída después de guardar el resultado y antes de cerrar",
+      "given": { "executionStatus": "SIMULATED", "crash": "después del COMMIT de SIMULATED" },
+      "settlementRuns": 2,
+      "expected": {
+        "executionStatus": "SETTLED",
+        "enrollmentStatus": "COMPLETED",
+        "facts": ["MissionSettled"],
+        "factsStored": 1,
+        "heroReleasesConfirmed": 1
+      }
+    },
+    {
+      "id": "T-04",
+      "ca": ["CA-05"],
+      "title": "Combat rechaza la configuración",
+      "combatResponses": [
+        { "status": 422, "body": { "code": "INVALID_ENEMY_PROFILE", "message": "El enemigo sombra-corrompida no tiene perfil." } }
+      ],
+      "expected": {
+        "executionStatus": "VOIDED",
+        "enrollmentStatus": "VOIDED",
+        "clearInserted": null,
+        "penalty": false,
+        "facts": ["MissionSettled"],
+        "heroReleasesConfirmed": 1
+      },
+      "pendingDecision": "Anulación técnica VOIDED (decisión 4 del diseño)"
+    },
+    {
+      "id": "T-05",
+      "ca": [],
+      "title": "Se agota el presupuesto de tiempo sin cumplir los objetivos principales",
+      "combatResponses": [
+        {
+          "status": 200,
+          "body": {
+            "simulationId": "sim_01JB8Y4D",
+            "operationId": "op_sim_01JB8Y4A",
+            "combatOutcome": "TIME_BUDGET_EXHAUSTED",
+            "summary": { "encountersCompleted": 4, "encountersTotal": 5, "bossDefeated": false, "minHealthPercent": 22.0 }
+          }
+        }
+      ],
+      "expected": { "enrollmentStatus": "FAILED", "reason": "TIME_LIMIT", "heroReleasesConfirmed": 1 },
+      "pendingDecision": "Resultado cuando se agota el tiempo (decisión 2 del diseño)"
+    }
+  ]
+}

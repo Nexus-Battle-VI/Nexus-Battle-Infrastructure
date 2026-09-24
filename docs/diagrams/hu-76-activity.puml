@@ -1,0 +1,28 @@
+@startuml hu-76-activity
+title HU-76 — Evaluar logros al terminar una misión (actividad)
+
+start
+:Tomar un MissionSettled no procesado\n(FOR UPDATE SKIP LOCKED);
+if (¿El par jugador y matrícula ya se procesó?) then (sí)
+  :No cambiar nada (L-9);
+  stop
+endif
+if (¿La misión es COMPLETED o FAILED?) then (no)
+  :ABANDONED o VOIDED no cuentan;
+else (sí)
+  :Armar el hecho normalizado:\nresultado, categoría, daño recibido,\nduración simulada, Máster y épicas;
+  :Añadir elementos a los conjuntos de progreso\n(añadir uno repetido no cambia nada);
+  :Evaluar cada logro activo del catálogo;
+  if (¿Algún criterio se cumple por primera vez?) then (sí)
+    :Insertar el desbloqueo\n(UNIQUE jugador y logro);
+    :Registrar el reconocimiento;
+    if (¿Es un cosmético que es producto?) then (sí)
+      :Pedir la entrega con operationId\ndeterminista por jugador y logro;
+    endif
+  else (no)
+    :Guardar el progreso parcial (CA-03);
+  endif
+endif
+:Marcar el hecho como procesado\nen la misma transacción;
+stop
+@enduml

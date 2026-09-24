@@ -1,0 +1,53 @@
+@startuml hu-70-activity
+title HU-70 — Confirmar la matrícula (actividad)
+
+start
+:El jugador confirma con heroId y difficulty\ny la cabecera Idempotency-Key;
+if (¿Cuerpo y cabecera válidos?) then (no)
+  :400 VALIDATION_ERROR,\nIDEMPOTENCY_KEY_REQUIRED\no UNKNOWN_DIFFICULTY;
+  stop
+endif
+if (¿La misión existe y está activa?) then (no)
+  :404 MISSION_NOT_FOUND;
+  stop
+endif
+if (¿La Idempotency-Key ya se usó?) then (sí)
+  :Responder el resultado guardado;
+  stop
+endif
+if (¿Requisitos previos completos?) then (no)
+  :422 MISSION_LOCKED (CA-07);
+  stop
+endif
+if (¿Dificultad desbloqueada según HU-75?) then (no)
+  :422 PROGRESSION_LOCKED;
+  stop
+endif
+if (¿El jugador ya tiene esta misión en curso?) then (sí)
+  :409 MISSION_ALREADY_IN_PROGRESS;
+  stop
+endif
+if (¿El héroe tiene otra matrícula activa?) then (sí)
+  :409 HERO_BUSY (CA-02);
+  stop
+endif
+:Guardar la matrícula PENDING con un operationId nuevo\n(los índices únicos parciales resuelven la concurrencia);
+:Pedir el compromiso MISSION a Player/Inventory;
+switch (¿Qué responde Player/Inventory?)
+case (201 concedido)
+  :PENDING a IN_PROGRESS\nstartedAt y endsAt\nhecho MissionEnrollmentStarted;
+  :201 con la matrícula (CA-01);
+case (422 rechazo)
+  :PENDING a REJECTED;
+  :409 HERO_BUSY o 422\n(CA-03, CA-04);
+case (409, 503 o sin respuesta)
+  :La matrícula sigue PENDING;
+  :503 DEPENDENCY_UNAVAILABLE;
+  note right
+    El reconciliador reintenta con el mismo
+    operationId: confirma o, a los 2 minutos,
+    libera el compromiso y marca EXPIRED.
+  end note
+endswitch
+stop
+@enduml

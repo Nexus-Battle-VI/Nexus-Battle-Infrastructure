@@ -1,0 +1,28 @@
+@startuml hu-71-turn-decision
+title HU-71 — Decisión de la IA en cada turno del héroe (la ejecuta Combat)
+
+start
+:Tomar las rotaciones congeladas en orden:\nHIGH, MEDIUM y LOW;
+while (¿Queda una rotación por evaluar?) is (sí)
+  :Leer la acción que marca el cursor de esa rotación;
+  if (¿La acción es BASIC_ATTACK?) then (sí)
+    :Ejecutar el ataque básico de la rotación\n(costo 0 de Poder);
+    :Avanzar el cursor de esa rotación;
+    stop
+  endif
+  if (¿La recarga de la habilidad está en 0?) then (no)
+    :Anotar la omisión ON_COOLDOWN;
+  elseif (¿Hay Poder para su costo?) then (no)
+    :Anotar la omisión NOT_ENOUGH_POWER;
+  elseif (¿Cumple la condición de salud?) then (no)
+    :Anotar la omisión HEALTH_CONDITION;
+  else (sí)
+    :Ejecutar la habilidad y descontar su costo;
+    :Avanzar el cursor de esa rotación (CA-02);
+    stop
+  endif
+endwhile (no)
+:Ejecutar el ataque básico de respaldo\nsin consumir Poder (CA-03);
+:Anotar fallback true y las omisiones;
+stop
+@enduml
