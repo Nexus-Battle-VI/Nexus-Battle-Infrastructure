@@ -36,6 +36,38 @@ fecha, nombre del titular ni token. `GET /api/orders/:id/payment` consulta el
 resultado; no vuelve a ejecutar el pago. La confirmación directa del pedido
 responde 409 para impedir saltarse la entrega.
 
+## Elegibilidad de comercialización premium
+
+Fuente funcional: PDF §7.2.2 (productos premium) y aclaración del PO (2026-09-24): `ITEM` y `EPICA` quedan
+fuera de E-commerce (siguen existiendo en Catalog/Player-Inventory/Missions; la épica se obtiene por
+Misiones/Máster, no por compra). Un producto es elegible para el flujo de compra premium cuando, todo junto:
+
+```text
+premium == true
+type in {HEROE, HABILIDAD, ARMA, ARMADURA}     // nunca ITEM ni EPICA
+lifecycleStatus == ACTIVE
+realMoneyPrice existe y realMoneyPrice.amount > 0
+availableUnits es null (infinito) o > 0
+```
+
+**La autoridad de esta regla vive en Commerce, no en Catalog ni en Web.** Commerce ya recibe `type` en la
+misma respuesta de `productOf()`/`priceOf()` que usa para fijar el precio — no hace falta un campo derivado
+nuevo (`ecommerceEligible` o similar) en Catalog, ni un endpoint adicional: sería una segunda fuente de
+verdad de la misma regla. Commerce aplica esta política al agregar/modificar líneas de carrito, al pagar y
+al restaurar un carrito guardado; rechaza `ITEM`/`EPICA`, no-premium, suspendido y agotado aunque se invoque
+la API directamente, sin depender de que Web los oculte.
+
+Web consume la oferta ya elegible — puede pedir el listado con los filtros que `GET /api/v1/catalog/products`
+ya admite (`type`, `currency`), y si ese endpoint no filtra por `premium`, Web omite del catálogo comercial
+(no solo deshabilita) los productos que el propio listado ya le indica como no premium/no disponibles,
+usando los campos que ya recibe por producto. Esto es presentación sobre datos ya autoritativos, no una
+segunda implementación de la regla de negocio: la autoridad de compra sigue siendo exclusivamente Commerce.
+
+**Moneda:** esta regla no limita el sistema a COP. El PDF contempla COP/USD/EUR según contexto geográfico
+(ver «Monedas y promociones pendientes» más abajo) y Commerce ya acepta las tres para el carrito. Este
+trabajo garantiza que el flujo premium en COP funcione de extremo a extremo (añadir, pagar, total en COP,
+precio siempre server-side); no restringe ni rompe USD/EUR donde ya funcionaban.
+
 ## Comandos internos
 
 Todas estas rutas quedan fuera del proxy público y exigen HMAC del servicio
