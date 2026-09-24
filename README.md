@@ -94,6 +94,7 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | [auction-settlement-events-v1.asyncapi.yaml](docs/contracts/auction-settlement-events-v1.asyncapi.yaml) | Contrato AsyncAPI de `auction.settled.v1` para HU-65.6 (Management #328) |
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
 | [hu-09-experience-reward-v1.md](docs/contracts/hu-09-experience-reward-v1.md) | Contrato de la recompensa de experiencia por derrota de un rival (HU-09). **Diseño — sin implementación** |
+| [hu-29-battle-commitment-v1.md](docs/contracts/hu-29-battle-commitment-v1.md) | Compromiso de batalla del héroe (HU-29): las dos rutas internas de Combat → Player/Inventory y el bloqueo del loadout. **Diseño — sin implementación** |
 
 ### Gobierno
 
