@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
   "kind": "hu-09-chain-e2e",
-  "startedAt": "2026-09-24T05:42:05.022Z",
-  "finishedAt": "2026-09-24T05:42:45.338Z",
+  "startedAt": "2026-09-24T12:46:33.959Z",
+  "finishedAt": "2026-09-24T12:47:14.805Z",
   "repositories": [
     {
       "repository": "Nexus-Battle-Missions",
-      "commit": "04a868e1747d250d1d4a565b7b44c419b2d57e7d",
+      "commit": "7d9462e7b304447df7515fb25370cbb10d9bca79",
       "dirty": false
     },
     {
       "repository": "Nexus-Battle-Combat",
-      "commit": "1374a474b6a5f5e666b9e3793b454f8def18e809",
+      "commit": "05b39142786f02cde8de96878abecd8602ff46df",
       "dirty": false
     },
     {
       "repository": "Nexus-Battle-Player-Inventory",
-      "commit": "9d6a9f794f29dcc8b46dc432588837ed843447d9",
+      "commit": "ae680dc68355c11968fc534a3c80d8b8fc58053b",
       "dirty": false
     }
   ],
@@ -39,11 +39,11 @@
       "result": "PASS",
       "observed": {
         "combat": {
-          "commit": "1374a474b6a5f5e666b9e3793b454f8def18e809",
+          "commit": "05b39142786f02cde8de96878abecd8602ff46df",
           "dirty": false
         },
         "playerInventory": {
-          "commit": "9d6a9f794f29dcc8b46dc432588837ed843447d9",
+          "commit": "ae680dc68355c11968fc534a3c80d8b8fc58053b",
           "dirty": false
         },
         "missionsDrivers": "postgres + http + http"
@@ -128,8 +128,9 @@
       "observed": {
         "single": {
           "before": 195,
-          "after": 207,
-          "level": 2
+          "after": 279,
+          "level": 2,
+          "defeats": 7
         },
         "multiple": {
           "before": 190,
