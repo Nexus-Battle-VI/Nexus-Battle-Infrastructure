@@ -1,0 +1,208 @@
+asyncapi: 3.0.0
+info:
+  title: Nexus Battle Auction Settlement Events
+  version: 1.0.0
+  description: >-
+    Contrato canónico de Nexus-Battle-Management#328 para la entrega
+    at-least-once de auction.settled.v1 desde Auction hacia Notifications.
+    Define contrato y topología objetivo; no declara que exista un dispatcher,
+    consumidor o recurso AWS desplegado.
+defaultContentType: application/json
+servers:
+  awsSqsUsEast1:
+    host: sqs.us-east-1.amazonaws.com
+    protocol: https
+    description: Endpoint regional SQS; la región real procede de configuración.
+channels:
+  auctionSettlementNotifications:
+    address: nexus-battle-{environment}-auction-settlement-notifications
+    title: Eventos de liquidación de subasta para Notifications
+    description: >-
+      Cola SQS Standard punto a punto dedicada a auction.settled.v1. Auction
+      envía y Notifications recibe; no reutiliza las colas de Catalog ni admite
+      consumidores competitivos de otros bounded contexts.
+    servers:
+      - $ref: '#/servers/awsSqsUsEast1'
+    parameters:
+      environment:
+        $ref: '#/components/parameters/environment'
+    messages:
+      auctionSettledV1:
+        $ref: '#/components/messages/auctionSettledV1'
+    x-aws-sqs:
+      bindingVersion: 0.3.0
+      queue:
+        fifoQueue: false
+        receiveMessageWaitTime: 20
+        visibilityTimeout: 60
+        messageRetentionPeriod: 345600
+        maximumMessageSize: 65536
+        serverSideEncryption: SSE-SQS
+      deadLetterQueue:
+        name: nexus-battle-{environment}-auction-settlement-notifications-dlq
+        messageRetentionPeriod: 1209600
+      redrivePolicy:
+        maxReceiveCount: 5
+operations:
+  sendAuctionSettled:
+    action: send
+    title: Publicar liquidación de subasta
+    summary: Auction despacha desde outbox el mismo eventId durable.
+    channel:
+      $ref: '#/channels/auctionSettlementNotifications'
+    messages:
+      - $ref: '#/channels/auctionSettlementNotifications/messages/auctionSettledV1'
+    x-owner: Auction
+  receiveAuctionSettled:
+    action: receive
+    title: Consumir liquidación de subasta
+    summary: Notifications valida, deduplica durablemente y materializa avisos in-app.
+    channel:
+      $ref: '#/channels/auctionSettlementNotifications'
+    messages:
+      - $ref: '#/channels/auctionSettlementNotifications/messages/auctionSettledV1'
+    x-owner: Notifications
+components:
+  parameters:
+    environment:
+      description: Entorno de despliegue.
+      enum: [dev, test, prod]
+  messages:
+    auctionSettledV1:
+      name: auction.settled.v1
+      title: Subasta liquidada V1
+      summary: Settlement durable terminado, con ganador o sin pujas.
+      contentType: application/json
+      correlationId:
+        location: $message.payload#/correlationId
+      payload:
+        $ref: '#/components/schemas/auctionSettledEnvelopeV1'
+      examples:
+        - name: Con ganador y dos perdedores
+          payload:
+            eventId: auction:auction-100:settled
+            eventType: auction.settled
+            eventVersion: 1
+            aggregateId: auction-100
+            occurredAt: '2026-09-23T18:00:00Z'
+            producer: auction
+            correlationId: auction:auction-100:settlement
+            data:
+              auctionId: auction-100
+              productId: product-100
+              sellerId: seller-1
+              resultType: WITH_WINNER
+              winnerId: winner-1
+              winningBidId: bid-100
+              finalAmountCredits: 450
+              loserBidderIds: [bidder-2, bidder-3]
+              settledAt: '2026-09-23T18:00:00Z'
+        - name: Sin pujas
+          payload:
+            eventId: auction:auction-101:settled
+            eventType: auction.settled
+            eventVersion: 1
+            aggregateId: auction-101
+            occurredAt: '2026-09-23T18:05:00Z'
+            producer: auction
+            correlationId: auction:auction-101:settlement
+            data:
+              auctionId: auction-101
+              productId: product-101
+              sellerId: seller-2
+              resultType: WITHOUT_BIDS
+              settledAt: '2026-09-23T18:05:00Z'
+  schemas:
+    auctionSettledEnvelopeV1:
+      type: object
+      additionalProperties: false
+      required: [eventId, eventType, eventVersion, aggregateId, occurredAt, producer, correlationId, data]
+      properties:
+        eventId:
+          type: string
+          pattern: '^auction:[^:]+:settled$'
+          description: >-
+            Identidad durable de outbox: auction:{auctionId}:settled. No cambia
+            entre publicación, reintento o redrive.
+        eventType:
+          type: string
+          const: auction.settled
+        eventVersion:
+          type: integer
+          const: 1
+        aggregateId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Igual a data.auctionId.
+        occurredAt:
+          type: string
+          format: date-time
+          description: Instante UTC del settlement durable, no del reintento.
+        producer:
+          type: string
+          const: auction
+        correlationId:
+          type: string
+          pattern: '^auction:[^:]+:settlement$'
+          description: Identidad estable de la operación de settlement.
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/auctionSettledWithWinnerDataV1'
+            - $ref: '#/components/schemas/auctionSettledWithoutBidsDataV1'
+    auctionSettledWithWinnerDataV1:
+      type: object
+      additionalProperties: false
+      required: [auctionId, productId, sellerId, resultType, winnerId, winningBidId, finalAmountCredits, loserBidderIds, settledAt]
+      properties:
+        auctionId:
+          $ref: '#/components/schemas/identifier'
+        productId:
+          $ref: '#/components/schemas/identifier'
+        sellerId:
+          $ref: '#/components/schemas/identifier'
+        resultType:
+          type: string
+          const: WITH_WINNER
+        winnerId:
+          $ref: '#/components/schemas/identifier'
+        winningBidId:
+          $ref: '#/components/schemas/identifier'
+        finalAmountCredits:
+          type: integer
+          minimum: 1
+        loserBidderIds:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/identifier'
+          description: >-
+            distinct(all bidderIds) - winnerId. La validación semántica exige
+            que winnerId no aparezca en esta lista.
+        settledAt:
+          type: string
+          format: date-time
+    auctionSettledWithoutBidsDataV1:
+      type: object
+      additionalProperties: false
+      required: [auctionId, productId, sellerId, resultType, settledAt]
+      properties:
+        auctionId:
+          $ref: '#/components/schemas/identifier'
+        productId:
+          $ref: '#/components/schemas/identifier'
+        sellerId:
+          $ref: '#/components/schemas/identifier'
+        resultType:
+          type: string
+          const: WITHOUT_BIDS
+        settledAt:
+          type: string
+          format: date-time
+      description: >-
+        winnerId, winningBidId, finalAmountCredits y loserBidderIds se omiten;
+        V1 no usa null para campos que no aplican.
+    identifier:
+      type: string
+      minLength: 1
+      maxLength: 128

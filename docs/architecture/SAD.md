@@ -63,6 +63,22 @@ semilla -> MT19937 -> Box-Müller -> Z ~ N(0,1) -> Φ(Z) -> indice uniforme 1..8
 - **Implementado** en Combat: motor HU-24, tabla y resolución HU-25, `CRITICAL_CHANCE` sobre la tabla y salas/lobby. **Pendiente:** política de semilla por batalla o simulación (la semilla 3.000.000 es la validada por HU-26, no una semilla global), Missions → Combat y el consumo por HU-20.
 - Diagrama: [combat-randomness.puml](../diagrams/combat-randomness.puml).
 
+### Experiencia por derrota de un rival (HU-09)
+
+La recompensa de experiencia `10 × 1,2^(1d8)` se otorga **al derrotar a un rival NPC en una misión (JvE)**, según la aclaración funcional del Product Owner. **El PvP («Jugar Online») no la otorga.** La responsabilidad se reparte entre tres contextos, porque ninguna de las tres piezas puede vivir en los otros dos:
+
+```text
+Combat    -> produce y PERSISTE un 1d8 por NPC derrotado (ADR-021); no conoce la fórmula
+Missions  -> calcula 10 x 1,2^(1d8) por derrota, lo redondea a entero y coordina la recompensa
+Player/Inv-> acredita cada derrota y recalcula el nivel con la tabla de HU-08
+```
+
+- **Una recompensa, una tirada y una acreditación por cada NPC derrotado**, no una por misión. La clave es la **instancia real de la derrota** (encuentro + enemigo concreto del `combatLog` de HU-72), nunca el arquetipo: una misión puede enfrentar dos veces al mismo tipo de enemigo y el arquetipo colisionaría.
+
+- **Combat no calcula experiencia** y **Missions no genera aleatoriedad**: `ADR-021` da la exclusiva del azar a Combat y `ADR-019` da la propiedad del estado del héroe a Player/Inventory. La tirada se persiste **antes de responder**, de modo que un reintento no vuelve a consumir el cursor aleatorio.
+- La acreditación es **idempotente** por `operationId` determinista, con ledger propio en Player/Inventory (`_id = operationId`) y actualización de la progresión en la misma transacción. Un reintento nunca duplica experiencia.
+- **Estado:** **solo diseño** (Task #439). Las Tasks de implementación (#440, #441, #442, #443) y la verificación E2E (#444) están `open` y no se dan por desbloqueadas. Ver el [contrato](../contracts/hu-09-experience-reward-v1.md), el [diseño](hu-09-experiencia-mision.md) y la [evidencia](../evidence/HU-09-experiencia-por-derrota-de-un-rival.md).
+
 ## 5. Arquitectura interna común
 
 Los seis servicios comparten la misma estructura: **Clean + Hexagonal**.
@@ -194,6 +210,24 @@ Se enumeran juntas porque quien lea este documento necesita conocerlas antes de 
 7. **Aceptación humana de HU-39 en curso.** La entrega técnica está desplegada;
    el ciclo real de TOTP, asignación, Catalog y retirada se conserva como
    evidencia pendiente de completar.
+8. **HU-09 está solo diseñada, y su alcance acordado la bloquea más allá de HU-08.**
+   La experiencia por derrota de un rival se otorga en el camino **JvE**, que
+   coordina Missions; pero **Missions no tiene hoy ninguna ruta de negocio ni
+   ninguna tabla**, y el flujo de misión (`HU-72.2`, `HU-74.2`) sigue `open` y solo
+   diseñado. Acreditar la experiencia exige además que **HU-08 esté en `develop`**
+   (hoy entregada en PRs sin mergear). Consecuencia dicha sin adornos: **HU-09 no
+   puede cerrarse en el Sprint 2** mientras esa cadena no exista. Ver el
+   [contrato](../contracts/hu-09-experience-reward-v1.md).
+9. **La decisión de redondeo de HU-09 sigue abierta y está marcada como provisional.**
+   Que la experiencia deba ser **entera** es una decisión tomada; **cómo** se convierte
+   `14,4` en entero no lo es hasta que se confirme **redondeo al entero más próximo**
+   frente a **truncamiento**. El contrato adopta el redondeo al más próximo con la marca
+   provisional visible, y la regla vive en un único punto para que confirmarla no toque
+   nada más. Ver el [contrato](../contracts/hu-09-experience-reward-v1.md) §15.
+10. **`missions` no está en el allow-list interno de Player/Inventory.** Hoy es
+    `['commerce', 'notifications', 'combat']`. La ruta de acreditación de
+    experiencia se acotará con `@InternalCallers('missions')` **sin** ampliar la
+    lista global: es una decisión de mínimo privilegio, no un pendiente.
 
 Ninguna es un descuido. Cada una tiene su motivo registrado y su condición de desbloqueo.
 

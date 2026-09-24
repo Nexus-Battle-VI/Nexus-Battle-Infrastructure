@@ -353,6 +353,8 @@ services:
       # y el resto sigue funcionando. Lo exigen con `:?` otros servicios de
       # este fichero, asi que en la practica ya esta definido.
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      AUCTION_SETTLEMENT_QUEUE_URL: ${AUCTION_SETTLEMENT_QUEUE_URL:-}
+      AUCTION_SETTLEMENT_EVENT_DISPATCH_ENABLED: 'true'
     depends_on:
       auction-migrate:
         condition: service_completed_successfully
@@ -479,6 +481,8 @@ services:
       # sin dispatcher que publique estos eventos desde su outbox: el wiring
       # queda listo para consumir en cuanto exista cola aplicada y productor.
       CATALOG_LIFECYCLE_QUEUE_DRIVER: sqs
+      AUCTION_SETTLEMENT_QUEUE_URL: ${AUCTION_SETTLEMENT_QUEUE_URL:-}
+      AUCTION_SETTLEMENT_QUEUE_DRIVER: sqs
     # Ya no depende de Mailpit: el envio sale por la API de SES. Mailpit se
     # mantiene en el compose a proposito, para que revertir a
     # `EMAIL_DRIVER: smtp` sea un cambio de una linea si SES da problemas.

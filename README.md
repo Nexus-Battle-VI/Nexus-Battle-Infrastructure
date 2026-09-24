@@ -25,6 +25,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [integration.md](docs/architecture/integration.md) | Comunicación entre contextos |
 | [security.md](docs/architecture/security.md) | Seguridad, identidad y RBAC desplegados |
 | [hu-39-role-management.md](docs/architecture/hu-39-role-management.md) | Diseño, matriz RBAC y contratos conceptuales de HU-39 |
+| [hu-09-experiencia-mision.md](docs/architecture/hu-09-experiencia-mision.md) | Diseño de la experiencia por derrota de un rival en misión (HU-09). **Solo diseño** |
 | [observability.md](docs/architecture/observability.md) | Registro, sondas y qué no se mide todavía |
 | [testing.md](docs/architecture/testing.md) | Estrategia de pruebas y cobertura real |
 | [developer-workflow.md](docs/architecture/developer-workflow.md) | Flujo de trabajo, CI y OIDC futuro |
@@ -83,7 +84,9 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | [catalog-product-v1.openapi.yaml](docs/contracts/catalog-product-v1.openapi.yaml) | Contrato canónico de Producto v1 |
 | [catalog-product-assets-v1.md](docs/contracts/catalog-product-assets-v1.md) | Contrato de diseño aprobado para carga, finalización y lectura de recursos visuales |
 | [catalog-events-v1.asyncapi.yaml](docs/contracts/catalog-events-v1.asyncapi.yaml) | AsyncAPI propuesto de `catalog.product.created` V1 |
+| [auction-settlement-events-v1.asyncapi.yaml](docs/contracts/auction-settlement-events-v1.asyncapi.yaml) | Contrato AsyncAPI de `auction.settled.v1` para HU-65.6 (Management #328) |
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
+| [hu-09-experience-reward-v1.md](docs/contracts/hu-09-experience-reward-v1.md) | Contrato de la recompensa de experiencia por derrota de un rival (HU-09). **Diseño — sin implementación** |
 
 ### Gobierno
 
@@ -171,4 +174,3 @@ Se aplican las convenciones descritas en [CONTRIBUTING.md](CONTRIBUTING.md) y la
 ## Licencia
 
 `Licensing pending project governance`. Este repositorio todavía no tiene una licencia asignada; su definición requiere autorización del gobierno del proyecto.
-

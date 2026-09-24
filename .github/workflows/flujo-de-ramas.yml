@@ -19,7 +19,9 @@ name: Flujo de ramas
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - develop
+      - main
 
 permissions:
   contents: read
@@ -40,6 +42,7 @@ jobs:
           fetch-depth: 0
 
       - name: Comprobar que todo lo que va a main paso por develop
+        if: github.base_ref == 'main'
         run: |
           set -euo pipefail
 
@@ -65,9 +68,9 @@ jobs:
           echo "El arbol propuesto coincide exactamente con develop."
 
       - name: Avisar si esta promocion borraria algo que solo esta en main
-        # Se ejecuta aunque el paso anterior falle: si las dos cosas van mal,
-        # conviene verlas juntas y no una por ejecucion.
-        if: always()
+        # Para main se ejecuta aunque falle la comparacion anterior; no aplica
+        # a PR hacia develop.
+        if: github.base_ref == 'main' && always()
         run: |
           set -euo pipefail
 
@@ -93,3 +96,8 @@ jobs:
           else
             echo "La promocion no elimina ningun fichero presente en main."
           fi
+
+      - name: PR hacia develop
+        if: github.base_ref == 'develop'
+        run: |
+          echo "PR hacia develop: la validacion develop -> main no aplica."
