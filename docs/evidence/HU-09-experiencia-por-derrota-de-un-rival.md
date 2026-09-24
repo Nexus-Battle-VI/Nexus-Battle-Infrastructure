@@ -263,7 +263,7 @@ Sin decimales en ningún punto, y con el nivel máximo 8 sin descarte de experie
 | `#443` experiencia en el reporte (HU-09.5) | Missions | [#18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/18) — abierto |
 | `#444` cadena E2E, guardas y workflow | Missions | [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19) — abierto, apilado sobre #18 |
 | `#444` control negativo de la guarda del azar | Combat | [#49](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/49) — abierto |
-| `#444` esta evidencia y el reporte | Infrastructure | el PR que trae este documento |
+| `#444` esta evidencia y el reporte | Infrastructure | [#157](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/157) — abierto |
 
 **Ninguno de estos PRs cierra la User Story #18.** Cierran Tasks subordinadas; la aceptación de la HU exige la revisión por pares y la aprobación del PO.
 
