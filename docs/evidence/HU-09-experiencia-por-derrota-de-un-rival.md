@@ -163,14 +163,14 @@ El workflow [`cadena-hu-09.yml`](https://github.com/Nexus-Battle-VI/Nexus-Battle
 
 | Ejecución | Ref de los hermanos | Resultado |
 | --- | --- | --- |
-| [PR #19, `pull_request`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/35960315150) | `develop` de los dos | **12/12 en verde** en Linux |
+| [PR #19, `pull_request`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/35961160277) | `develop` de los dos | **12/12 en verde** en Linux |
 | [Lanzada a mano](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/35959730007) | Combat `test/hu-09-6-control-guarda-azar` | **12/12 en verde**, antes de que ese PR estuviera mergeado |
 
-Dos cosas que conviene saber al leer el artefacto de CI:
+Tres cosas que conviene saber al leer el artefacto de CI:
 
-- **La cadena se prueba contra el `develop` de los dos hermanos**, no contra sus PRs. Un rojo puede venir de ellos, y por eso los pasos están separados por repositorio. Cuando corría antes de que Combat #49 entrara, `S-11` se ponía rojo **con razón**: la guarda que la cadena ejecuta no tenía todavía su control negativo.
-- Para verificar un conjunto **antes** de mergearlo, el workflow acepta `combat_ref` e `inventory_ref` por `workflow_dispatch`; el ref elegido queda escrito en el ambiente del reporte. Es la ejecución de la tabla de arriba.
-- En una ejecución de `pull_request`, el commit de Missions que aparece es el **commit de fusión sintético** del PR, no la punta de la rama.
+- **La cadena se prueba contra el `develop` de los dos hermanos**, no contra sus PRs. Un rojo puede venir de ellos, y por eso los pasos están separados por repositorio. Mientras el control negativo de la guarda de Combat no estuvo mergeado, `S-11` se ponía rojo **con razón**: la guarda que la cadena ejecuta es la de Combat y todavía no sabía fallar. Ese rojo es la prueba de que el aserto no es decorativo.
+- Para verificar un conjunto **antes** de mergearlo, el workflow acepta `combat_ref` e `inventory_ref` por `workflow_dispatch`; el ref elegido queda escrito en el ambiente del reporte. Es la segunda ejecución de la tabla.
+- En una ejecución de `pull_request`, el commit de Missions que aparece es el **commit de fusión sintético** del PR, no la punta de la rama. En este documento, el commit de Missions citado es el de la rama.
 
 
 ## Qué se decidió, y con qué autoridad
