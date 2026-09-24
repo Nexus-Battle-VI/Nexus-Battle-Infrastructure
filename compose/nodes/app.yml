@@ -303,6 +303,12 @@ services:
       # estos dos servicios internos antes de aceptar un ingreso a sala.
       ACCOUNT_SERVICE_BASE_URL: http://account:3000
       PLAYER_INVENTORY_SERVICE_BASE_URL: http://inventory:3002
+      # HU-22/HU-23: Combat acredita las recompensas y reserva, libera y
+      # liquida las apuestas contra Wallet (HMAC, allow-list `combat` de
+      # Wallet). Sin esta URL Combat instala clientes "no configurados":
+      # toda apuesta responde 503 y las recompensas quedan PENDING_CREDIT, y
+      # con `NODE_ENV: development` el guard de arranque no lo advierte.
+      WALLET_SERVICE_BASE_URL: http://wallet:3009
     depends_on:
       combat-migrate:
         condition: service_completed_successfully
@@ -347,6 +353,8 @@ services:
       # y el resto sigue funcionando. Lo exigen con `:?` otros servicios de
       # este fichero, asi que en la practica ya esta definido.
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      AUCTION_SETTLEMENT_QUEUE_URL: ${AUCTION_SETTLEMENT_QUEUE_URL:-}
+      AUCTION_SETTLEMENT_EVENT_DISPATCH_ENABLED: 'true'
     depends_on:
       auction-migrate:
         condition: service_completed_successfully
@@ -473,6 +481,8 @@ services:
       # sin dispatcher que publique estos eventos desde su outbox: el wiring
       # queda listo para consumir en cuanto exista cola aplicada y productor.
       CATALOG_LIFECYCLE_QUEUE_DRIVER: sqs
+      AUCTION_SETTLEMENT_QUEUE_URL: ${AUCTION_SETTLEMENT_QUEUE_URL:-}
+      AUCTION_SETTLEMENT_QUEUE_DRIVER: sqs
     # Ya no depende de Mailpit: el envio sale por la API de SES. Mailpit se
     # mantiene en el compose a proposito, para que revertir a
     # `EMAIL_DRIVER: smtp` sea un cambio de una linea si SES da problemas.

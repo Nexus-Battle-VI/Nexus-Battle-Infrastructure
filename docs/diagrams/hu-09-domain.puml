@@ -1,0 +1,89 @@
+@startuml hu-09-domain
+title HU-09 — Dominio: dónde vive cada pieza
+
+package "Combat" #EEF5FF {
+  class ExperienceRollPolicy <<política pura>> {
+    + rollFor(sequence) : 1..8
+    ..no conoce la fórmula..
+  }
+  class ExperienceRollBatch <<persistido, UNO POR MISIÓN>> {
+    + operationId : string (clave _id del lote)
+    + enrollmentId : string
+    + simulationId : string
+    + heroId : string
+    + createdAt : Date
+    + rolls : ExperienceRoll[]
+  }
+  class ExperienceRoll <<valor, UNO POR DERROTA>> {
+    + key : string (encuentro + instancia)
+    + encounterId : string
+    + enemyInstanceId : string
+    + rivalRef : string
+    + roll : 1..8
+    + persistedAt : Date
+  }
+  ExperienceRollBatch *-- ExperienceRoll
+  ExperienceRollPolicy ..> ExperienceRollBatch : produce, en el orden del lote
+}
+
+package "Missions" #EFFAEF {
+  class ExperienceReward <<agregado, UNO POR DERROTA>> {
+    + enrollmentId : string
+    + simulationId : string
+    + playerId : string
+    + heroId : string
+    + encounterId : string
+    + enemyInstanceId : string
+    + rivalRef : string
+    + roll : 1..8 | null
+    + amount : integer | null
+    + state : PENDING | ROLLED | CREDITED | FAILED
+    + attempts : integer
+    + failureReason : string | null
+  }
+  class ExperienceRewardPolicy <<política pura>> {
+    + rewardFor(roll : 1..8) : integer
+    ..ÚNICO dueño de 10 × 1,2^(1d8)..
+  }
+  ExperienceRewardPolicy ..> ExperienceReward : calcula amount
+}
+
+package "Player / Inventory" #FFF7EE {
+  class ExperienceGrant <<ledger insert-only, UNO POR DERROTA>> {
+    + operationId : string (clave _id)
+    + ownerId : string
+    + heroId : string
+    + amount : integer
+    + roll : 1..8
+    + enrollmentId : string
+    + encounterId : string
+    + enemyInstanceId : string
+    + createdAt : Date
+  }
+  class HeroProgression <<HU-08, ya implementado>> {
+    + level : 1..8
+    + currentXp : integer
+    + awardExperience(amount)
+    + thresholdForNextLevel()
+  }
+  ExperienceGrant ..> HeroProgression : acredita en la misma transacción
+}
+
+ExperienceReward --> ExperienceRollBatch : consume la tirada de su instancia\n(no la posee)
+ExperienceReward --> ExperienceGrant : produce (idempotente por operationId)
+ExperienceReward ..> HeroProgression : NUNCA la copia\n(estado de otro contexto)
+
+note bottom of ExperienceReward
+  La clave es la INSTANCIA de la derrota
+  (encuentro + enemigo concreto),
+  nunca el arquetipo: dos
+  "sombra-corrompida" en encuentros
+  distintos son dos recompensas.
+end note
+
+note bottom of ExperienceRewardPolicy
+  La fórmula vive SOLO aquí.
+  Combat no la conoce y
+  Player/Inventory no la aplica.
+end note
+@enduml
