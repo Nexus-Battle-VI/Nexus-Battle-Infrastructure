@@ -32,7 +32,7 @@ sus propias pruebas; **ninguna de las dos está mergeada**, y la verificación d
 | Trazabilidad `RF-29 → HU-29 → Diseño` | **Presente**, en la cabecera del diseño y en su §9 |
 | Escenarios de prueba | **10 identificados** (los 5 de la Task más 5 derivados) |
 | **Implementación** | **Existe, en ramas y sin mergear**: el guard y el compromiso en Player/Inventory (PR [#26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26)) y el lado de Combat que compromete y libera (PR [#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/55)). **No está en `develop`** |
-| **Pruebas de la implementación** | **Existen en las dos ramas** y están verdes salvo fallos preexistentes de `develop` (ver «Implementación»). Son pruebas de la implementación, **no** la verificación de aceptación de `#233` |
+| **Pruebas de la implementación** | **Existen en las dos ramas** y están verdes (el CI del PR de Combat, en verde; queda un hallazgo ajeno de intermitencia en `test:db`, ver «Implementación»). Son pruebas de la implementación, **no** la verificación de aceptación de `#233` |
 | Endpoint o contrato HTTP | **Contratado**: `hu-29-battle-commitment-v1` (Infrastructure PR [#165](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/165)). El diseño no lo prescribía —era mandato de la Task— y la implementación sí necesitaba fijarlo |
 | Revisión por pares | **PENDIENTE** en los tres PR |
 | Aceptación del PO | **PENDIENTE**, y depende de las decisiones de la sección siguiente |
@@ -123,12 +123,19 @@ declarada: hasta que las rutas existan en el entorno **y** la URL esté puesta,
 | Cobertura | 89,38 % sentencias · 80,24 % ramas | 95,57 % sentencias · 88,86 % ramas |
 | Base de datos real (Testcontainers) | 10 suites / 102 pruebas | 10 suites / 205 pruebas |
 
-**Dos fallos preexistentes de `develop`** —no de esta HU— hacen que el CI de estos PR salga rojo:
-`test/unit/mission-ability-policy.spec.ts` (los PR #51 y #52 de Combat pasaron CI **por separado** y su
-fusión dejó una expectativa obsoleta; `develop` no volvió a ejecutar CI porque el workflow solo corre en
-`push` a `main`) y una **fuga de temporizador** de `IntervalRewardWorkflowScheduler` (HU-22), que sigue
-disparando después de cerrar el cliente de Mongo y hace caer el error dentro de la ventana de la prueba
-en curso. Los dos se reproducen en `develop` **sin** estos cambios.
+**El CI de los PR está en verde** (Combat PR #55: `Calidad y pruebas` `pass`). Queda **un hallazgo
+ajeno** a esta HU, que **no** reproduce en CI y sí en una máquina Windows: el `test:db` de Combat cae
+de forma intermitente con un `MongoNotConnectedError` lanzado por `IntervalRewardWorkflowScheduler.tick`
+(HU-22) **después** de que la prueba cierre el cliente de Mongo; el error aterriza en la ventana de la
+prueba que esté corriendo y el conjunto de suites que falla cambia entre ejecuciones. Es una fuga de
+temporizador —el planificador debería detenerse en el apagado— y merece su propio issue.
+
+> **Corrección, medida y no heredada.** Una versión anterior de esta sección afirmaba que `develop`
+> estaba rojo y que el CI de los PR saldría rojo por **dos** fallos preexistentes. Era falso: el fallo
+> de `test/unit/mission-ability-policy.spec.ts` se midió sobre una copia local de `develop` anclada en
+> `05b3914`, y el commit `cd57ff8` (`test(combat): [HU-71/72] comparar con PvP solo la bonificacion
+> inmediata tras HU-19 v2`, PR #53) ya lo había arreglado. El CI de un PR prueba la **fusión** con el
+> `develop` vigente, así que lo incluía. Tras rebasar la rama: 117 suites / 2865 pruebas, **0 fallos**.
 
 ## Trabajo previo: qué se rescató y qué no
 
@@ -188,8 +195,8 @@ sus pruebas, **no** es la verificación de aceptación: eso es la Task `#233`, y
 2. **Decisión de arquitectura** sobre si la épica entra en el bloqueo —hoy **no**, por lo que dice la
    HU— y sobre la exclusión cruzada entre propósitos, que **no** se ha implementado.
 3. **Mergear y verificar**: los tres PR (contrato #165, Player/Inventory #26, Combat #55) están
-   abiertos y **ninguno está en `develop`**. Antes conviene resolver los **dos fallos preexistentes**
-   de `develop` que dejan el CI rojo en cualquier PR de Combat.
+   abiertos y **ninguno está en `develop`**. El CI del de Combat está en verde; el único hallazgo abierto
+   es la fuga de temporizador de `IntervalRewardWorkflowScheduler` (HU-22), ajena a esta HU.
 4. **Task `#233`**: automatizar y verificar los 10 escenarios, incluido el extremo a extremo con los
    dos servicios reales, que hoy **no existe**.
 5. **Corregir la trazabilidad del Project**: HU-29 y sus tres Tasks figuran `Done`. **Recomendación,
