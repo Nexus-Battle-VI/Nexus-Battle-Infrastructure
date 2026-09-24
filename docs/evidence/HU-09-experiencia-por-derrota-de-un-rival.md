@@ -44,8 +44,10 @@ Y dice, en su propia tabla, **qué piezas se ejercen de verdad y cuáles se sust
 | Aceptación del PO | **PENDIENTE**, y condicionada por `P-2` |
 | Visualización en Web (`#443`) | **No entra** en esta verificación; la superficie pública es el reporte de misión de HU-74 |
 | Escala, carga y concurrencia reales | **No comprobado**: el escenario es 1 jugador, 1 héroe y un servicio por pieza |
-| La ruta interna de perfil de héroe (`HU-71.2`) | **Sustituida** por el doble de desarrollo: sigue sin estar en `develop` |
+| La ruta interna de perfil de héroe (`HU-71.2`) | **Sustituida** por el doble de desarrollo: sigue sin estar en `develop`, y es la causa de que también se sustituya el resultado de la simulación |
 | Producción real (Cognito, AWS, réplicas) | **No comprobado**: no hay Cognito en la cadena y los contenedores son locales |
+| El escenario en Linux, en CI | **Comprobado**: el job `Cadena HU-09` corre en `ubuntu-latest` y está en verde (12/12) |
+| Que la simulación de la misión la produzca Combat | **NO comprobado**: se sustituye, con el motivo medido. Ver «Un hallazgo» |
 
 ### Qué piezas fueron REALES y cuáles simuladas
 
@@ -56,8 +58,9 @@ Las tres piezas de la cadena son **código de producción en ejecución**, no do
 | Missions | **REAL** | La aplicación NestJS real de este repositorio, con `PERSISTENCE_DRIVER=postgres` sobre un PostgreSQL 17 en contenedor. Sus adaptadores son los de producción: `PostgresExperienceRewardRepository`, `PostgresReportRepository`, `CombatExperienceRollClient`, `PlayerInventoryExperienceClient` — el caso `S-00` **afirma el nombre de la clase** que el contenedor resolvió para cada token, así que un doble colado se vería |
 | Combat | **REAL, como proceso** | `node dist/main.js` del repositorio hermano, sobre un MongoDB 8 real en réplica, con sus planificadores encendidos. Es quien **tira el dado**: las 19 caras de `S-01` salen de su motor centralizado, y el lote queda persistido en `experience-rolls` con el `operationId` del contrato |
 | Player/Inventory | **REAL, como proceso** | `node dist/main.js` del repositorio hermano, sobre el mismo MongoDB. Es quien **acredita**: los asientos de `experience_grants` y el documento `hero-progressions` que se leen en los casos son los suyos, escritos por su propia ruta interna |
-| Resultado de la simulación de Combat (HU-72) | **SUSTITUIDO** | `COMBAT_SIMULATION_DRIVER=memory`, el doble de desarrollo (`ScriptedCombatSimulation`): el ingreso de simulación de Combat todavía responde `503`, así que no hay bitácora de simulación que consumir. **No se sustituye nada de HU-09**: las derrotas que produce ese doble son las del contenido de la misión, y a partir de ahí la tirada, el cálculo y la acreditación son los reales |
-| Perfil y compromiso del héroe (HU-71.2) | **SUSTITUIDO** | `HERO_ABILITIES_DRIVER=memory` y `HERO_COMMITMENTS_DRIVER=memory`: la ruta interna de perfil de héroe todavía no está en `develop` |
+| Resultado de la simulación de Combat (HU-72) | **SUSTITUIDO** | `COMBAT_SIMULATION_DRIVER=memory`, el doble de desarrollo (`ScriptedCombatSimulation`). **No es que Combat no exista** — su ingreso de simulación está en `develop` desde el PR [#44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/44) —: es que **rechaza el contenido** con `422 MISSION_CONTENT_INVALID` porque lo primero que valida es `hero.profile.effectiveStats` y `hero.profile.subtype`, y el perfil que Missions puede enviar hoy no los trae. **Verificado, no supuesto**: véase «Un hallazgo», más abajo. **No se sustituye nada de HU-09**: las derrotas que produce ese doble son las del contenido de la misión, y a partir de ahí la tirada, el cálculo y la acreditación son los reales |
+| Perfil del héroe (HU-71.2) | **SUSTITUIDO** | `HERO_ABILITIES_DRIVER=memory`. Es **la misma dependencia** que la fila anterior: la ruta interna de perfil de héroe es el PR [#48](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/48) de Player-Inventory, todavía abierto. El día que entre, las dos sustituciones caen con un cambio de una línea |
+| Compromiso del héroe | **SUSTITUIDO** | `HERO_COMMITMENTS_DRIVER=memory`. La ruta existe ya en `develop` (HU-70, PR [#50](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/50)), pero no se ha cambiado en esta Task: no aporta nada a la cadena de la recompensa |
 | Testimonio del jugador | **SUSTITUIDO** | Un verificador de tokens fijo: no hay Cognito en la cadena. Solo afecta a *quién* llama al reporte, no a la cadena de la recompensa |
 | Puerto de tirada en `S-02` | **SUSTITUIDO, y solo ahí** | Para cubrir las **ocho** caras en una sola misión se guioniza el puerto de tirada con caras `1..8` en ciclo. **La acreditación sigue siendo la real de Player/Inventory**, y `S-01` —el caso de la cadena completa— usa la tirada **real** de Combat |
 | Reloj | **NO se sustituye** | Los clientes internos firman con HMAC y Player/Inventory acepta un sello de ±30 s: adelantar el reloj rompería la cadena. El tiempo se maneja con dos **datos de partida**: la ventana de la matrícula se desplaza al pasado (una hora exacta, terminando un segundo antes) y el escalonado de reintento se vence escribiendo `next_attempt_at` |
@@ -111,16 +114,31 @@ Que estén en verde no basta: una guarda que solo afirma «ninguno coincide» pa
 | Missions, fórmula | `const copiaDeLaFormula = 10 * 1.2 ** roll` en `src/application/use-cases/CoordinateExperienceReward.ts` | **2 fallos**, `Test Suites: 1 failed`, salida `1` |
 | Combat, azar | `const caraAlternativa = Math.random()` en `src/domain/reward/ExperienceRollPolicy.ts` | **1 fallo**, `Test Suites: 1 failed`, salida `1` |
 
-### Dos defectos del escenario, encontrados y corregidos en esta Task
+### Defectos del andamiaje, encontrados y corregidos en esta Task
 
-Ninguno es un defecto de producción: los dos estaban **en el andamiaje de la prueba**, y los dos hacían que la cadena no llegara a probarse.
+Ninguno es un defecto de producción: los cuatro estaban **en el andamiaje de la prueba o del reporte**, y los dos primeros hacían que la cadena no llegara a probarse.
 
 | # | Defecto | Efecto real | Corrección |
 | --- | --- | --- | --- |
-| 1 | La ventana de la matrícula se desplazaba al pasado con **dos llamadas separadas a `now()`**, así que medía `59,9` minutos | El presupuesto de tiempo que viaja a Combat es esa resta en minutos y `toIsoDuration` solo admite enteros: el cierre moría con `mission_execution_error`, la misión **no se cerraba**, el informe daba `404` y **no se devengaba ninguna recompensa**. Los doce casos en rojo | Las dos fechas salen de **una sola lectura del reloj**, separadas por una hora exacta y con el fin un segundo en el pasado (`b4d6126`) |
-| 2 | `S-11` ejecutaba las guardas con un **patrón posicional** (`npm run test:unit -- hu-09-reward-policy`) | **Jest 30 retiró el patrón posicional**: esa orden corre el proyecto unitario **entero**. El caso afirmaba «la guarda está en verde» sin haber ejecutado la guarda | Se pasa a `--testPathPatterns`, se afirma que corre **una sola suite** y que su **control negativo** se ejecuta; `runNpmScript` lee también `stderr`, que es donde Jest escribe el resumen (`f7c1e15`) |
+| 1 | La ventana de la matrícula se desplazaba al pasado con **dos llamadas separadas a `now()`**, así que medía `59,9` minutos | El presupuesto de tiempo que viaja a Combat es esa resta en minutos y `toIsoDuration` solo admite enteros: el cierre moría con `mission_execution_error`, la misión **no se cerraba**, el informe daba `404` y **no se devengaba ninguna recompensa**. Los doce casos en rojo | Las dos fechas salen de **una sola lectura del reloj**, separadas por una hora exacta y con el fin un segundo en el pasado (`b2d6e4f`) |
+| 2 | `S-11` ejecutaba las guardas con un **patrón posicional** (`npm run test:unit -- hu-09-reward-policy`) | **Jest 30 retiró el patrón posicional**: esa orden corre el proyecto unitario **entero**. El caso afirmaba «la guarda está en verde» sin haber ejecutado la guarda | Se pasa a `--testPathPatterns`, se afirma que corre **una sola suite** y que su **control negativo** se ejecuta; `runNpmScript` lee también `stderr`, que es donde Jest escribe el resumen (`b3c39a8`) |
+| 3 | `S-09` contaba solo los asientos de *esa* matrícula | Con la base sucia, «no se acreditó» y «se acreditó a otra matrícula» se ven igual: el fallo diría lo primero cuando pasó lo segundo | Se añade `countGrants` y el caso compara las dos cifras (`b3c39a8`) |
+| 4 | `dirty` se encendía en CI sobre un árbol recién clonado | El workflow clona los dos hermanos **dentro** del espacio de trabajo de Missions, y esos dos directorios sin seguir bastaban. El campo dejaba de significar «el código que se probó tiene cambios» para significar «aquí se clonó algo» | `isDirty` acepta rutas que ignorar y el escenario le pasa los dos directorios hermanos cuando caen dentro (`04a868e`) |
 
-Un tercer caso, menor y del mismo tipo: `S-09` contaba solo los asientos de *esa* matrícula, y con la base sucia «no se acreditó» y «se acreditó a otra matrícula» se ven igual. Ahora compara las dos cifras.
+### Un hallazgo: por qué se sigue sustituyendo la simulación
+
+El reporte declaraba que el resultado de la simulación se sustituía porque «Combat todavía no produce bitácoras y su ingreso responde `503`». **Eso dejó de ser cierto**: el ingreso está en `develop` desde el PR [Combat #44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/44).
+
+Se comprobó de verdad, poniendo `COMBAT_SIMULATION_DRIVER=http` y ejecutando la cadena:
+
+| Qué se hizo | Qué pasó |
+| --- | --- |
+| Missions llama a `POST /api/internal/v1/combat/simulations` con la petición real de HU-72 | Combat **acepta** la petición y **rechaza el contenido**: `422 MISSION_CONTENT_INVALID` |
+| Se inspecciona la ejecución en PostgreSQL | `status = VOIDED`, `outcome_reason = MISSION_CONTENT_INVALID` |
+| Se mira qué valida Combat primero | `hero.profile.effectiveStats` y `hero.profile.subtype` (`mission-simulation-request.ts`, líneas 203-207) |
+| Se mira qué envía Missions | El perfil del doble de `HERO_ABILITIES_DRIVER=memory`: `{ heroId, abilities }`, **sin** `subtype` ni `effectiveStats` |
+
+**Conclusión:** la sustitución del resultado de la simulación y la del perfil del héroe son **la misma dependencia**, y esa dependencia es `HU-71.2` (Player-Inventory PR [#48](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/48)), que sigue abierta. No se sostiene diciendo «Combat no existe»: existe y **rechaza lo que Missions puede enviarle hoy**. El reporte lo dice así, y el cambio que retira la sustitución es de una línea (`COMBAT_SIMULATION_DRIVER` a `http`) el día que ese perfil sea real.
 
 ### Reporte de ejecución
 
@@ -131,13 +149,28 @@ El reporte completo, con commits, ambiente, casos, valores observados, cobertura
 | Comando | `npm run test:e2e:chain` (Missions) |
 | Plataforma | Windows 11, Node `v24.19.0` |
 | Bases | `postgres:17-alpine` y `mongo:8.0` (réplica), Testcontainers |
-| Commits | Missions `f7c1e15` · Combat `c77aae9` · Player/Inventory `614acb9` — **los tres sin cambios pendientes** |
+| Commits | Missions `04a868e` · Combat `1374a47` · Player/Inventory `9d6a9f7` — **los tres sin cambios pendientes** |
 | Casos | **12/12 en verde** |
 | Cobertura de la cadena (informativa) | Sentencias `60,31 %` · Ramas `35,67 %` · Funciones `53,26 %` · Líneas `58,79 %` |
-| Duración | 60 s |
-| Límites declarados | 7, en el propio reporte |
+| Duración | 49 s |
+| Límites declarados | 9, en el propio reporte |
 
 La cobertura es **informativa y deliberadamente sin umbral**: los umbrales viven donde se pueden exigir sin contenedores (`jest.config.ts` y `jest.db.config.ts`). Esta suite mide la cadena, no la superficie del servicio.
+
+### La cadena también corre en CI, sobre los tres repositorios
+
+El workflow [`cadena-hu-09.yml`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/blob/develop/.github/workflows/cadena-hu-09.yml) de Missions clona los tres repositorios, compila los hermanos y publica el reporte como artefacto durante 30 días.
+
+| Ejecución | Ref de los hermanos | Resultado |
+| --- | --- | --- |
+| [PR #19, `pull_request`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/35960315150) | `develop` de los dos | **12/12 en verde** en Linux |
+| [Lanzada a mano](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/35959730007) | Combat `test/hu-09-6-control-guarda-azar` | **12/12 en verde**, antes de que ese PR estuviera mergeado |
+
+Dos cosas que conviene saber al leer el artefacto de CI:
+
+- **La cadena se prueba contra el `develop` de los dos hermanos**, no contra sus PRs. Un rojo puede venir de ellos, y por eso los pasos están separados por repositorio. Cuando corría antes de que Combat #49 entrara, `S-11` se ponía rojo **con razón**: la guarda que la cadena ejecuta no tenía todavía su control negativo.
+- Para verificar un conjunto **antes** de mergearlo, el workflow acepta `combat_ref` e `inventory_ref` por `workflow_dispatch`; el ref elegido queda escrito en el ambiente del reporte. Es la ejecución de la tabla de arriba.
+- En una ejecución de `pull_request`, el commit de Missions que aparece es el **commit de fusión sintético** del PR, no la punta de la rama.
 
 
 ## Qué se decidió, y con qué autoridad
@@ -195,7 +228,8 @@ Los que había el 2026-09-23 y lo que ha pasado con cada uno. **Ninguno bloquea 
 | **HU-08** (#17) | **Resuelto**: `HeroProgression` y el umbral por nivel están en `develop` de Player-Inventory (`f54e176`, `6ba0f5e`) | `#441` compila y acredita; `S-03` comprueba la subida de nivel con la tabla vigente |
 | **HU-24** (#71) | `closed` | El motor existe: `BoundedRandom.nextInt(8) + 1`, y es el que tira en `S-01` |
 | **Cadena de Misiones** | **Resuelto**: `HU-70`, `HU-71`, `HU-72`, `HU-74`, `HU-75` y `HU-76` están implementados en `develop` de Missions | `#442` existe y la cadena se recorre entera |
-| **HU-71.2 — ruta interna del perfil de héroe** | **ABIERTO** (Player-Inventory PR [#48](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/48)) | Es la **única** dependencia que obliga a sustituir algo de la cadena que no sea el resultado de la simulación: el perfil y el compromiso del héroe se sirven con los dobles de desarrollo. Está declarado en la tabla de piezas y en los límites del reporte |
+| **HU-71.2 — ruta interna del perfil de héroe** | **ABIERTO** (Player-Inventory PR [#48](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/48)) | Es la **única** dependencia que obliga a sustituir algo de la cadena que no sea el resultado de la simulación, y de hecho es la causa de las dos sustituciones: Combat **rechaza** el contenido precisamente porque el perfil que Missions puede enviar es el doble de desarrollo |
+| **Combat #49 — control negativo de la guarda del azar** | **Resuelto**: mergeado en `develop` | Mientras no estuvo, el job `Cadena HU-09` del PR de Missions se puso rojo en `S-11` **con razón**: la guarda que la cadena ejecuta es la de Combat y todavía no sabía fallar. Ese rojo se verificó antes de mergear lanzando el workflow a mano con `combat_ref` |
 | **Web** (`#443`) | Sin empezar | No afecta a esta verificación: la superficie pública de HU-09 es el reporte de misión de HU-74, no una pantalla nueva |
 
 ## Criterios de aceptación y su cobertura
@@ -225,14 +259,16 @@ Los que había el 2026-09-23 y lo que ha pasado con cada uno. **Ninguno bloquea 
 7. **No mostrar como concedida una recompensa pendiente.** El reporte de misión ya separa la foto del estado de cada línea.
 8. **No dar por probada la cadena desde una suite con dobles.** Añadido por esta Task: el escenario vive en `test/e2e/`, se ejecuta con `npm run test:e2e:chain`, y **`S-00` afirma el nombre del adaptador que el contenedor resolvió** para que un doble colado se vea en lugar de pasar desapercibido.
 9. **No confiar en el patrón posicional de Jest.** Añadido por esta Task: Jest 30 retiró el argumento suelto y `jest <patrón>` corre el proyecto entero **en verde**. Para seleccionar un fichero, `--testPathPatterns`.
+10. **No escribir en el reporte un motivo que no se haya comprobado.** Añadido por esta Task: el reporte afirmaba que la simulación se sustituía porque Combat respondía `503`, y Combat ya aceptaba la petición; lo que hace es **rechazar el contenido** por el perfil. Un motivo heredado que nadie vuelve a medir es una afirmación falsa con formato de dato.
 
 ## Qué falta para cerrar HU-09
 
 1. **Confirmación de `P-2`** por el PO (redondeo al más próximo o truncamiento); hasta entonces el contrato mantiene la marca provisional. Es la única decisión funcional abierta.
-2. **Revisión por pares** de los PRs de `#440`, `#441`, `#442` y `#444`.
-3. **Aceptación del PO** (`CA-09`), que es lo que convierte la verificación en aceptación.
-4. **Opcional, si el PO la pide:** la visualización en Web (`#443`), que no forma parte de esta verificación.
-5. **Cuando `HU-71.2` entre en `develop`:** retirar del escenario la sustitución del perfil y el compromiso del héroe, que es la última pieza simulada que no es el resultado de la simulación.
+2. **Merge de los PRs que siguen abiertos:** Missions [#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/17) (HU-09.4) y [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19) (esta verificación). `#440`, `#441`, `#442` (vía #18) y el PR de la guarda de Combat ya están mergeados.
+3. **Revisión por pares** de lo entregado, que es lo que la Task `#444` **no** puede darse a sí misma.
+4. **Aceptación del PO** (`CA-09`), que es lo que convierte la verificación en aceptación.
+5. **Opcional, si el PO la pide:** la visualización en Web (`#443`), que no forma parte de esta verificación.
+6. **Cuando `HU-71.2` entre en `develop`:** pasar `COMBAT_SIMULATION_DRIVER` a `http` y quitar del escenario las dos sustituciones que dependen de él —el resultado de la simulación y el perfil del héroe—. Es el primer candidato a caer de la tabla de límites, y el cambio está medido: hoy, con `http`, la misión se anula con `MISSION_CONTENT_INVALID`.
 
 
 ## Alineación con la progresión de HU-08
@@ -254,16 +290,16 @@ Sin decimales en ningún punto, y con el nivel máximo 8 sin descarte de experie
 
 ## Pull requests de HU-09
 
-| Task | Repositorio | PR |
-| --- | --- | --- |
-| `#439` diseño y contrato | Infrastructure | [#147](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/147) — mergeado |
-| `#440` tirada en Combat | Combat | [#43](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/43) — mergeado |
-| `#441` acreditación en Player/Inventory | Player-Inventory | [#47](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/47) — mergeado |
-| `#442` coordinación y fórmula en Missions | Missions | [#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/17) — abierto |
-| `#443` experiencia en el reporte (HU-09.5) | Missions | [#18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/18) — abierto |
-| `#444` cadena E2E, guardas y workflow | Missions | [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19) — abierto, apilado sobre #18 |
-| `#444` control negativo de la guarda del azar | Combat | [#49](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/49) — abierto |
-| `#444` esta evidencia y el reporte | Infrastructure | [#157](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/157) — abierto |
+| Task | Repositorio | PR | Estado |
+| --- | --- | --- | --- |
+| `#439` diseño y contrato | Infrastructure | [#147](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/147) | mergeado |
+| `#440` tirada en Combat | Combat | [#43](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/43) | mergeado |
+| `#441` acreditación en Player/Inventory | Player-Inventory | [#47](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/47) | mergeado |
+| `#442` coordinación y fórmula en Missions | Missions | [#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/17) | **abierto** |
+| `#442` experiencia en el reporte (HU-09.5) | Missions | [#18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/18) | mergeado |
+| `#444` control negativo de la guarda del azar | Combat | [#49](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/49) | mergeado |
+| `#444` cadena E2E, guardas y workflow | Missions | [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19) | **abierto** |
+| `#444` esta evidencia y el reporte | Infrastructure | [#157](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/157) y su corrección posterior | mergeado / **abierto** |
 
 **Ninguno de estos PRs cierra la User Story #18.** Cierran Tasks subordinadas; la aceptación de la HU exige la revisión por pares y la aprobación del PO.
 
