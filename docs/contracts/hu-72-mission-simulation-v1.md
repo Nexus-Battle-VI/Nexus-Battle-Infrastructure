@@ -232,3 +232,23 @@ POST /api/internal/v1/inventory/commitments/{operationId}/extend
 - Montos y botín: HU-10.
 - Logros: HU-76.
 - Cancelación y penalización: sin HU en Sprint 2.
+
+## Extensión «misiones jugables» (compatible)
+
+Diseño: [misiones-jugabilidad.md](../architecture/misiones-jugabilidad.md). Solo añade campos y rutas; nada se quita ni se renombra.
+
+- Nueva en Combat: `POST /api/internal/v1/combat/simulations/estimates` (P-J7), firmada como la simulación.
+  - Cuerpo: `{ runs?, request }`, donde `request` es la misma solicitud de simulación; `runs` vale 30 por defecto y como máximo 100.
+  - Respuesta: `{ runs, victories, defeats, timeouts, winRate, averageTurns, averageDamageTaken, averageMinHealthPercent, masterAppearanceRate, abilities }`.
+  - Errores: `400 SCHEMA_INVALID`, `422` (contenido inválido) y `503 ESTIMATE_UNAVAILABLE`.
+  - No reserva la operación ni guarda nada. Usa las semillas `<operationId>:estimate:<n>`.
+- La solicitud de simulación lleva la composición del nivel (P-J8):
+  - enemigos de más en el primer grupo de cada encuentro regular;
+  - `enrageAttackBonus` del jefe aumentado;
+  - `bossDrops` y candidatos de Máster con la probabilidad mejorada, con tope en 1.
+- Habilidades con semántica de misión (P-J4): daño directo, curación, inmunidad, reflejo y penalizaciones al enemigo. La bitácora añade:
+  - `heroHealed`;
+  - en `heroAction`: `effects`, `powerSpent` y `attacked`;
+  - en `enemyAction`: `prevented` y `reflected`;
+  - en el resumen: `healingDone` y `abilityDamage`.
+- Botín (P-J1): cada botín ganado es una línea `PRODUCT` de origen `HU-72` y se entrega con `POST /api/internal/v1/inventory/grants` (`operationId = uuidV5(enrollmentId:loot:label)`).

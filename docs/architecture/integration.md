@@ -18,7 +18,9 @@ Una integración es **síncrona** cuando quien llama no puede continuar sin la r
 | Commerce → Player/Inventory (reserva) | Asíncrono con saga | **No implementado** |
 | Combat → Player/Inventory (héroe equipado: `subtype`, estadísticas efectivas y `activeEffects`) | Síncrono interno | **Implementado** (Player-Inventory [#35](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/35), Combat [#22](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/22)): `GET /api/internal/v1/players/:playerId/equipped-hero`, HMAC |
 | Combat → Account (perfil de batalla) | Síncrono interno | **Implementado**: cliente en Combat, ruta interna `GET /api/internal/accounts/:subject/battle-profile` en Account, HMAC |
-| Missions → Combat (simulación autoritativa) | Síncrono | **Previsto**: `POST /api/internal/v1/combat/simulations` figura en la documentación de Combat y Missions, pero el contrato **no está formalizado ni implementado** |
+| Missions → Combat (simulación autoritativa) | Síncrono interno | **Implementado** en `develop` (Combat [#44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/44) y [#50](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/50)): `POST /api/internal/v1/combat/simulations`, HMAC, [contrato HU-72](../contracts/hu-72-mission-simulation-v1.md) |
+| Missions → Combat (probabilidad de éxito, P-J7) | Síncrono interno | **En la rama `feat/misiones-jugabilidad`**: `POST /api/internal/v1/combat/simulations/estimates`, HMAC; la misma simulación varias veces, sin guardar nada ([diseño](misiones-jugabilidad.md)) |
+| Missions → Player/Inventory (épica del Máster y botín del jefe) | Síncrono interno, con reintento | `POST /api/internal/v1/inventory/grants`, HMAC e idempotente por `operationId` (Player-Inventory #49). La épica (HU-73) está en `develop`; el botín (P-J1) está en la rama `feat/misiones-jugabilidad` |
 
 El razonamiento en cada caso:
 
@@ -49,7 +51,7 @@ Contrato: [catalog-events-v1.asyncapi.yaml](../contracts/catalog-events-v1.async
 ```text
 Player/Inventory --(subtype + activeEffects, HMAC)--> Combat: BuildHeroEffectTable -> tabla vigente
 Combat: sequence.nextIndex() (HU-24) + tabla vigente -> ResolveRandomEffect -> efecto y magnitud (HU-25)
-Missions --(previsto)--> Combat: simulación con el mismo motor
+Missions --(HMAC)--> Combat: simulación y estimación de la misión con el mismo motor
 ```
 
 Player/Inventory es dueño del héroe, del equipamiento y de los `activeEffects`; Combat, de la tabla probabilística, su aplicación y la aleatoriedad. Ningún cliente aporta semilla, índice ni `activeEffects`. Detalle y decisión en [ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md) y [combat-randomness.puml](../diagrams/combat-randomness.puml).

@@ -116,3 +116,10 @@ El mismo jugador y logro producen siempre el mismo `operationId`: nunca dos entr
 - Mostrar los logros en el perfil: HU-76.3 (Web).
 - Guardar títulos e insignias en el perfil de Account, si se decide así (decisión 4).
 - Logros de otros módulos (JcJ, torneos).
+
+## Extensión «misiones jugables» (compatible)
+
+Diseño: [misiones-jugabilidad.md](../architecture/misiones-jugabilidad.md). Solo añade campos y rutas; nada se quita ni se renombra.
+
+- Sin cambios de forma.
+- Un catálogo vacío (`items: []`) significa que no hay logros definidos: Web lo muestra como «Aún no disponible» y no promete ninguno (P-J3).

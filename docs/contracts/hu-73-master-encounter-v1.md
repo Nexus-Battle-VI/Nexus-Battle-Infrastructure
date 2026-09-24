@@ -137,3 +137,11 @@ x-internal-service: missions
 - Cómo convierte Combat su índice aleatorio en una tirada y cómo calcula las estadísticas del Máster: Combat (ADR-021).
 - Acreditar la épica y rechazar otras vías de obtención: HU-32 y Player/Inventory.
 - Usar la épica en combate: HU-31 y Combat.
+
+## Extensión «misiones jugables» (compatible)
+
+Diseño: [misiones-jugabilidad.md](../architecture/misiones-jugabilidad.md). Solo añade campos y rutas; nada se quita ni se renombra.
+
+- Cada épica oficial de la Tabla 20 la entrega exactamente un Máster de su tipo, y una misión puede tener varios candidatos (P-J3). La Sombra del Olvido entrega «Toma y lleva».
+- El detalle muestra `epic: null` para un candidato cuya épica aún no es un producto (P-J2).
+- La probabilidad de aparición mejora con la dificultad (P-J8).

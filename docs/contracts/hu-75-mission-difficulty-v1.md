@@ -179,3 +179,9 @@ Ese insert es lo que desbloquea el siguiente nivel. Matricular no desbloquea. La
 - Bitácora y motor de daño: HU-72 / Combat.
 - Montos de créditos e ítems: HU-10.
 - Reporte para el jugador: HU-74.
+
+## Extensión «misiones jugables» (compatible)
+
+Diseño: [misiones-jugabilidad.md](../architecture/misiones-jugabilidad.md). Solo añade campos y rutas; nada se quita ni se renombra.
+
+- `GET /api/v1/missions/{missionId}/difficulties`: cada nivel añade `extraEnemiesPerEncounter`, `bossEnrageBonus`, `lootBonusPercent` y `masterBonusPercent` (P-J8). Los valores están en la tabla del diseño.
