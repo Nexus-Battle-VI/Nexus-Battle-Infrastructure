@@ -138,6 +138,40 @@ temporizador —el planificador debería detenerse en el apagado— y merece su 
 > inmediata tras HU-19 v2`, PR #53) ya lo había arreglado. El CI de un PR prueba la **fusión** con el
 > `develop` vigente, así que lo incluía. Tras rebasar la rama: 117 suites / 2865 pruebas, **0 fallos**.
 
+## Matriz P1/P2/P3 y registro (Task #233)
+
+La Task pide automatizar **tres casos** y el **registro**. Está en
+`Nexus-Battle-Player-Inventory/test/unit/hu-29-3-matriz-bloqueo.spec.ts`
+(PR [#59](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/59), **apilado** sobre el #26: prueba
+código que todavía no está en `develop`).
+
+| # | Caso del enunciado | Prueba | Qué afirma |
+| --- | --- | --- | --- |
+| **P1** | fuera de batalla → `ok true` (o delega) | `P1 fuera de batalla: la mutacion pasa…` y `P1 fuera de batalla: se DELEGA en HU-28…` | la mutación pasa, la lectura publica `locked: false`, y un producto que no es del jugador sigue siendo **404** (no un `battle_lock` por defecto) |
+| **P2** | en batalla → `ok false battle_lock`, equipo igual | `P2 en batalla: rechaza con reason: battle_lock y el equipo queda EXACTAMENTE igual` | el **DTO completo idéntico** antes y después (equipo, estadísticas efectivas, deltas, efectos) y la **versión del loadout intacta**, con el héroe llegando a la batalla **ya equipado** |
+| **P3** | fin batalla → lock liberado | `P3 fin de batalla: el lock se libera…` y `P3 (red de seguridad): un compromiso VENCIDO…` | el **mismo** cambio que se rechazó ahora pasa; y la **caducidad** libera sin liberación explícita, que es la red bajo la reconciliación |
+| **Log** | «Test + log» | `registra el rechazo con reason: battle_lock…`, `registra el exito fuera de batalla…`, `un rechazo que NO es el bloqueo no se registra como bloqueo` | `equipment_change_rejected` (`warn`, con `reason`) y `equipment_change_applied` (`info`), y **nada** en los demás rechazos |
+
+**Cómo se ejecuta:** en Player/Inventory, `npx jest --selectProjects unit --testPathPatterns hu-29-3-matriz` → **8/8**.
+
+**El estado de batalla no se simula con un doble**: empezar una batalla es **comprometer** al héroe y terminarla es
+**liberarlo**, que es lo que hace Combat por la ruta interna, así que la suite no puede pasar por un camino que en
+producción no existe.
+
+**Que las guardas pueden fallar** (lo que hace que un verde diga algo). Dos mutaciones, revertidas después:
+
+| Mutación | Qué se pone rojo |
+| --- | --- |
+| `decideEquipmentChange` devuelve siempre `ok: true` | P2, P3 y la caducidad (**3** pruebas) |
+| El controlador deja de emitir `equipment_change_rejected` | La del registro (**1** prueba) |
+
+**Lo que esta suite NO aporta, dicho:** **no mueve la cobertura** (89,39 % sentencias / 80,24 % ramas, igual antes y
+después). Esos caminos ya estaban cubiertos por las suites de HU-29.2; lo que añade es la **trazabilidad de los tres
+casos del enunciado** y el registro a nivel unitario. Y **sigue sin haber prueba de extremo a extremo entre los dos
+servicios**: el enunciado de `#233` pide unitarios y registro, así que no es un requisito de esta Task — pero es la
+verificación que falta para poder afirmar los criterios de aceptación de punta a punta, y se deja escrito como tal en
+lugar de darla por hecha.
+
 ## Trabajo previo: qué se rescató y qué no
 
 | Dónde | Estado al 2026-09-09 | Qué se hizo |
