@@ -327,10 +327,26 @@ services:
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
-      # Sin `:?`: sin secreto, las rutas internas del servicio responden 503
-      # y el resto sigue funcionando. Lo exigen con `:?` otros servicios de
-      # este fichero, asi que en la practica ya esta definido.
-      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      # Missions firma sus llamadas internas a Combat y a Player/Inventory
+      # (HU-70 a HU-73 y HU-09): sin secreto no puede matricular ni cerrar una
+      # mision, asi que se exige igual que en Player/Inventory.
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:?Define el secreto interno en .env}
+      # Integraciones reales. Con NODE_ENV=development el valor por defecto es
+      # el doble en memoria, que no reserva al heroe ni simula nada.
+      HERO_COMMITMENTS_DRIVER: http
+      HERO_ABILITIES_DRIVER: http
+      EPIC_GRANTS_DRIVER: http
+      EXPERIENCE_REWARDS_DRIVER: http
+      PLAYER_INVENTORY_BASE_URL: http://inventory:3002
+      COMBAT_SIMULATION_DRIVER: http
+      COMBAT_BASE_URL: http://combat:3006
+      # Apagados por defecto en el servicio. El planificador simula y cierra
+      # cada mision al vencer su duracion (HU-72); el barrido acredita la
+      # experiencia de cada derrota (HU-09); el reconciliador libera al heroe
+      # de una matricula PENDING que Player/Inventory no confirmo.
+      MISSION_EXECUTION_ENABLED: 'true'
+      EXPERIENCE_REWARD_ENABLED: 'true'
+      ENROLLMENT_RECONCILER_ENABLED: 'true'
     depends_on:
       missions-migrate:
         condition: service_completed_successfully
