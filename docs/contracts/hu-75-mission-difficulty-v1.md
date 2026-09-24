@@ -184,4 +184,4 @@ Ese insert es lo que desbloquea el siguiente nivel. Matricular no desbloquea. La
 
 Diseño: [misiones-jugabilidad.md](../architecture/misiones-jugabilidad.md). Solo añade campos y rutas; nada se quita ni se renombra.
 
-- `GET /api/v1/missions/{missionId}/difficulties`: cada nivel añade `extraEnemiesPerEncounter`, `bossEnrageBonus`, `lootBonusPercent` y `masterBonusPercent` (P-J8). Los valores están en la tabla del diseño.
+- `GET /api/v1/missions/{missionId}/difficulties`: cada nivel añade `extraEnemiesPerEncounter`, `bossEnrageBonus` y `lootBonusPercent` (P-J8). Los valores están en la tabla del diseño. La probabilidad del Máster no cambia con el nivel: el PO la fijó en el 15 % por misión.

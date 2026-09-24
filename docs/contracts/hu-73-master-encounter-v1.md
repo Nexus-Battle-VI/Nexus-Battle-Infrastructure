@@ -144,4 +144,4 @@ Diseño: [misiones-jugabilidad.md](../architecture/misiones-jugabilidad.md). Sol
 
 - Cada épica oficial de la Tabla 20 la entrega exactamente un Máster de su tipo, y una misión puede tener varios candidatos (P-J3). La Sombra del Olvido entrega «Toma y lleva».
 - El detalle muestra `epic: null` para un candidato cuya épica aún no es un producto (P-J2).
-- La probabilidad de aparición mejora con la dificultad (P-J8).
+- Un Máster aparece en el 15 % de las misiones, igual para cualquier héroe y en cualquier dificultad (decisión del PO del 2026-09-24). El contenido v2 usa un solo punto de evaluación por misión y reparte ese 15 % entre sus candidatos: 15 % con uno, 7,8 % cada uno con dos y 5,275 % cada uno con tres.

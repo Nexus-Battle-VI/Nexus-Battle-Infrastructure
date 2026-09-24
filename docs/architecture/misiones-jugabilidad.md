@@ -1,6 +1,6 @@
 # Misiones jugables — diseño P-J1 a P-J11
 
-**Estado de este documento:** diseño contrastado con el código de las ramas `feat/misiones-jugabilidad` de Missions, Combat, Web e Infrastructure (2026-09-24). Nada de esto está en `develop` todavía. Las cifras de balance salen del motor real de Combat; las decisiones marcadas como **pendientes del PO** son propuestas del equipo.
+**Estado de este documento:** diseño contrastado con el código de las ramas `feat/misiones-jugabilidad` de Missions, Combat, Web e Infrastructure (2026-09-24). Nada de esto está en `develop` todavía. Las cifras de balance salen del motor real de Combat. Incluye las decisiones que el PO tomó el 2026-09-24 (ver «Decisiones del PO»); lo que sigue marcado como **pendiente del PO** son propuestas del equipo.
 
 ## Trazabilidad
 
@@ -61,15 +61,19 @@ La prueba de punta a punta sobre `develop` (2026-09-24) mostró un módulo que f
 | Épica | Máster | Tipo | Misión |
 | --- | --- | --- | --- |
 | Toma y lleva | Sombra del Olvido | Pícaro Veneno | El Templo Olvidado |
-| Golpe de defensa | Coloso de Obsidiana | Guerrero Tanque | El Templo Olvidado |
 | Frío concentrado | Hechicera del Sello | Mago Hielo | La Cámara Sellada |
+| Golpe de defensa | Coloso de Obsidiana | Guerrero Tanque | La Cámara Sellada |
 | Segundo impulso | Campeón Carmesí | Guerrero Armas | La Arena de los Caídos |
 | Intimidación sangrienta | Filo Errante | Pícaro Machete | La Arena de los Caídos |
 | Luz cegadora | Llama Salvaje | Mago Fuego | Travesía por el Bosque Sombrío |
 | Té changua | Chamán de la Niebla | Chamán | Travesía por el Bosque Sombrío |
 | Reanimador 3000 | Cirujano Silente | Médico | Travesía por el Bosque Sombrío |
 
-- Cada Máster aparece más para su propio tipo de héroe (`probabilityByHeroType`), así que cada tipo tiene su Máster que perseguir (7.8.4).
+- **Un Máster aparece en el 15 % de las misiones, igual para cualquier héroe** (decisión del PO).
+  - Cada misión tiene un solo punto de evaluación y como mucho una aparición, así que la cifra que ve el jugador en cada Máster es la real.
+  - Templo: 15 %, como el ejemplo del curso (7.8.14). Cámara y Arena: 7,8 % por Máster. Travesía: 5,275 % por Máster. En Combat, que tira con resolución de 1/8000, dan entre 14,99 % y 15,01 %.
+  - El Coloso pasó del Templo a la Cámara para que el Templo quede como en el curso.
+  - `GET /missions/{id}` publica en `masterEncounter.probability` la probabilidad de que aparezca algún Máster en la misión, calculada por Missions: `1 − ((1 − p₁)(1 − p₂)…)^puntos`, la mayor según el tipo de héroe. Antes era la mayor probabilidad configurada de un candidato. Web la muestra en el detalle.
 - El resumen del historial añade `epicAlbum`: cada épica entregable, con su Máster, su misión y si el jugador ya la tiene. Una entrega en camino cuenta como obtenida; una fallida no.
 - Logros (HU-76): Missions lista todo su catálogo, conseguido o no. Con el catálogo vacío, Web muestra «Aún no disponible» y no «Aún no tienes logros».
 
@@ -108,43 +112,44 @@ La prueba de punta a punta sobre `develop` (2026-09-24) mostró un módulo que f
 
 ### P-J8 — Dificultad que cambia la misión
 
-| Nivel | Estadísticas | Enemigos de más por encuentro regular | Ataque de más del jefe furioso | Botín y Máster |
+| Nivel | Estadísticas | Enemigos de más por encuentro regular | Ataque de más del jefe furioso | Botín |
 | --- | --- | --- | --- | --- |
 | Normal | ×1 | 0 | 0 | +0 % |
 | Heroico | ×1,5 | 1 | 0 | +25 % |
 | Legendario | ×2 | 1 | 2 | +50 % |
 | Mítico | ×2,5 | 2 | 4 | +100 % |
 
-- Las probabilidades mejoradas tienen tope en el 100 %.
+- La probabilidad de botín mejorada tiene tope en el 100 %.
+- La del Máster no cambia con el nivel: el PO la fijó en el 15 % por misión.
 - Los enemigos de más se suman al primer grupo de cada encuentro regular; el jefe nunca se duplica.
 - Más enemigos también dan más experiencia (HU-09).
-- `GET .../difficulties` publica `extraEnemiesPerEncounter`, `bossEnrageBonus`, `lootBonusPercent` y `masterBonusPercent`.
+- `GET .../difficulties` publica `extraEnemiesPerEncounter`, `bossEnrageBonus` y `lootBonusPercent`.
 
 ### P-J9 — Contenido v2 y balance medido
 
 - Nuevas misiones:
   - **Camino al Templo:** historia, 10 min, sin requisitos ni Máster y con botín seguro.
   - **La Arena de los Caídos:** desafío, 1 h, requiere el Camino.
-  - **Travesía por el Bosque Sombrío:** exploración, 24 h, hasta dos Máster, requiere el Camino.
+  - **Travesía por el Bosque Sombrío:** exploración, 24 h, tres Máster posibles (como mucho uno por misión), requiere el Camino.
 - El Templo y la Cámara suben a 300 turnos por encuentro: la pelea con el jefe se decide por la vida de alguno, no por agotar el tiempo.
 - La migración 012 inserta lo nuevo y mejora el Templo y la Cámara campo a campo, solo donde conservan lo sembrado en v1: lo que un administrador editó o enlazó no se toca.
 
-Balance medido con el banco (`simulateMission` de Combat sobre `buildSimulationRequest` de Missions, 100 corridas por celda). Porcentaje de victorias con estrategia de dos mejoras de daño:
+Balance medido con el banco (`simulateMission` de Combat sobre `buildSimulationRequest` de Missions, 100 corridas por celda), con los Máster al 15 % por misión. Porcentaje de victorias con estrategia de dos mejoras de daño:
 
 | Misión | Héroe | Normal | Heroico | Legendario | Mítico |
 | --- | --- | --- | --- | --- | --- |
 | Camino al Templo | Guerrero Armas equipado | 100 | 100 | 86 | 3 |
 | Camino al Templo | Pícaro Veneno nivel 1 | 100 | 98 | 30 | 0 |
-| El Templo Olvidado | Guerrero Armas equipado | 100 | 100 | 78 | 0 |
-| El Templo Olvidado | Pícaro Veneno nivel 1 | 100 | 78 | 0 | 0 |
-| La Cámara Sellada | Guerrero Armas equipado | 100 | 100 | 92 | 0 |
-| La Arena de los Caídos | Guerrero Armas equipado | 100 | 93 | 2 | 0 |
-| La Arena de los Caídos | Pícaro Veneno nivel 1 | 100 | 13 | 0 | 0 |
-| Travesía por el Bosque Sombrío | Guerrero Armas equipado | 100 | 95 | 1 | 0 |
-| Travesía por el Bosque Sombrío | Médico nivel 1 | 60 | 3 | 0 | 0 |
+| El Templo Olvidado | Guerrero Armas equipado | 100 | 100 | 87 | 0 |
+| El Templo Olvidado | Pícaro Veneno nivel 1 | 100 | 79 | 0 | 0 |
+| La Cámara Sellada | Guerrero Armas equipado | 100 | 100 | 93 | 0 |
+| La Arena de los Caídos | Guerrero Armas equipado | 100 | 95 | 2 | 0 |
+| La Arena de los Caídos | Pícaro Veneno nivel 1 | 98 | 17 | 0 | 0 |
+| Travesía por el Bosque Sombrío | Guerrero Armas equipado | 100 | 93 | 1 | 0 |
+| Travesía por el Bosque Sombrío | Médico nivel 1 | 61 | 3 | 0 | 0 |
 
 - Guerrero Armas equipado: el héroe del stack local, con ataque 12, defensa 14, vida 40 y daño 1d4. Pícaro Veneno y Médico de nivel 1: Tabla 6.
-- Sin estrategia, las cifras bajan. Por ejemplo, el Médico cae del 60 % al 22 % en la Travesía: la estrategia importa.
+- Sin estrategia, las cifras bajan. Por ejemplo, el Médico cae del 61 % al 30 % en la Travesía: la estrategia importa.
 - Mítico queda para héroes más fuertes. El curso dice que el nivel multiplica las estadísticas (nivel 3 → ataque 30), pero Player/Inventory aún no lo aplica: con héroes de nivel alto el balance cambiará y habrá que medirlo de nuevo.
 
 ### P-J10 — Nombres, no identificadores
@@ -160,36 +165,46 @@ Balance medido con el banco (`simulateMission` de Combat sobre `buildSimulationR
 
 ## Cambios de contrato
 
-Todos son compatibles: añaden campos o rutas y no quitan ni renombran nada.
+Todos son compatibles: añaden campos o rutas y no quitan ni renombran nada. La única cifra que cambia de significado es `masterEncounter.probability` de HU-70; con un solo candidato vale lo mismo que antes.
 
 | Contrato | Cambio |
 | --- | --- |
-| HU-70 | `GET /missions/{id}`: `imageRef`, `prerequisiteMissions`, `rewards` de P-J2 y `epic` anulable. Ruta nueva `GET /missions/{id}/estimate`. |
+| HU-70 | `GET /missions/{id}`: `imageRef`, `prerequisiteMissions`, `rewards` de P-J2, `epic` anulable y `masterEncounter.probability` como probabilidad de la misión (P-J3). Ruta nueva `GET /missions/{id}/estimate`. |
 | HU-71 | Sin cambios de forma. La estimación dice qué habilidades de la estrategia sirven en misiones. |
-| HU-72 | Combat: `POST /simulations/estimates`. La solicitud lleva la composición del nivel y las probabilidades mejoradas (P-J8). Las habilidades se evalúan con P-J4. |
-| HU-73 | Una épica oficial por Máster; varios candidatos por misión (P-J3). |
+| HU-72 | Combat: `POST /simulations/estimates`. La solicitud lleva la composición del nivel y la probabilidad de botín mejorada (P-J8). Las habilidades se evalúan con P-J4. |
+| HU-73 | Una épica oficial por Máster, varios candidatos por misión y un 15 % por misión (P-J3). |
 | HU-74 | Reporte: `strategy`, `healingDone`, `abilityDamage` y líneas `PRODUCT` de origen `HU-72`. Resumen: nombres y `epicAlbum`. Rutas nuevas `GET /missions/me/active` y `GET /missions/me/progress/{id}`. |
-| HU-75 | `GET /missions/{id}/difficulties`: `extraEnemiesPerEncounter`, `bossEnrageBonus`, `lootBonusPercent` y `masterBonusPercent`. |
+| HU-75 | `GET /missions/{id}/difficulties`: `extraEnemiesPerEncounter`, `bossEnrageBonus` y `lootBonusPercent`. |
 | HU-76 | Sin cambios. Un catálogo vacío se lee como «sin logros definidos». |
 
 Base de datos de Missions:
 - **011:** tabla `mission_loot_grants` y el origen `HU-72` en las líneas del reporte.
 - **012:** contenido v2.
 
-## Pendiente del PO
+## Decisiones del PO (2026-09-24)
 
-1. **Probabilidad de los Máster.** La Tabla 20 da entre 0,01 % y 0,1 % por misión, lo que hace el álbum inalcanzable. El equipo propone entre 3 % y 20 %, con el 15 % del ejemplo del curso para la Sombra del Olvido.
-2. **Composición de cada dificultad (P-J8)** y la escala de riesgo de la estimación (P-J7).
-3. **Épicas repetidas.** Hoy una épica ya obtenida se acredita otra vez y se apila; se vio «Toma y lleva» ×2 en local. ¿Se acredita, se convierte en otra cosa o no se vuelve a entregar?
-4. **Catálogo de logros (HU-76).** La base es la lista del curso (7.8.11): completar todas las misiones de una categoría, derrotar a todos los Máster, completar misiones sin recibir daño, terminar en tiempo récord y coleccionar todas las épicas. Mientras no se apruebe, la sección no promete nada.
-5. **Créditos, cofres y títulos (HU-10).** No se entregan ni se muestran hasta que HU-10 los entregue.
-6. **«Velo de Sombras».** La épica del ejemplo del curso no es un producto: se reemplazó por «Toma y lleva», la oficial de su tipo.
-7. **Cancelar una misión (7.8.9).** No está en este alcance.
-8. **Botín en la tienda.** Los productos nuevos quedan a la venta por créditos; si deben ser exclusivos de las misiones, hay que retirarlos de la venta (ver el runbook).
+El PO respondió las preguntas abiertas de los diseños de HU-70 a HU-76. Estas son las que tocan este diseño:
+
+| Pregunta | Decisión | En este diseño |
+| --- | --- | --- |
+| Probabilidad de los Máster | 15 % por misión. Se consulta al profesor. | Aplicada en el contenido v2, el detalle y la estimación. La dificultad ya no la sube (P-J3, P-J8). |
+| Épicas de los Máster | Las 8 oficiales de la Tabla 20. | Aplicada (P-J3). «Velo de Sombras», que no es un producto, queda reemplazada por «Toma y lleva». |
+| Épica repetida | Se acumula. | Ya es así: Player/Inventory suma la cantidad y el álbum la cuenta una vez. |
+| Créditos, cofres y títulos | HU-10 (#19) la hace Beta. | Siguen ocultos hasta que HU-10 los entregue (P-J2). Los créditos necesitan una ruta nueva en Wallet (Gama). |
+| Nombres de la dificultad | Normal, Heroico, Legendario y Mítico, también en el filtro del tablón. Mítico se queda en ×2,5. | Los niveles ya usan esos nombres y el ×2,5. El tablón aún no tiene filtro por dificultad (pregunta 10 del diseño de HU-70): está fuera de este alcance. |
+| Tiempo agotado sin el objetivo principal | Misión fallida. | Ya es así: `FAILED` con `TIME_LIMIT`. |
+| Botín | Pasa al inventario al terminar y también se vende en la tienda. Solo las épicas son exclusivas de las misiones y no se venden. | El botín ya se entrega (P-J1) y sus productos quedan a la venta. Falta confirmar que las épicas de producción no se puedan comprar (ver el runbook). |
+| Logros | Los 5 del curso (7.8.11). | Falta cargarlos en el catálogo de HU-76. Mientras esté vacío, Web muestra «Aún no disponible» (P-J3). |
+| Cancelar una misión | El héroe queda cansado un tercio de la duración y no recibe recompensas. | Fuera de este diseño. |
+
+**Sigue pendiente del PO:**
+
+1. Los valores de P-J8 (enemigos de más, ataque de más del jefe y mejora del botín) y la escala de riesgo de la estimación (P-J7). Son propuestas del equipo.
+2. La confirmación del profesor sobre el 15 %.
 
 ## Verificación
 
-- **Missions:** 1070 pruebas unitarias y de integración, y 13 suites contra PostgreSQL real con Testcontainers. Incluyen la migración 012 sobre una base v1 enlazada y editada.
+- **Missions:** 1075 pruebas unitarias y de integración, y 13 suites (217 pruebas) contra PostgreSQL real con Testcontainers. Incluyen la migración 012 sobre una base v1 enlazada y editada, y el 15 % de Máster por misión.
 - **Combat:** pruebas unitarias de la política de habilidades (24 habilidades de producción) y de la simulación, y pruebas HTTP de `POST /estimates`.
-- **Web:** 2483 pruebas, incluida la guarda `noClientAuthority` de HU-09.5, y el build de producción con su verificación de bundle.
+- **Web:** 2484 pruebas, incluida la guarda `noClientAuthority` de HU-09.5, y el build de producción con su verificación de bundle.
 - **Punta a punta local:** ver la sección de entorno local del runbook de productos.

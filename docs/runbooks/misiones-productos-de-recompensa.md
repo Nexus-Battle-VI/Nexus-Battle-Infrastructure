@@ -13,8 +13,8 @@ Los identificadores de los productos creados como datos **cambian en cada entorn
 | Épica | `epicRef` en el contenido | Máster (misión) | `productId` en producción |
 | --- | --- | --- | --- |
 | Toma y lleva | `toma-y-lleva` | Sombra del Olvido (Templo) | `0783a7ad-bb8a-463d-b24a-c4d88aae2d37` |
-| Golpe de defensa | `golpe-de-defensa` | Coloso de Obsidiana (Templo) | `fc89342a-56b9-450f-9c5c-3ac2900c6fcb` |
 | Frío concentrado | `frio-concentrado` | Hechicera del Sello (Cámara) | `3adf92bd-4806-4454-aacc-445ad016035d` |
+| Golpe de defensa | `golpe-de-defensa` | Coloso de Obsidiana (Cámara) | `fc89342a-56b9-450f-9c5c-3ac2900c6fcb` |
 | Segundo impulso | `segundo-impulso` | Campeón Carmesí (Arena) | `26dd2358-5ee9-4cf0-91d9-da02ba0d97ee` |
 | Intimidación sangrienta | `intimidacion-sangrienta` | Filo Errante (Arena) | `f752f8a6-286d-4ede-b6ad-1cb9a7f43f00` |
 | Luz cegadora | `luz-cegadora` | Llama Salvaje (Travesía) | `de662785-0edc-4816-b2bf-cbb785fdeaa1` |
@@ -36,7 +36,10 @@ Los identificadores de los productos creados como datos **cambian en cada entorn
 
 La dificultad sube estas probabilidades (+25 %, +50 % y +100 % en Heroico, Legendario y Mítico, con tope en el 100 %).
 
-**Decisión pendiente del PO: visibilidad en la tienda.** Un producto recién creado queda activo y se puede comprar por su precio en créditos. Si el botín debe ser exclusivo de las misiones, hay que retirarlo de la venta desde la administración de Catalog, comprobando antes que el inventario siga mostrando los objetos ya entregados.
+**Decisión del PO (2026-09-24): el botín también se vende en la tienda; solo las épicas son exclusivas de las misiones y no se venden.**
+
+- Los productos de botín quedan activos, a la venta por su precio en créditos.
+- Falta comprobar en el Catalog de producción que las 8 épicas no se puedan comprar. Si se pueden, un administrador las retira de la venta desde Catalog, después de confirmar que Player/Inventory sigue aceptando la entrega de un producto retirado y que el inventario sigue mostrando las ya entregadas.
 
 ## Orden en producción
 

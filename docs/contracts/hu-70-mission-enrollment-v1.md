@@ -331,6 +331,7 @@ Diseño: [misiones-jugabilidad.md](../architecture/misiones-jugabilidad.md). Sol
   - `prerequisiteMissions: [{ missionId, name }]` (P-J10);
   - `rewards` con la forma de P-J2: `experience`, y `potential` solo con botín enlazado a un producto;
   - `masterEncounter.candidates[].epic` en `null` si la épica aún no es un producto.
+- `masterEncounter.probability` pasa a ser la probabilidad de que aparezca algún Máster en la misión, calculada por Missions: el 15 % que fijó el PO, la mayor según el tipo de héroe. Antes era la mayor probabilidad configurada de un candidato; con un solo candidato vale lo mismo.
 - `GET /api/v1/missions`: `highlightedRewards` son la experiencia, las épicas posibles y los dos botines más probables (P-J2).
 - Nueva `GET /api/v1/missions/{missionId}/estimate?heroId=&difficulty=` (P-J7).
   - Respuesta: `{ missionId, heroId, difficulty, strategyVersion, runs, successPercent, defeatPercent, timeoutPercent, risk, riskLabel, averageTurns, averageMinHealthPercent, masterAppearancePercent, abilities: [{ abilityId, name, usable, reason }] }`.
