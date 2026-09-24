@@ -119,9 +119,10 @@ declarada: hasta que las rutas existan en el entorno **y** la URL esté puesta,
 | Puerta | Player / Inventory | Combat |
 | --- | --- | --- |
 | `lint`, `format:check`, `typecheck`, `build` | verde | verde |
-| Suites | 59 suites / 1023 pruebas | 117 suites / 2865 (unit) · 12 suites / 190 (integración) |
-| Cobertura | 89,38 % sentencias · 80,24 % ramas | 95,57 % sentencias · 88,86 % ramas |
+| Suites | 59 suites / **1024 pruebas** | 117 suites / **2865** (unit) · 12 suites / **190** (integración) |
+| Cobertura | 89,39 % sentencias · **80,24 % ramas** | 95,5 % sentencias · **88,8 % ramas** |
 | Base de datos real (Testcontainers) | 10 suites / 102 pruebas | 10 suites / 205 pruebas |
+| CI del PR | verde | verde (`Calidad y pruebas`) |
 
 **El CI de los PR está en verde** (Combat PR #55: `Calidad y pruebas` `pass`). Queda **un hallazgo
 ajeno** a esta HU, que **no** reproduce en CI y sí en una máquina Windows: el `test:db` de Combat cae
