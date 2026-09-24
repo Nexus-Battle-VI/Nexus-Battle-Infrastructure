@@ -38,18 +38,17 @@ if (¿HU-70 acepta?) then (no)
   stop
 endif
 
-:Persistir matrícula con difficulty
-y rewardTier;
+:Persistir matrícula con difficulty;
 note right
-  STANDARD / IMPROVED /
-  PREMIUM / EXCLUSIVE.
-  Montos = HU-10.
+  rewardTier se publica en GET
+  de niveles, no se persiste
+  en la matrícula actual.
 end note
 
 if (¿Simulación HU-72 disponible?) then (sí)
   :Pedir a Combat difficulty
   + multiplicador aprobado;
-  if (¿Resultado SUCCESS?) then (sí)
+  if (¿Misión cerrada COMPLETED?) then (sí)
     :Registrar MissionDifficultyClear;
   endif
 else (no)

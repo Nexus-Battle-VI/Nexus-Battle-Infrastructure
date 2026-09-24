@@ -36,8 +36,13 @@ class Enrollment {
   missionId
   heroId
   difficulty
-  rewardTier
   result
+}
+
+class DifficultyDescriptor {
+  difficulty
+  enemyStatMultiplier
+  rewardTier
 }
 
 enum RewardTier {
@@ -60,13 +65,14 @@ class RewardGrant <<external>> {
 Mission "1" o-- "4" DifficultyLevel : ofrece
 Enrollment --> Mission
 Enrollment --> DifficultyLevel
-Enrollment --> RewardTier
+DifficultyDescriptor --> RewardTier
+DifficultyDescriptor --> DifficultyLevel
 MissionDifficultyClear --> Mission
 MissionDifficultyClear --> DifficultyLevel
 DifficultyPolicy ..> MissionDifficultyClear : consulta
 DifficultyPolicy ..> DifficultyLevel : ordena
 Enrollment ..> CombatSimulationRequest : envía si HU-72
-Enrollment ..> RewardGrant : frontera HU-10
+DifficultyDescriptor ..> RewardGrant : futura frontera HU-10
 
 note right of DifficultyPolicy
   Heroico exige clear NORMAL

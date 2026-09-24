@@ -31,10 +31,10 @@ else CA-01 / CA-02 nivel desbloqueado
   player -> web : elige nivel libre y confirma
   web -> missions : POST matrícula + difficulty + héroe
   missions -> missions : DifficultyPolicy.acepta()
-  missions -> db : guardar Enrollment(difficulty, rewardTier)
+  missions -> db : guardar Enrollment(difficulty)
   missions --> web : 201 matrícula
 
-  opt cuando exista HU-72
+  opt cuando Combat entregue simulación real
     missions -> combat : simular(difficulty, multiplier?)
     note right of combat
       Heroico: 1.5
@@ -43,7 +43,7 @@ else CA-01 / CA-02 nivel desbloqueado
       multiplicador inventado
     end note
     combat --> missions : resultado + bitácora
-    alt SUCCESS
+    alt cierre de misión COMPLETED
       missions -> db : insert MissionDifficultyClear
       missions -> pay : grant según HU-10 / operationId
     end

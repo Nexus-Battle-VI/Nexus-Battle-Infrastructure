@@ -13,7 +13,7 @@ rectangle "Missions" {
   usecase "Consultar niveles\ny su desbloqueo" as list
   usecase "Matricular eligiendo\ndificultad" as enroll
   usecase "Validar progresión\nmisma misión" as policy
-  usecase "Registrar clear\nal éxito" as clear
+  usecase "Registrar clear\nal cierre COMPLETED" as clear
   usecase "Rechazar con\nmensaje explicativo" as deny
 }
 
@@ -21,8 +21,8 @@ player --> list
 player --> enroll
 enroll ..> policy : <<include>>
 policy ..> deny : <<extend>>\nfalta nivel anterior
-enroll ..> combat : <<include>>\nsolo si HU-72 existe
-clear --> rewards : entrega según rewardTier\n(no se inventan montos)
+enroll ..> combat : <<include>>\nsi Combat entrega simulación real
+clear --> rewards : entrega futura HU-10\n(no se inventan montos)
 
 note bottom of policy
   Normal → Heroico → Legendario → Mítico.

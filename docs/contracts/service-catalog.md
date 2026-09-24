@@ -16,7 +16,7 @@
 | Auction | [Nexus-Battle-Auction](https://github.com/Nexus-Battle-VI/Nexus-Battle-Auction) | 3008 | Gama | `/api/docs` | PostgreSQL |
 | Wallet | [Nexus-Battle-Wallet](https://github.com/Nexus-Battle-VI/Nexus-Battle-Wallet) | 3009 | Gama | `/api/docs` | PostgreSQL |
 
-Combat, Missions, Auction y Wallet salen de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md) (`Accepted`). Missions, Auction y Wallet son andamiaje sin rutas de negocio; **Combat ya expone rutas de salas y un canal WebSocket** (ver su sección). Caddy reserva `/api/v1/combat*`, `/api/v1/missions*`, `/api/v1/auctions*` y `/api/v1/wallet*`. Los contratos de los demás se añadirán aquí cuando cada Historia de Usuario los defina.
+Combat, Missions, Auction y Wallet salen de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md) (`Accepted`). Missions ya expone en `develop` la consulta de dificultad de HU-75; la matrícula sigue en una PR en borrador. **Combat ya expone rutas de salas y un canal WebSocket** (ver su sección). Caddy reserva `/api/v1/combat*`, `/api/v1/missions*`, `/api/v1/auctions*` y `/api/v1/wallet*`. Los contratos de los demás se añadirán aquí cuando cada Historia de Usuario los defina.
 
 La especificación OpenAPI **se genera desde el código** con `@nestjs/swagger`, por lo que no puede quedar desincronizada de la implementación. Está deshabilitada en producción salvo decisión explícita.
 
@@ -219,20 +219,20 @@ La lectura **omite los mensajes ocultos**. La persistencia los conserva.
 
 Las tres rutas marcadas **diseño** las define el [contrato de HU-17](hu-17-battle-turn-order-v1.md) (Task #405) y **solo son capacidad cuando Combat las integre** (Task #406); ese documento fija también los mensajes del WebSocket (`battleStarted`, `turnAdvanced`, `snapshot`, `resume`). Errores y esquemas: OpenAPI de Combat (`/api/docs`). Combat consume, con HMAC, rutas internas de Player/Inventory (`GET /api/internal/v1/players/:playerId/equipped-hero`) y de Account (`GET /api/internal/accounts/:subject/battle-profile`).
 
-**La aleatoriedad no tiene ruta pública ni interna**: el generador (HU-24) y la tabla de efectos (HU-25) los consume Combat internamente ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)). No existen `/random`, `/rng` ni `/seed`. El contrato interno de simulaciones para Missions (`POST /api/internal/v1/combat/simulations`) está **previsto y sin formalizar**, por eso no se documenta aquí.
+**La aleatoriedad no tiene ruta pública ni interna**: el generador (HU-24) y la tabla de efectos (HU-25) los consume Combat internamente ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)). No existen `/random`, `/rng` ni `/seed`. La solicitud interna de HU-72 preparada en [Missions #15](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/15) usa `POST /api/internal/v1/combat/simulations`; [Combat #44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/44) prepara su recepción, pero todavía no entrega resultados de simulación.
 
 **Previsto y sin implementar (HU-09, Task #439):** `POST /api/internal/v1/combat/experience-rolls` (servicio permitido: `missions`) devolvería **una tirada `1d8` por cada NPC derrotado** de una misión, obtenidas del motor centralizado y **persistidas antes de responder**, con `operationId` de lote determinista y clave por instancia de derrota. **No es una ruta de azar**: no acepta rango, no devuelve el índice ni la semilla y es idempotente. Contrato: [hu-09-experience-reward-v1](hu-09-experience-reward-v1.md) §5.
 
 ### Missions — `/api/v1/missions`
 
-Sin rutas de negocio implementadas (andamiaje, [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md)). Primer contrato en **diseño**:
+Estado de las rutas de dificultad, contrastado con `develop` de Missions y su [PR #15](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/15):
 
 | Método | Ruta | Códigos de éxito |
 | --- | --- | --- |
-| `GET` | `/api/v1/missions/:missionId/difficulties` (HU-75, **diseño** [contrato v1](hu-75-mission-difficulty-v1.md)) | `200` |
-| `POST` | `/api/v1/missions/:missionId/enrollments` con `difficulty` (extiende la matrícula de HU-70; HU-75, **diseño**) | `201` |
+| `GET` | `/api/v1/missions/:missionId/difficulties` (HU-75, [contrato v1](hu-75-mission-difficulty-v1.md); **en `develop` de Missions**) | `200` |
+| `POST` | `/api/v1/missions/:missionId/enrollments` con `difficulty` (HU-70 + HU-75; **en PR #15, no en `develop`**) | `201` |
 
-Las dos rutas las define el [contrato de HU-75](hu-75-mission-difficulty-v1.md) (Task #383) y **solo son capacidad cuando Missions las integre** (Task #384). La matrícula pertenece a HU-70 (Task #365), que fija el resto del cuerpo y sus errores; HU-75 añade `difficulty`, el `422 PROGRESSION_LOCKED` y el `400 UNKNOWN_DIFFICULTY`. El contrato interno hacia Combat sigue **previsto y sin formalizar**: HU-75 solo fija los campos `difficulty` y `enemyStatMultiplier` que Missions aportará cuando HU-72 lo defina.
+El [contrato de HU-75](hu-75-mission-difficulty-v1.md) distingue la consulta disponible en `develop` de la matrícula aún en revisión. HU-75 añade `difficulty`, el `422 PROGRESSION_LOCKED` y el `400 UNKNOWN_DIFFICULTY` a la matrícula de HU-70, preparada en [Missions #15](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/15). Esa rama también prepara `difficulty` y `enemyStatMultiplier` para HU-72; la recepción firmada está en [Combat #44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/44), pendiente de revisión, y el motor real no está disponible.
 
 ### Notifications
 
