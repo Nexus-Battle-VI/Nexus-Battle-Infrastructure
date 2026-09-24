@@ -365,10 +365,32 @@ services:
       AUTH_MODE: ${AUTH_MODE:-disabled}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
-      # Sin `:?`: sin secreto, las rutas internas del servicio responden 503
-      # y el resto sigue funcionando. Lo exigen con `:?` otros servicios de
-      # este fichero, asi que en la practica ya esta definido.
-      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      # Con `:?`: Auction se niega a arrancar si hay una *_BASE_URL interna
+      # configurada sin secreto, y firma con el todas sus llamadas internas.
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:?Define el secreto interno en .env}
+      # --- HU-64: dependencias internas de Auction (mismo nodo `app`, red
+      # interna de compose: no sale del nodo, no es TLS ni un secreto) ---
+      # Sin estas URLs Auction instala adaptadores "no disponibles" y toda
+      # compra inmediata responde 503. Base sin `/api`: los clientes de
+      # Auction ya incluyen la ruta completa `/api/internal/...`.
+      CATALOG_BASE_URL: http://catalog:3003
+      ACCOUNT_BASE_URL: http://account:3000
+      WALLET_BASE_URL: http://wallet:3009
+      INVENTORY_BASE_URL: http://inventory:3002
+      ACCOUNT_REQUEST_TIMEOUT_MS: 3000
+      WALLET_REQUEST_TIMEOUT_MS: 3000
+      INVENTORY_REQUEST_TIMEOUT_MS: 3000
+      # Servidor interno de Auction en Notifications (AUCTION_OUTBID_HTTP_PORT):
+      # outbid (HU-63) y closed-by-buy-now (HU-64).
+      NOTIFICATIONS_BASE_URL: http://notifications:3005
+      # Watchlist (HU-68) vive en el servidor distinto de Catalog Notifications.
+      NOTIFICATIONS_WATCHLIST_BASE_URL: http://notifications:3004
+      NOTIFICATIONS_TIMEOUT_MS: 3000
+      AUCTION_EARLY_CLOSURE_RETRY_SCHEDULER_ENABLED: 'true'
+      AUCTION_EARLY_CLOSURE_RETRY_POLL_INTERVAL_MS: 30000
+      AUCTION_BUY_NOW_PENDING_CLAIM_RETRY_SCHEDULER_ENABLED: 'true'
+      AUCTION_BUY_NOW_PENDING_CLAIM_RETRY_POLL_INTERVAL_MS: 30000
+      AUCTION_BUY_NOW_PENDING_CLAIM_RETRY_BATCH_SIZE: 50
       AUCTION_SETTLEMENT_QUEUE_URL: ${AUCTION_SETTLEMENT_QUEUE_URL:-}
       AUCTION_SETTLEMENT_EVENT_DISPATCH_ENABLED: 'true'
     depends_on:
@@ -471,6 +493,14 @@ services:
       CATALOG_NOTIFICATIONS_HTTP_ENABLED: 'true'
       CATALOG_NOTIFICATIONS_HTTP_PORT: 3004
       CATALOG_NOTIFICATIONS_REPOSITORY_DRIVER: mongo
+      # --- HU-63/HU-64: servidor interno para Auction ---
+      # POST /api/internal/v1/notifications/auction/outbid y
+      # .../auction/closed-by-buy-now (HMAC, caller `auction`). Requiere
+      # CATALOG_NOTIFICATIONS_HTTP_ENABLED=true y un puerto distinto de los
+      # demas (3001 sondas, 3002 ingesta, 3003 compras, 3004 catalogo). No se
+      # publica al anfitrion: solo lo alcanza la red interna de compose.
+      AUCTION_OUTBID_HTTP_ENABLED: 'true'
+      AUCTION_OUTBID_HTTP_PORT: 3005
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
       # Resolucion de propietarios para suspension/reactivacion
