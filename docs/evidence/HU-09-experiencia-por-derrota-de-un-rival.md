@@ -125,6 +125,15 @@ Ninguno es un defecto de producción: los cuatro estaban **en el andamiaje de la
 | 3 | `S-09` contaba solo los asientos de *esa* matrícula | Con la base sucia, «no se acreditó» y «se acreditó a otra matrícula» se ven igual: el fallo diría lo primero cuando pasó lo segundo | Se añade `countGrants` y el caso compara las dos cifras (`b3c39a8`) |
 | 4 | `dirty` se encendía en CI sobre un árbol recién clonado | El workflow clona los dos hermanos **dentro** del espacio de trabajo de Missions, y esos dos directorios sin seguir bastaban. El campo dejaba de significar «el código que se probó tiene cambios» para significar «aquí se clonó algo» | `isDirty` acepta rutas que ignorar y el escenario le pasa los dos directorios hermanos cuando caen dentro (`04a868e`) |
 
+Y **dos afirmaciones falsas en la documentación de Missions**, del mismo tipo que el hallazgo de abajo y corregidas en el mismo PR:
+
+| # | Decía | Es |
+| --- | --- | --- |
+| 5 | `README.md`: «La bitácora de la simulación todavía no registra las bajas: hasta que la ruta de simulación de Combat exista, el camino se recorre con el doble de desarrollo» | La ruta **existe**; el motivo es el perfil del héroe |
+| 6 | `docs/hu-09-experiencia.md`: «su ingreso responde `503`» y «hoy solo existe el **ingreso** de solicitudes, que responde `503 SIMULATION_UNAVAILABLE`» | Ídem. Además, ese documento apuntaba a `HU-09-verificacion-extremo-a-extremo.md`, **un fichero que no existe**: el real es este |
+
+Las dos importan por lo mismo: hacían creer que el pendiente era «que Combat exista», cuando el pendiente es «que el perfil del héroe sea real», que es otra Task y otro repositorio.
+
 ### Un hallazgo: por qué se sigue sustituyendo la simulación
 
 El reporte declaraba que el resultado de la simulación se sustituía porque «Combat todavía no produce bitácoras y su ingreso responde `503`». **Eso dejó de ser cierto**: el ingreso está en `develop` desde el PR [Combat #44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/44).
@@ -149,11 +158,21 @@ El reporte completo, con commits, ambiente, casos, valores observados, cobertura
 | Comando | `npm run test:e2e:chain` (Missions) |
 | Plataforma | Windows 11, Node `v24.19.0` |
 | Bases | `postgres:17-alpine` y `mongo:8.0` (réplica), Testcontainers |
-| Commits | Missions `04a868e` · Combat `1374a47` · Player/Inventory `9d6a9f7` — **los tres sin cambios pendientes** |
+| Commits | Missions `197218f` · Combat `1374a47` · Player/Inventory `9d6a9f7` — **los tres sin cambios pendientes** |
 | Casos | **12/12 en verde** |
 | Cobertura de la cadena (informativa) | Sentencias `60,31 %` · Ramas `35,67 %` · Funciones `53,26 %` · Líneas `58,79 %` |
-| Duración | 49 s |
+| Duración | 56 s |
 | Límites declarados | 9, en el propio reporte |
+
+Y las otras dos suites de Missions, sobre **el mismo commit**, para que «suites» no sea una promesa:
+
+| Suite | Comando | Resultado |
+| --- | --- | --- |
+| Unitaria | `npm run test:unit` | **30 suites, 712 pruebas** en verde |
+| Contra PostgreSQL real | `npm run test:db` | **10 suites, 160 pruebas** en verde · `97,98 %` sentencias · `90,36 %` ramas · `100 %` funciones |
+| De la cadena | `npm run test:e2e:chain` | **1 suite, 12 casos** en verde · `60,31 %` sentencias |
+
+En Combat, sobre su `develop` (`1374a47`): `npm run test:unit` → **113 suites, 2.762 pruebas** en verde.
 
 La cobertura es **informativa y deliberadamente sin umbral**: los umbrales viven donde se pueden exigir sin contenedores (`jest.config.ts` y `jest.db.config.ts`). Esta suite mide la cadena, no la superficie del servicio.
 
@@ -295,13 +314,15 @@ Sin decimales en ningún punto, y con el nivel máximo 8 sin descarte de experie
 | `#439` diseño y contrato | Infrastructure | [#147](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/147) | mergeado |
 | `#440` tirada en Combat | Combat | [#43](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/43) | mergeado |
 | `#441` acreditación en Player/Inventory | Player-Inventory | [#47](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/47) | mergeado |
-| `#442` coordinación y fórmula en Missions | Missions | [#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/17) | **abierto** |
-| `#442` experiencia en el reporte (HU-09.5) | Missions | [#18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/18) | mergeado |
+| `#442` coordinación y fórmula en Missions | Missions | [#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/17) (1/3 y 2/3) y [#18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/18) (3/3: la línea en el reporte) | **#17 abierto**, #18 mergeado |
+| `#443` visualización de la experiencia en Web | Web | — | **sin empezar**; fuera de esta verificación |
 | `#444` control negativo de la guarda del azar | Combat | [#49](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/49) | mergeado |
 | `#444` cadena E2E, guardas y workflow | Missions | [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19) | **abierto** |
-| `#444` esta evidencia y el reporte | Infrastructure | [#157](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/157) y su corrección posterior | mergeado / **abierto** |
+| `#444` esta evidencia y el reporte | Infrastructure | [#157](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/157) y [#158](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/158) (correcciones) | #157 mergeado, #158 **abierto** |
 
 **Ninguno de estos PRs cierra la User Story #18.** Cierran Tasks subordinadas; la aceptación de la HU exige la revisión por pares y la aprobación del PO.
+
+> **Nota sobre la numeración, porque induce a error.** En el código y en algunos documentos de Missions, el trabajo de la línea de experiencia en el reporte aparece como «HU-09.5», pero `#443` es **la vista en Web**: ese trabajo pertenece a `#442` (HU-09.4). Esta tabla usa los títulos de Management, que es la fuente. La documentación de Missions se ha corregido en el PR [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19).
 
 ## Archivos de este entregable
 
