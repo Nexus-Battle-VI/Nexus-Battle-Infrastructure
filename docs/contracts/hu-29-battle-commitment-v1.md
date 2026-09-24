@@ -45,7 +45,7 @@ POST /api/internal/v1/inventory/heroes/{heroId}/battle-commitments
 
 | Campo | Tipo | Obligatorio | Descripción |
 | --- | --- | --- | --- |
-| `operationId` | `string` (1..200) | sí | Clave de idempotencia del llamador. Combat usa el identificador estable de **su** compromiso; el mismo `operationId` con otro contenido es `409` |
+| `operationId` | `string` **UUID** | sí | Clave de idempotencia del llamador. Combat usa el identificador estable de **su** compromiso; el mismo `operationId` con otro contenido es `409`. Es **UUID** y no texto libre, igual que en el compromiso de misión y en las entregas de HU-22: el DTO de Player/Inventory lo valida con `@IsUUID()` |
 | `playerId` | `string` (1..200) | sí | Jugador dueño del héroe |
 | `reference` | `string` (1..200) | sí | Referencia del llamador: el `roomId` de la batalla. Es traza, no clave |
 | `expiresAt` | `string` ISO-8601 | sí | Hasta cuándo vale el compromiso. **Obligatorio**: es lo que impide un bloqueo permanente si la liberación se pierde. Debe ser futura |
@@ -112,6 +112,16 @@ Este contrato es la **entrada**; la regla de HU-29 es la **salida**. Con un comp
 | La sala pasa a `IN_BATTLE` | Combat (`StartBattle`) | Compromete **cada** héroe participante, con su propio `operationId` |
 | La sala queda `FINISHED` | Combat (`BattleFinalizer`, efectos posteriores de HU-21) | Libera los compromisos |
 | Ventana entre «sala `FINISHED` persistida» y «efectos posteriores hechos» | Combat (`ReconcileRewardWorkflows`) | **Reintenta** la liberación. Es el mismo hueco que ese reconciliador ya cubre |
+
+**El `operationId` que Combat envía** es un **UUID v5 determinista** de (`roomId`, `playerId`), con espacio de nombres propio y distinto al de las entregas de HU-22:
+
+```text
+operationId = uuidV5("battle:{roomId}:player:{playerId}:commitment", 6f2a1c74-58d3-4e0b-9a17-2c8b5e4d7f31)
+```
+
+Dos propiedades, y las dos importan: el reintento del compromiso usa **la misma** clave (idempotencia real, no aparente) y la liberación **reencuentra** el compromiso con la clave con la que se creó. El `heroId` **no** entra en la clave: si el héroe equipado cambiara entre ambos momentos —cosa que el propio bloqueo impide—, la clave tiene que seguir siendo la misma o la liberación no encontraría nada. El espacio de nombres es parte de la clave y **no se cambia nunca**; hay una prueba que lo fija como valor dorado.
+
+**Al iniciar, el compromiso se pide ANTES de persistir la sala** y la operación **para en el primer fallo**. Sin compromiso confirmado la batalla no existe: es la única forma de que «con batalla activa no se cambia el equipo» sea cierto desde el primer instante. Los compromisos ya hechos cuando falla uno posterior **no se deshacen**: caducan por `expiresAt`, y el peor caso aceptable es un bloqueo temporal sin batalla, no una batalla sin bloqueo.
 
 **Síncrono, y con consecuencia declarada:** al iniciar, si Player/Inventory no confirma el compromiso, **la batalla no arranca** (`503` al jugador). Es lo que decidió `ADR-019` con la palabra «Síncrono», y se acepta a cambio de que el bloqueo sea real y no una promesa.
 
