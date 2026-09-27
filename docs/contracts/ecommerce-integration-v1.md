@@ -38,13 +38,16 @@ responde 409 para impedir saltarse la entrega.
 
 ## Elegibilidad de comercialización premium
 
-Fuente funcional: PDF §7.2.2 (productos premium) y aclaración del PO (2026-09-24): `ITEM` y `EPICA` quedan
-fuera de E-commerce (siguen existiendo en Catalog/Player-Inventory/Missions; la épica se obtiene por
-Misiones/Máster, no por compra). Un producto es elegible para el flujo de compra premium cuando, todo junto:
+Fuente funcional: PDF §7.2.2 (productos premium), aclaración del PO (2026-09-24) y aclaración del
+cliente/profesor (2026-09-27): `ITEM` y `EPICA` quedan fuera de E-commerce (siguen existiendo en
+Catalog/Player-Inventory/Missions; la épica se obtiene por Misiones/Máster, no por compra). `HABILIDAD`
+también queda fuera desde el 2026-09-27: una habilidad es intrínseca del héroe -viene incluida al
+adquirirlo, nunca se vende por separado- y no un producto independiente de la vitrina. Un producto es
+elegible para el flujo de compra premium cuando, todo junto:
 
 ```text
 premium == true
-type in {HEROE, HABILIDAD, ARMA, ARMADURA}     // nunca ITEM ni EPICA
+type in {HEROE, ARMA, ARMADURA}     // nunca ITEM, EPICA ni HABILIDAD
 lifecycleStatus == ACTIVE
 realMoneyPrice existe y realMoneyPrice.amount > 0
 availableUnits es null (infinito) o > 0
