@@ -1,0 +1,33 @@
+@startuml hu-29-use-case
+title HU-29 — Caso de uso: bloquear cambios de equipamiento durante el combate
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Jugador" as Jugador
+actor "Combat\n(publica el estado de batalla)" as Combat
+
+rectangle "Player / Inventory" {
+  usecase "UC-HU29-01\nBloquear cambios de\nequipamiento durante\nel combate" as UC
+  usecase "Rechazar cambio\nen batalla activa" as RECHAZAR
+  usecase "Informar motivo" as INFORMAR
+  usecase "Liberar la restriccion\nal finalizar la batalla" as LIBERAR
+  usecase "Equipar / cambiar equipo\n(HU-28: NO se rediseña)" as EQUIPAR
+}
+
+Jugador --> UC
+UC ..> RECHAZAR : <<include>>
+UC ..> INFORMAR : <<include>>
+UC ..> LIBERAR : <<include>>
+Combat --> UC : publica el estado de batalla
+UC ..> EQUIPAR : la precede; no la sustituye
+
+note bottom of UC
+  Cubre arma, armadura e item.
+  Cualquier mutacion del loadout
+  —equipar, desequipar, intercambiar
+  o reemplazar— se rechaza.
+  Las capacidades 2/6/2 y el recalculo
+  son de HU-28 y no se reimplementan.
+end note
+@enduml
