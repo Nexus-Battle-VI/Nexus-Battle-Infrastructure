@@ -222,3 +222,9 @@ variable "catalog_lifecycle_queue_arn" {
   type        = string
   default     = ""
 }
+
+variable "auction_settlement_queue_arn" {
+  description = "ARN de auction.settled.v1 para Auction y Notifications."
+  type        = string
+  default     = ""
+}

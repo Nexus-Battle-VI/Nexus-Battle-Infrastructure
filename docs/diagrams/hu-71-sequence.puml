@@ -1,0 +1,35 @@
+@startuml hu-71-sequence
+title HU-71 — Guardar, congelar y aplicar la estrategia (secuencia)
+autonumber
+
+actor "Jugador" as Player
+participant "Web" as Web
+participant "Missions" as Missions
+database "PostgreSQL\n(missions)" as DB
+participant "Player/Inventory\n(Team Alfa)" as Inventory
+participant "Combat\n(Team Alfa)" as Combat
+
+== Guardar (CA-01, CA-04) ==
+Player -> Web : Editar las rotaciones
+Web -> Missions : PUT /api/v1/missions/{missionId}/strategies/{heroId}\nexpectedVersion y rotaciones
+Missions -> Missions : StrategyPolicy: hasta 3 rotaciones,\nprioridades sin huecos, de 1 a 3 acciones
+Missions -> Inventory : Habilidades del héroe {heroId}\n(ruta por heroId: pendiente de Team Alfa)
+Inventory --> Missions : abilityId, costo y recarga
+alt Todo válido y versión igual
+  Missions -> DB : UPDATE ... WHERE version = expectedVersion
+  Missions --> Web : 200 o 201 con la versión nueva
+else Cuarta rotación
+  Missions --> Web : 422 TOO_MANY_ROTATIONS
+else Otra sesión la cambió
+  Missions --> Web : 409 VERSION_CONFLICT
+end
+
+== Congelar al matricular (HU-70) ==
+Web -> Missions : POST /api/v1/missions/{missionId}/enrollments\nstrategyVersion
+Missions -> DB : Comparar la versión y copiar las rotaciones\nen la matrícula
+
+== Aplicar en la simulación (HU-72) ==
+Missions -> Combat : POST /api/internal/v1/combat/simulations\nbloque strategy congelado
+Combat -> Combat : Decidir la acción de cada turno\n(Poder, recarga y salud)
+Combat --> Missions : combatLog con rotación, paso y omisiones
+@enduml

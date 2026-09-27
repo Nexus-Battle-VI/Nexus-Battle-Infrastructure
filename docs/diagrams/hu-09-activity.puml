@@ -1,0 +1,57 @@
+@startuml hu-09-activity
+title HU-09 — Actividad: de la derrota de cada NPC a la experiencia acreditada
+
+start
+
+:Enfrentamiento JvE terminado;
+
+:Enumerar cada derrota\ndel combatLog (encuentro + instancia);
+
+if (¿Hay al menos una derrota\ny héroe beneficiario?) then (no)
+  :No se crea ninguna recompensa\n(CA-08);
+  stop
+else (sí)
+endif
+
+:Persistir una recompensa PENDING\nPOR CADA derrota;
+note right
+  Antes de pedir la tirada:
+  es lo que impide
+  una tirada huérfana.
+end note
+
+:Pedir a Combat el lote de tiradas\noperationId = mission:{enrollmentId}:xp-rolls;
+
+fork
+  :Combat consume 1d8 por derrota\ny lo PERSISTE con su clave de instancia;
+fork again
+  :Reintento con el MISMO operationId\nsi Combat no está disponible (503);
+end fork
+
+:Recibir rolls[] en el mismo orden;
+
+repeat
+  :Tomar la siguiente derrota;
+  :Calcular experiencia = redondear(10 × 1,2^(1d8))\npolitica pura de Missions;
+  :Persistir el importe de esa derrota (ROLLED);
+  :Acreditar en Player/Inventory\noperationId por instancia;
+  if (¿Aceptada?) then (sí)
+    :Player/Inventory acumula la XP\ny recalcula el nivel con la tabla de HU-08;
+    :Marcar CREDITED esa derrota;
+  else (422 rechazo terminal)
+    :Marcar FAILED esa derrota;
+    note right
+      Las DEMÁS derrotas
+      siguen su curso:
+      cada recompensa
+      es independiente.
+    end note
+  else (503 / timeout)
+    :Dejarla en su estado de origen\npara que el barrido la retome;
+  endif
+repeat while (¿Quedan derrotas?) is (sí)
+
+:Reflejar el estado de cada recompensa\nen el reporte de misión;
+
+stop
+@enduml

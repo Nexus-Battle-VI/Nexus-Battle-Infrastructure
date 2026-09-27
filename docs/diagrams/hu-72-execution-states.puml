@@ -1,0 +1,19 @@
+@startuml hu-72-execution-states
+title HU-72 — Estados de MissionExecution
+hide empty description
+
+[*] --> QUEUED : hecho MissionEnrollmentStarted
+QUEUED --> REQUESTED : el planificador llama a Combat
+REQUESTED --> REQUESTED : 503, tiempo agotado o red\n/ reintento con el mismo operationId
+REQUESTED --> SIMULATED : 200\n/ resultado guardado y sellado
+REQUESTED --> VOIDED : 400, 409 o 422,\no plazo agotado
+QUEUED --> VOIDED : plazo agotado
+SIMULATED --> SETTLED : llega endsAt\n/ matrícula COMPLETED o FAILED
+SETTLED --> [*] : héroe liberado
+VOIDED --> [*] : héroe liberado
+
+note right of SIMULATED
+  El jugador no ve el resultado
+  antes de endsAt.
+end note
+@enduml

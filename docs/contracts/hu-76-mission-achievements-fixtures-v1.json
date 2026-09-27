@@ -1,0 +1,92 @@
+{
+  "contract": "hu-76-mission-achievements-v1",
+  "status": "design-draft",
+  "description": "Escenarios de diseño de HU-76 (Task #387). Catálogo y datos de ejemplo; ningún logro está otorgado en producción.",
+  "player": "cognito-sub-jugador-demo",
+  "activeCatalog": {
+    "storyMissions": ["msn_templo_olvidado", "msn_camara_sellada"],
+    "availableMasters": ["sombra-del-olvido", "centinela-carmesi"],
+    "masterEpics": ["velo-de-sombras", "furia-carmesi"],
+    "recordThresholds": { "msn_templo_olvidado": "PT9H" }
+  },
+  "cases": [
+    {
+      "id": "L-1",
+      "ca": ["CA-01", "CA-02"],
+      "title": "Misión completada sin recibir daño",
+      "achievementId": "ach_sin_rasgunos",
+      "fact": { "enrollmentId": "enr_l1", "missionId": "msn_templo_olvidado", "category": "STORY", "outcome": "COMPLETED", "damageTaken": 0, "simulatedDuration": "PT9H40M", "mastersDefeated": [], "epicsCredited": [] },
+      "expected": { "status": "UNLOCKED", "recognition": { "kind": "BADGE", "status": "RECORDED" } }
+    },
+    {
+      "id": "L-2",
+      "ca": ["CA-03"],
+      "title": "Completada con un punto de daño",
+      "achievementId": "ach_sin_rasgunos",
+      "fact": { "enrollmentId": "enr_l2", "missionId": "msn_templo_olvidado", "category": "STORY", "outcome": "COMPLETED", "damageTaken": 1, "simulatedDuration": "PT9H40M", "mastersDefeated": [], "epicsCredited": [] },
+      "expected": { "status": "LOCKED" }
+    },
+    {
+      "id": "L-3",
+      "ca": ["CA-03"],
+      "title": "Fallida sin daño",
+      "achievementId": "ach_sin_rasgunos",
+      "fact": { "enrollmentId": "enr_l3", "missionId": "msn_templo_olvidado", "category": "STORY", "outcome": "FAILED", "damageTaken": 0, "simulatedDuration": "PT2H", "mastersDefeated": [], "epicsCredited": [] },
+      "expected": { "status": "LOCKED" }
+    },
+    {
+      "id": "L-4",
+      "ca": ["CA-02"],
+      "title": "Tiempo dentro del umbral",
+      "achievementId": "ach_templo_veloz",
+      "given": { "threshold": "PT9H" },
+      "fact": { "enrollmentId": "enr_l4", "missionId": "msn_templo_olvidado", "category": "STORY", "outcome": "COMPLETED", "damageTaken": 120, "simulatedDuration": "PT8H55M", "mastersDefeated": [], "epicsCredited": [] },
+      "expected": { "status": "UNLOCKED" },
+      "pendingDecision": "Umbral de tiempo récord (decisión 3 del diseño)"
+    },
+    {
+      "id": "L-5",
+      "ca": ["CA-03"],
+      "title": "Un Máster derrotado de dos disponibles",
+      "achievementId": "ach_cazador_de_master",
+      "given": { "progress": { "mastersDefeated": [] } },
+      "fact": { "enrollmentId": "enr_l5", "missionId": "msn_templo_olvidado", "category": "STORY", "outcome": "COMPLETED", "damageTaken": 300, "simulatedDuration": "PT10H", "mastersDefeated": ["sombra-del-olvido"], "epicsCredited": ["velo-de-sombras"] },
+      "expected": { "status": "IN_PROGRESS", "progress": { "current": 1, "target": 2 } }
+    },
+    {
+      "id": "L-6",
+      "ca": ["CA-02"],
+      "title": "Segundo Máster derrotado",
+      "achievementId": "ach_cazador_de_master",
+      "given": { "progress": { "mastersDefeated": ["sombra-del-olvido"] } },
+      "fact": { "enrollmentId": "enr_l6", "missionId": "msn_camara_sellada", "category": "STORY", "outcome": "FAILED", "damageTaken": 900, "simulatedDuration": "PT3H", "mastersDefeated": ["centinela-carmesi"], "epicsCredited": [] },
+      "expected": { "status": "UNLOCKED", "progress": { "current": 2, "target": 2 } }
+    },
+    {
+      "id": "L-7",
+      "ca": ["CA-02"],
+      "title": "Colección de épicas completa",
+      "achievementId": "ach_coleccionista",
+      "given": { "progress": { "epicsCredited": ["velo-de-sombras"] } },
+      "fact": { "enrollmentId": "enr_l7", "missionId": "msn_camara_sellada", "category": "STORY", "outcome": "COMPLETED", "damageTaken": 400, "simulatedDuration": "PT5H", "mastersDefeated": ["centinela-carmesi"], "epicsCredited": ["furia-carmesi"] },
+      "expected": { "status": "UNLOCKED", "recognition": { "kind": "COSMETIC_PRODUCT", "status": "PENDING" }, "grantRequests": 1 }
+    },
+    {
+      "id": "L-8",
+      "ca": ["CA-03"],
+      "title": "Historia a medias",
+      "achievementId": "ach_historia_completa",
+      "given": { "progress": { "completedMissions": [] } },
+      "fact": { "enrollmentId": "enr_l8", "missionId": "msn_templo_olvidado", "category": "STORY", "outcome": "COMPLETED", "damageTaken": 50, "simulatedDuration": "PT9H40M", "mastersDefeated": [], "epicsCredited": [] },
+      "expected": { "status": "IN_PROGRESS", "progress": { "current": 1, "target": 2 } }
+    },
+    {
+      "id": "L-9",
+      "ca": ["CA-02"],
+      "title": "El mismo hecho reprocesado",
+      "given": { "previousCase": "L-7", "processedFacts": [{ "enrollmentId": "enr_l7" }] },
+      "fact": { "enrollmentId": "enr_l7" },
+      "expected": { "progressChanged": false, "unlocksCreated": 0, "grantRequests": 0 }
+    }
+  ]
+}

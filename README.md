@@ -25,6 +25,14 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [integration.md](docs/architecture/integration.md) | Comunicación entre contextos |
 | [security.md](docs/architecture/security.md) | Seguridad, identidad y RBAC desplegados |
 | [hu-39-role-management.md](docs/architecture/hu-39-role-management.md) | Diseño, matriz RBAC y contratos conceptuales de HU-39 |
+| [hu-09-experiencia-mision.md](docs/architecture/hu-09-experiencia-mision.md) | Diseño de la experiencia por derrota de un rival en misión (HU-09). **Solo diseño** |
+| [hu-70-matriculacion-mision.md](docs/architecture/hu-70-matriculacion-mision.md) | Diseño de HU-70: tablón, detalle y matrícula con reserva del héroe, y su contrato conceptual |
+| [hu-71-rotaciones-habilidades.md](docs/architecture/hu-71-rotaciones-habilidades.md) | Diseño de HU-71: estrategia de hasta tres rotaciones, versión optimista y decisión de la IA por turno |
+| [hu-72-simulacion-mision.md](docs/architecture/hu-72-simulacion-mision.md) | Diseño de HU-72: simulación asíncrona en Combat, cierre en `endsAt`, liberación del héroe y propuesta de contrato |
+| [hu-73-encuentro-master.md](docs/architecture/hu-73-encuentro-master.md) | Diseño de HU-73: aparición del Máster con la aleatoriedad de Combat, evidencia del encuentro y entrega idempotente de la épica |
+| [hu-74-reporte-mision.md](docs/architecture/hu-74-reporte-mision.md) | Diseño de HU-74: reporte inmutable creado en el cierre, recompensas con estado propio e historial por jugador |
+| [hu-75-dificultad-escalonada.md](docs/architecture/hu-75-dificultad-escalonada.md) | Diseño de HU-75: política de progresión por misión, clears y contrato conceptual de dificultad |
+| [hu-76-logros-misiones.md](docs/architecture/hu-76-logros-misiones.md) | Diseño de HU-76: catálogo versionado de logros, progreso idempotente por jugador y reconocimientos |
 | [observability.md](docs/architecture/observability.md) | Registro, sondas y qué no se mide todavía |
 | [testing.md](docs/architecture/testing.md) | Estrategia de pruebas y cobertura real |
 | [developer-workflow.md](docs/architecture/developer-workflow.md) | Flujo de trabajo, CI y OIDC futuro |
@@ -85,6 +93,7 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | [catalog-events-v1.asyncapi.yaml](docs/contracts/catalog-events-v1.asyncapi.yaml) | AsyncAPI propuesto de `catalog.product.created` V1 |
 | [auction-settlement-events-v1.asyncapi.yaml](docs/contracts/auction-settlement-events-v1.asyncapi.yaml) | Contrato AsyncAPI de `auction.settled.v1` para HU-65.6 (Management #328) |
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
+| [hu-09-experience-reward-v1.md](docs/contracts/hu-09-experience-reward-v1.md) | Contrato de la recompensa de experiencia por derrota de un rival (HU-09). **Diseño — sin implementación** |
 
 ### Gobierno
 

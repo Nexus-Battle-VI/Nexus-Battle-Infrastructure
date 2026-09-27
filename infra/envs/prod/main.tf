@@ -90,6 +90,12 @@ module "catalog_lifecycle_events_queue" {
   tags        = local.tags
 }
 
+module "auction_settlement_notifications_queue" {
+  source      = "../../modules/auction_settlement_notifications_queue"
+  environment = var.environment
+  tags        = local.tags
+}
+
 module "network" {
   source = "../../modules/network"
 
@@ -221,7 +227,9 @@ locals {
         # consumo real de esta cola espera un PR de Notifications que agregue
         # un driver lifecycle independiente (ver ADR-018 y
         # docs/contracts/event-catalog.md).
-        CATALOG_LIFECYCLE_QUEUE_URL = module.catalog_lifecycle_events_queue.queue_url
+        CATALOG_LIFECYCLE_QUEUE_URL               = module.catalog_lifecycle_events_queue.queue_url
+        AUCTION_SETTLEMENT_QUEUE_URL              = module.auction_settlement_notifications_queue.queue_url
+        AUCTION_SETTLEMENT_EVENT_DISPATCH_ENABLED = "true"
 
         # Filtro automatico de contenido de Community (HU-41.7,
         # Management#29). Vacio por defecto: Community arranca igual y no
@@ -274,21 +282,22 @@ module "compute" {
   # el nodo. Se activa sola en cuanto hay sitio publico configurado.
   stable_public_ip = var.public_site_address != ""
 
-  name                        = local.name
-  tags                        = local.tags
-  subnet_id                   = module.network.subnet_id
-  security_group_ids          = module.network.security_group_ids
-  nodes                       = var.nodes
-  bootstrap                   = local.bootstrap
-  arrancar_stack              = var.arrancar_stack
-  compose_plugin_url          = var.compose_plugin_url
-  compose_plugin_sha256       = var.compose_plugin_sha256
-  cognito_user_pool_arn       = module.identity.user_pool_arn
-  data_volume_gb              = var.data_volume_gb
-  mount_data_volume           = var.mount_data_volume
-  product_assets_bucket       = local.product_assets_bucket_name
-  catalog_events_queue_arn    = module.catalog_events_queue.queue_arn
-  catalog_lifecycle_queue_arn = module.catalog_lifecycle_events_queue.queue_arn
+  name                         = local.name
+  tags                         = local.tags
+  subnet_id                    = module.network.subnet_id
+  security_group_ids           = module.network.security_group_ids
+  nodes                        = var.nodes
+  bootstrap                    = local.bootstrap
+  arrancar_stack               = var.arrancar_stack
+  compose_plugin_url           = var.compose_plugin_url
+  compose_plugin_sha256        = var.compose_plugin_sha256
+  cognito_user_pool_arn        = module.identity.user_pool_arn
+  data_volume_gb               = var.data_volume_gb
+  mount_data_volume            = var.mount_data_volume
+  product_assets_bucket        = local.product_assets_bucket_name
+  catalog_events_queue_arn     = module.catalog_events_queue.queue_arn
+  catalog_lifecycle_queue_arn  = module.catalog_lifecycle_events_queue.queue_arn
+  auction_settlement_queue_arn = module.auction_settlement_notifications_queue.queue_arn
 
   # El presupuesto y las alertas existen antes que cualquier recurso de computo.
   # Esta dependencia lo convierte en una garantia del grafo, no en una costumbre.

@@ -79,6 +79,23 @@ xp acumulada         -> ExperiencePolicy -> nivel alcanzado (puede cruzar varios
 - **La recompensa no se calcula aquí.** `10 × 1,2^(1d8)` es de Missions y la tirada `1d8` es de Combat ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)); Player/Inventory recibe un importe entero y lo acredita.
 - El umbral es función del **nivel** y no de las estadísticas: **no** interviene en `computeEffectiveStats` ni en el contrato `equipped-hero`, que sigue sin llevar nivel. Ver las limitaciones correspondientes en §14.
 
+### Experiencia por derrota de un rival (HU-09)
+
+La recompensa de experiencia `10 × 1,2^(1d8)` se otorga **al derrotar a un rival NPC en una misión (JvE)**, según la aclaración funcional del Product Owner. **El PvP («Jugar Online») no la otorga.** La responsabilidad se reparte entre tres contextos, porque ninguna de las tres piezas puede vivir en los otros dos:
+
+```text
+Combat    -> produce y PERSISTE un 1d8 por NPC derrotado (ADR-021); no conoce la fórmula
+Missions  -> calcula 10 x 1,2^(1d8) por derrota, lo redondea a entero y coordina la recompensa
+Player/Inv-> acredita cada derrota y recalcula el nivel con la tabla de HU-08
+```
+
+- **Una recompensa, una tirada y una acreditación por cada NPC derrotado**, no una por misión. La clave es la **instancia real de la derrota** (encuentro + enemigo concreto del `combatLog` de HU-72), nunca el arquetipo: una misión puede enfrentar dos veces al mismo tipo de enemigo y el arquetipo colisionaría.
+
+- **Combat no calcula experiencia** y **Missions no genera aleatoriedad**: `ADR-021` da la exclusiva del azar a Combat y `ADR-019` da la propiedad del estado del héroe a Player/Inventory. La tirada se persiste **antes de responder**, de modo que un reintento no vuelve a consumir el cursor aleatorio.
+- La acreditación es **idempotente** por `operationId` determinista, con ledger propio en Player/Inventory (`_id = operationId`) y actualización de la progresión en la misma transacción. Un reintento nunca duplica experiencia.
+- **Estado:** **implementada y verificada de extremo a extremo; NO aceptada.** Las cuatro piezas existen (Combat `#440`, Player/Inventory `#441`, Missions `#442` y `#443`) y la cadena se recorre entera: 12/12 casos en verde sobre las tres piezas reales, con el reporte en [`hu-09-ejecucion-e2e.json`](../evidence/hu-09-ejecucion-e2e.json). Falta la revisión por pares y la aprobación del PO (`CA-09`), y la decisión `P-2` —redondeo al más próximo frente a truncamiento— sigue abierta. Ver el [contrato](../contracts/hu-09-experience-reward-v1.md), el [diseño](hu-09-experiencia-mision.md) y la [evidencia](../evidence/HU-09-experiencia-por-derrota-de-un-rival.md).
+- **Límite conocido:** el escenario sustituye el resultado de la simulación de HU-72 (Combat todavía no produce bitácoras y su ingreso responde `503`) y el perfil y el compromiso del héroe (la ruta interna de `HU-71.2` no está en `develop`). La tirada, el cálculo, la acreditación y el nivel **sí** son los reales. Está declarado en la evidencia, pieza por pieza.
+
 ## 5. Arquitectura interna común
 
 Los seis servicios comparten la misma estructura: **Clean + Hexagonal**.
@@ -240,6 +257,26 @@ Se enumeran juntas porque quien lea este documento necesita conocerlas antes de 
     El PO describió el redondeo al entero más próximo y ofreció el truncamiento como
     alternativa. La tabla de umbrales no tiene fracciones que redondear, así que esto
     no afecta al cálculo del nivel.
+12. **HU-09 ya no está bloqueada: está implementada y verificada, y sigue SIN aceptar.**
+   El bloqueo que se registró aquí —Missions sin rutas ni tablas, `HU-72.2`/`HU-74.2`
+   solo diseñadas y `HU-08` sin mergear— se ha resuelto: las tres piezas están en
+   `develop` y la cadena de experiencia se recorre de extremo a extremo, con 12/12
+   casos en verde sobre tres repositorios sin cambios pendientes
+   ([reporte](../evidence/hu-09-ejecucion-e2e.json)). Lo que queda **no es técnico**:
+   revisión por pares y aprobación del PO (`CA-09`).
+   Ver el [contrato](../contracts/hu-09-experience-reward-v1.md) y la
+   [evidencia](../evidence/HU-09-experiencia-por-derrota-de-un-rival.md).
+13. **La decisión de redondeo de HU-09 sigue abierta y está marcada como provisional.**
+   Que la experiencia deba ser **entera** es una decisión tomada; **cómo** se convierte
+   `14,4` en entero no lo es hasta que se confirme **redondeo al entero más próximo**
+   frente a **truncamiento**. El contrato adopta el redondeo al más próximo con la marca
+   provisional visible, y la regla vive en un único punto para que confirmarla no toque
+   nada más. Ver el [contrato](../contracts/hu-09-experience-reward-v1.md) §15.
+14. **`missions` no está en el allow-list interno de Player/Inventory.** Hoy es
+    `['commerce', 'notifications', 'combat']`. La ruta de acreditación de
+    experiencia se acota con `@InternalCallers('missions')` **sin** ampliar la
+    lista global: es una decisión de mínimo privilegio, no un pendiente. La cadena
+    de HU-09 lo ejerce de verdad (`S-05`, `S-06`).
 
 Ninguna es un descuido. Cada una tiene su motivo registrado y su condición de desbloqueo.
 

@@ -1,0 +1,36 @@
+@startuml hu-72-use-case
+title HU-72 — Ejecución de la simulación (casos de uso)
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Planificador\nde Missions" as Scheduler
+actor "Combat\n(Team Alfa)" as Combat
+actor "Player/Inventory\n(Team Alfa)" as Inventory
+
+rectangle "Missions (Team Beta)" {
+  usecase "Ejecutar la simulación\n(CA-01, CA-02, CA-03)" as UC1
+  usecase "Cerrar la misión en endsAt\n(CA-04, CA-06)" as UC2
+  usecase "Evaluar objetivos" as UC3
+  usecase "Registrar el hecho\nMissionSettled" as UC4
+  usecase "Insertar el clear\n(HU-75)" as UC5
+  usecase "Liberar al héroe\n(CA-05)" as UC6
+  usecase "Anular por error técnico\n(VOIDED, propuesta)" as UC7
+  usecase "Abandonar\n(pendiente)" as UC8
+}
+
+Scheduler --> UC1
+Scheduler --> UC2
+UC1 --> Combat
+UC2 ..> UC3 : <<include>>
+UC2 ..> UC4 : <<include>>
+UC2 ..> UC5 : <<include>>
+UC2 ..> UC6 : <<include>>
+UC7 ..> UC1 : <<extend>>
+UC7 ..> UC6 : <<include>>
+UC6 --> Inventory
+
+note bottom of UC8
+  Sin contrato de cancelación ni
+  penalización aprobados (§7.8.7).
+end note
+@enduml

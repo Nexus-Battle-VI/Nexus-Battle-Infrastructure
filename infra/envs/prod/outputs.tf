@@ -92,3 +92,7 @@ output "catalog_lifecycle_dlq_url" {
 output "catalog_lifecycle_dlq_arn" {
   value = module.catalog_lifecycle_events_queue.dlq_arn
 }
+
+output "auction_settlement_queue_url" { value = module.auction_settlement_notifications_queue.queue_url }
+output "auction_settlement_queue_arn" { value = module.auction_settlement_notifications_queue.queue_arn }
+output "auction_settlement_dlq_arn" { value = module.auction_settlement_notifications_queue.dlq_arn }

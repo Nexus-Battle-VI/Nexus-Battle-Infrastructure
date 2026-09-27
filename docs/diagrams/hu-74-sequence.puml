@@ -1,0 +1,38 @@
+@startuml hu-74-sequence
+title HU-74 — Generar y consultar el reporte (secuencia)
+autonumber
+
+actor "Jugador" as Player
+participant "Web" as Web
+participant "Missions" as Missions
+database "PostgreSQL\n(missions)" as DB
+
+== Generar, dentro del cierre de HU-72 ==
+Missions -> DB : BEGIN
+Missions -> DB : Matrícula COMPLETED o FAILED\ny hecho MissionSettled
+Missions -> DB : INSERT mission_reports (foto inmutable)\nINSERT mission_report_rewards en PENDING
+Missions -> DB : COMMIT
+
+== Consultar ==
+Player -> Web : Abrir el reporte
+Web -> Missions : GET /api/v1/missions/me/reports/{enrollmentId}
+alt Reporte del jugador
+  Missions -> DB : Foto y estado actual de las recompensas
+  Missions --> Web : 200 reporte
+else Misión en curso
+  Missions --> Web : 404 REPORT_NOT_AVAILABLE (CA-04)
+else Inexistente o de otro jugador
+  Missions --> Web : 404 REPORT_NOT_FOUND
+end
+Player -> Web : Abrir el historial
+Web -> Missions : GET /api/v1/missions/me/history\ny /history/summary
+Missions -> DB : Consultas por jugador sobre los índices
+Missions --> Web : 200 lista y resumen (CA-05)
+
+== Acreditar después (HU-10, HU-73) ==
+Missions -> DB : UPDATE mission_report_rewards\nstatus CREDITED o FAILED
+note right of DB
+  La foto de mission_reports
+  no cambia nunca.
+end note
+@enduml

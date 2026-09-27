@@ -1,0 +1,83 @@
+@startuml hu-76-domain
+title HU-76 — Fragmento de dominio de los logros
+hide empty members
+skinparam classAttributeIconSize 0
+
+package "Missions (Team Beta)" {
+  class AchievementDefinition <<catálogo versionado>> {
+    achievementId
+    version
+    criterion : Criterion
+    params
+    recognition : Recognition
+    active
+  }
+
+  class AchievementProgress <<agregado>> {
+    playerId
+    achievementId
+    progress
+    status : AchievementStatus
+    unlockedAt
+    version
+    --
+    apply(fact)
+  }
+
+  class Recognition <<valor>> {
+    kind : RecognitionKind
+    name
+    productId
+  }
+
+  class MissionFinishedForAchievements <<hecho normalizado>> {
+    playerId
+    enrollmentId
+    outcome
+    category
+    damageTaken
+    simulatedDuration
+    mastersDefeated
+    epicsCredited
+  }
+
+  class AchievementEvaluator <<dominio puro>> {
+    evaluate(definition, progress, fact)
+  }
+
+  enum Criterion {
+    ALL_CATEGORY_MISSIONS
+    ALL_MASTERS_DEFEATED
+    FLAWLESS_MISSION
+    RECORD_TIME
+    ALL_MASTER_EPICS
+  }
+
+  enum AchievementStatus {
+    LOCKED
+    IN_PROGRESS
+    UNLOCKED
+  }
+
+  enum RecognitionKind {
+    TITLE
+    BADGE
+    COSMETIC_PRODUCT
+  }
+
+  interface ProgressRepository
+  interface ProcessedFactsRepository
+  interface RecognitionGrantPort
+}
+
+AchievementDefinition --> Criterion
+AchievementDefinition *-- Recognition
+Recognition --> RecognitionKind
+AchievementProgress --> AchievementStatus
+AchievementProgress ..> AchievementDefinition : achievementId
+AchievementEvaluator ..> MissionFinishedForAchievements
+AchievementEvaluator ..> AchievementProgress
+ProgressRepository ..> AchievementProgress
+ProcessedFactsRepository ..> MissionFinishedForAchievements : jugador y matrícula
+RecognitionGrantPort ..> Recognition : solo COSMETIC_PRODUCT
+@enduml

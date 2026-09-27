@@ -315,15 +315,26 @@ resource "aws_cognito_user_pool_client" "web" {
   enable_token_revocation = true
 
   refresh_token_rotation {
-    feature = "ENABLED"
+    # DESHABILITADO el 2026-09-23: activarla rompia por completo `POST
+    # /api/sessions/refresh` en produccion desde que se activo (2026-08-29),
+    # para CUALQUIER usuario real. Con la rotacion activa, Cognito exige el
+    # flujo OAuth completo (`/oauth2/token`) para renovar -ni
+    # `AdminInitiateAuthCommand` ni `InitiateAuthCommand` la soportan,
+    # ambas responden `UnsupportedOperationException: This API does not
+    # support refresh token rotation`- y `CognitoAuthenticationProvider` de
+    # Account usa esas dos API, no el flujo OAuth. Nadie lo detecto porque
+    # las pruebas usan un `AuthenticationProviderPort` falso, y el sintoma
+    # solo aparece cuando el `accessToken` caduca (15 min) o se recarga la
+    # pagina.
+    #
+    # Reactivar exige antes reescribir `CognitoAuthenticationProvider.refresh()`
+    # para usar `/oauth2/token` y que `SessionsController` rote la cookie con
+    # el refresh token nuevo que esa ruta devuelve.
+    feature = "DISABLED"
 
     # Explicito aunque cero sea el valor por defecto del servidor: omitirlo hace
     # que el proveedor devuelva "inconsistent result after apply", porque en la
     # configuracion es nulo y AWS lo materializa como 0.
-    #
-    # Cero significa que el token anterior deja de valer en cuanto se canjea,
-    # sin ventana de gracia. Es lo estricto, y es lo que se quiere: la ventana
-    # existe para clientes que reintentan en paralelo, y aqui no los hay.
     retry_grace_period_seconds = 0
   }
 

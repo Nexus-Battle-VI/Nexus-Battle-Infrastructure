@@ -1,0 +1,102 @@
+{
+  "contract": "hu-73-master-encounter-v1",
+  "status": "design-draft",
+  "description": "Escenarios de diseño de HU-73 (Task #376). Máster del ejemplo del curso (§7.8.14). Las tiradas las hace Combat: aquí se da su resultado, no cómo se obtiene.",
+  "enrollment": { "enrollmentId": "enr_01JB8Y3K7Q", "heroSubtype": "PICARO_VENENO", "encountersTotal": 5 },
+  "configCases": [
+    {
+      "id": "C-1",
+      "title": "Probabilidad fuera de rango",
+      "candidate": { "masterRef": "sombra-del-olvido", "subtype": "PICARO_VENENO", "epic": { "epicRef": "velo-de-sombras" }, "probabilityByHeroType": { "*": 1.5 } },
+      "expected": { "code": "INVALID_MASTER_CONFIG", "reason": "PROBABILITY_OUT_OF_RANGE" }
+    },
+    {
+      "id": "C-2",
+      "title": "Épica sin referencia",
+      "candidate": { "masterRef": "sombra-del-olvido", "subtype": "PICARO_VENENO", "epic": {}, "probabilityByHeroType": { "*": 0.15 } },
+      "expected": { "code": "INVALID_MASTER_CONFIG", "reason": "MISSING_REFERENCE" }
+    }
+  ],
+  "decisionCases": [
+    {
+      "id": "M-1",
+      "ca": "CA-02",
+      "title": "Probabilidad 0: nunca aparece",
+      "config": { "evaluationPoints": [{ "afterEncounter": 3 }], "maxAppearances": 1, "probability": 0 },
+      "combatResult": { "appeared": false, "evaluations": [{ "afterEncounter": 3, "masterRef": "sombra-del-olvido", "appeared": false }], "encounters": [] },
+      "expected": { "records": [{ "sequence": 1, "status": "NOT_APPEARED" }], "grants": 0 }
+    },
+    {
+      "id": "M-2",
+      "ca": "CA-02",
+      "title": "Probabilidad 0.15 y la tirada no dispara",
+      "config": { "evaluationPoints": [{ "afterEncounter": 3 }], "maxAppearances": 1, "probability": 0.15 },
+      "combatResult": { "appeared": false, "evaluations": [{ "afterEncounter": 3, "masterRef": "sombra-del-olvido", "appeared": false }], "encounters": [] },
+      "expected": { "records": [{ "sequence": 1, "status": "NOT_APPEARED" }], "grants": 0 }
+    },
+    {
+      "id": "M-3",
+      "ca": "CA-01",
+      "title": "Aparece y el héroe lo derrota",
+      "config": { "evaluationPoints": [{ "afterEncounter": 3 }], "maxAppearances": 1, "probability": 0.15 },
+      "combatResult": {
+        "appeared": true,
+        "defeated": true,
+        "evaluations": [{ "afterEncounter": 3, "masterRef": "sombra-del-olvido", "appeared": true }],
+        "encounters": [{ "masterRef": "sombra-del-olvido", "afterEncounter": 3, "levelOffset": 2, "outcome": "DEFEATED", "turns": 14 }]
+      },
+      "missionOutcome": "COMPLETED",
+      "expected": { "records": [{ "sequence": 1, "status": "APPEARED_DEFEATED", "epicRef": "velo-de-sombras" }], "grants": 1 }
+    },
+    {
+      "id": "M-4",
+      "ca": "CA-03",
+      "title": "Aparece y derrota al héroe",
+      "config": { "evaluationPoints": [{ "afterEncounter": 3 }], "maxAppearances": 1, "probability": 0.15 },
+      "combatResult": {
+        "appeared": true,
+        "defeated": false,
+        "evaluations": [{ "afterEncounter": 3, "masterRef": "sombra-del-olvido", "appeared": true }],
+        "encounters": [{ "masterRef": "sombra-del-olvido", "afterEncounter": 3, "levelOffset": 2, "outcome": "HERO_DEFEATED", "turns": 9 }]
+      },
+      "missionOutcome": "FAILED",
+      "expected": { "records": [{ "sequence": 1, "status": "APPEARED_HERO_DEFEATED" }], "grants": 0 }
+    },
+    {
+      "id": "M-5",
+      "ca": null,
+      "title": "Probabilidad 1 con dos puntos y tope 1",
+      "config": { "evaluationPoints": [{ "afterEncounter": 2 }, { "afterEncounter": 4 }], "maxAppearances": 1, "probability": 1 },
+      "combatResult": {
+        "appeared": true,
+        "defeated": true,
+        "evaluations": [{ "afterEncounter": 2, "masterRef": "sombra-del-olvido", "appeared": true }],
+        "encounters": [{ "masterRef": "sombra-del-olvido", "afterEncounter": 2, "levelOffset": 2, "outcome": "DEFEATED", "turns": 11 }]
+      },
+      "missionOutcome": "COMPLETED",
+      "expected": {
+        "records": [
+          { "sequence": 1, "status": "APPEARED_DEFEATED" },
+          { "sequence": 2, "status": "SKIPPED_MAX_REACHED" }
+        ],
+        "grants": 1
+      }
+    },
+    {
+      "id": "M-6",
+      "ca": "CA-02",
+      "title": "El subtipo del héroe no tiene probabilidad configurada",
+      "enrollmentOverride": { "heroSubtype": "MAGO_FUEGO" },
+      "config": { "probabilityByHeroType": { "PICARO_VENENO": 0.15 } },
+      "combatRequestIncludesMaster": false,
+      "expected": { "records": [{ "sequence": 1, "status": "NOT_APPLICABLE" }], "grants": 0 }
+    },
+    {
+      "id": "M-7",
+      "ca": "CA-01",
+      "title": "El cierre se repite tras una caída",
+      "given": { "previousCase": "M-3", "settlementRuns": 2 },
+      "expected": { "grantRequests": 2, "distinctOperationIds": 1, "epicsInInventory": 1 }
+    }
+  ]
+}
