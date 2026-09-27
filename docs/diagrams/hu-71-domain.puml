@@ -1,0 +1,64 @@
+@startuml hu-71-domain
+title HU-71 — Fragmento de dominio de la estrategia
+hide empty members
+skinparam classAttributeIconSize 0
+
+package "Missions (Team Beta)" {
+  class RotationStrategy <<agregado>> {
+    playerId
+    heroId
+    missionId
+    version
+    updatedAt
+    --
+    replace(rotations, expectedVersion, now)
+  }
+
+  class Rotation {
+    priority : RotationPriority
+  }
+
+  class RotationStep {
+    kind : StepKind
+    abilityId
+  }
+
+  enum RotationPriority {
+    HIGH
+    MEDIUM
+    LOW
+  }
+
+  enum StepKind {
+    ABILITY
+    BASIC_ATTACK
+  }
+
+  class StrategyPolicy <<dominio puro>> {
+    validate(rotations, heroAbilities)
+  }
+
+  class MissionEnrollment <<agregado de HU-70>> {
+    strategyVersion
+    rotations : copia congelada
+  }
+
+  interface StrategyRepository
+  interface HeroAbilitiesPort
+  interface CombatSimulationPort <<HU-72>>
+}
+
+RotationStrategy "1" *-- "1..3" Rotation
+Rotation "1" *-- "1..3" RotationStep
+Rotation --> RotationPriority
+RotationStep --> StepKind
+StrategyPolicy ..> RotationStrategy
+StrategyRepository ..> RotationStrategy
+MissionEnrollment ..> RotationStrategy : copia al matricular
+CombatSimulationPort ..> MissionEnrollment : envía la copia congelada
+
+note bottom of HeroAbilitiesPort
+  Player/Inventory: habilidades del héroe
+  por heroId (pendiente de Team Alfa).
+end note
+@enduml

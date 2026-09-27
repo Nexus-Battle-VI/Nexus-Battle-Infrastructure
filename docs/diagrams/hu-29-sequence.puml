@@ -1,0 +1,46 @@
+@startuml hu-29-sequence
+title HU-29 — Secuencia: rechazo en batalla activa y liberacion al terminar
+
+actor "Jugador" as Jugador
+participant "Solicitud de equipar/cambiar\n(HU-28)" as Solicitud
+participant "RestriccionEquipamientoEnCombate\n(HU-29)" as Regla
+participant "Estado de batalla\n(lo publica Combat)" as Estado
+participant "Configuracion de equipamiento\ndel heroe" as Loadout
+
+note over Regla, Estado
+  El estado de batalla lo PUBLICA el contexto de combate.
+  Esta regla no lo infiere ni lo calcula.
+end note
+
+Jugador -> Solicitud : modificar el equipamiento de un heroe
+Solicitud -> Regla : ¿procede esta mutacion?
+Regla -> Estado : consultar el estado publicado para ese heroe
+
+alt el heroe esta en una batalla activa
+  Estado --> Regla : batalla activa
+  Regla --> Solicitud : rechazado, con el motivo explicativo
+  note over Loadout
+    No se escribe nada.
+    El loadout queda identico
+    a como entro a la batalla.
+  end note
+  Solicitud --> Jugador : rechazo con el mensaje que explica por que
+else no hay batalla activa, o ya termino
+  Estado --> Regla : sin batalla activa
+  Regla --> Solicitud : esta regla no interviene
+  Solicitud -> Loadout : aplicar la mutacion con las reglas de HU-28
+  note over Loadout
+    Propiedad, categoria, capacidad 2/6/2
+    y recalculo: de HU-28, no de aqui.
+  end note
+  Loadout --> Solicitud : loadout actualizado
+  Solicitud --> Jugador : exito
+end
+
+note over Estado : Evento de fin de batalla
+Estado --> Regla : la batalla termino
+note over Regla
+  La restriccion deja de aplicarse.
+  No queda un lock permanente.
+end note
+@enduml

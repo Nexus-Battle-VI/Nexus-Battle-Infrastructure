@@ -1,0 +1,45 @@
+@startuml hu-29-domain
+title HU-29 — Dominio: la regla temporal y de quien es cada pieza
+
+package "Player / Inventory" #FFF7EE {
+  class Heroe <<de HU-28: no se rediseña>> {
+    + identificador
+  }
+  class ConfiguracionEquipamiento <<de HU-28: no se rediseña>> {
+    + armas
+    + piezasDeArmadura
+    + items
+    + version
+  }
+  class RestriccionEquipamientoEnCombate <<regla temporal de HU-29>> {
+    + evaluar(heroe, cambioSolicitado, estado) : DecisionDeCambio
+  }
+  class DecisionDeCambio <<valor>> {
+    + procede : boolean
+    + motivo : texto | nulo
+  }
+
+  Heroe "1" --> "1" ConfiguracionEquipamiento : lo configura
+  RestriccionEquipamientoEnCombate ..> ConfiguracionEquipamiento : la PRECEDE, no la modifica
+  RestriccionEquipamientoEnCombate --> DecisionDeCambio : produce
+}
+
+package "Combat" #EEF5FF {
+  class EstadoDeBatallaPublicado <<estado, no el motor>> {
+    + hayBatallaActiva(heroe) : boolean
+  }
+}
+
+RestriccionEquipamientoEnCombate ..> EstadoDeBatallaPublicado : consulta; no lo posee
+
+note bottom of RestriccionEquipamientoEnCombate
+  Se aplica SOLO mientras la batalla esta activa.
+  Al terminar deja de aplicar: no hay lock permanente.
+end note
+
+note bottom of ConfiguracionEquipamiento
+  NO se clona. Si la mutacion no se aplica,
+  el propio loadout demuestra que no cambio;
+  una copia seria una segunda version de la verdad.
+end note
+@enduml

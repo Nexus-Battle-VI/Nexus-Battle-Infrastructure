@@ -1,0 +1,35 @@
+@startuml hu-73-use-case
+title HU-73 — Encuentro con enemigo Máster (casos de uso)
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Quien carga\nel contenido" as Content
+actor "Planificador\nde Missions" as Scheduler
+actor "Combat\n(Team Alfa)" as Combat
+actor "Player/Inventory\n(Team Alfa, HU-32)" as Inventory
+
+rectangle "Missions (Team Beta)" {
+  usecase "Configurar el Máster\nde la misión" as UC1
+  usecase "Validar la configuración" as UC2
+  usecase "Enviar el bloque master\na la simulación (HU-72)" as UC3
+  usecase "Registrar evaluaciones\ny encuentros (CA-02)" as UC4
+  usecase "Pedir la entrega de la épica\n(CA-01)" as UC5
+}
+
+usecase "Tirar la aparición y resolver\nel encuentro (CA-03, CA-04)" as UC6
+
+Content --> UC1
+UC1 ..> UC2 : <<include>>
+Scheduler --> UC3
+UC3 --> Combat
+Combat --> UC6
+Scheduler --> UC4
+UC4 ..> UC5 : <<include>>
+UC5 --> Inventory
+
+note right of UC5
+  Solo si el Máster cayó y la misión
+  no quedó VOIDED; operationId
+  determinista: nunca dos entregas.
+end note
+@enduml

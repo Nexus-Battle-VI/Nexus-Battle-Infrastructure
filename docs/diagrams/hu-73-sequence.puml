@@ -1,0 +1,28 @@
+@startuml hu-73-sequence
+title HU-73 — Máster: configuración, simulación, evidencia y épica (secuencia)
+autonumber
+
+participant "Missions\n(planificadores)" as Missions
+database "PostgreSQL\n(missions)" as DB
+participant "Combat\n(Team Alfa)" as Combat
+participant "Player/Inventory\n(Team Alfa, HU-32)" as Inventory
+
+Missions -> DB : Leer masterEncounter de la definición
+Missions -> Missions : Resolver la probabilidad\npara el subtipo del héroe
+Missions -> Combat : POST /api/internal/v1/combat/simulations\nbloque master: puntos, tope y candidatos
+Combat -> Combat : Tirar en cada punto con su generador\ny resolver el encuentro con levelOffset 2
+Combat --> Missions : 200 summary.master con evaluations\ny encounters
+
+... Al llegar endsAt (cierre de HU-72) ...
+Missions -> DB : Guardar mission_master_encounters\nen la transacción del cierre
+loop Por cada encuentro APPEARED_DEFEATED, si la misión no es VOIDED
+  Missions -> Inventory : POST /api/internal/v1/inventory/grants\noperationId determinista, playerId,\nitems con el producto de la épica
+  alt Entregada
+    Inventory --> Missions : 200
+    Missions -> DB : Anotar grantedAt
+  else No disponible
+    Inventory --> Missions : 503
+    Missions -> DB : Reintentar con el mismo operationId
+  end
+end
+@enduml

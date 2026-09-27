@@ -40,7 +40,7 @@ El punto que decide es la **propiedad exclusiva de datos**. Ver [ADR-001](../adr
 | Contexto | Responsabilidad | Team | Repositorio |
 | --- | --- | --- | --- |
 | Account / Identity | Existencia de la cuenta, ciclo de vida y roles | Alfa | `Nexus-Battle-Account` |
-| Player / Inventory | Qué posee un jugador y en qué cantidad | Alfa | `Nexus-Battle-Player-Inventory` |
+| Player / Inventory | Qué posee un jugador y en qué cantidad; y el héroe: su equipamiento, su selección y su progresión | Alfa | `Nexus-Battle-Player-Inventory` |
 | Catalog | Qué productos existen y a qué precio | Gama | `Nexus-Battle-Catalog` |
 | Community | Hilos, mensajes y moderación | Gama | `Nexus-Battle-Community` |
 | Commerce | Pedidos, líneas y totales | Beta | `Nexus-Battle-Commerce` |
@@ -63,6 +63,22 @@ semilla -> MT19937 -> Box-Müller -> Z ~ N(0,1) -> Φ(Z) -> indice uniforme 1..8
 - **Implementado** en Combat: motor HU-24, tabla y resolución HU-25, `CRITICAL_CHANCE` sobre la tabla y salas/lobby. **Pendiente:** política de semilla por batalla o simulación (la semilla 3.000.000 es la validada por HU-26, no una semilla global), Missions → Combat y el consumo por HU-20.
 - Diagrama: [combat-randomness.puml](../diagrams/combat-randomness.puml).
 
+### Progresión del héroe (HU-08)
+
+Player/Inventory posee el **nivel** y la **experiencia acumulada** del héroe, en un agregado por `(jugador, héroe)` con su propio almacén. No es una decisión nueva de este documento: la ficha de ownership de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md) ya asigna a Player/Inventory el héroe, su equipamiento y sus estadísticas efectivas, y solo ese contexto escribe su Mongo.
+
+La regla vive **en proceso**, en `ExperiencePolicy`, como política pura: no persiste, no expone HTTP y no entrega experiencia. Contiene la **tabla de umbrales aprobada por el Product Owner** —`100 · 200 · 400 · 800 · 1.600 · 3.200 · 6.400 · 12.800`, de experiencia **acumulada** por nivel— y las dos direcciones de esa tabla: el umbral de un nivel y el nivel de un acumulado. El **umbral no se almacena** —es derivable del nivel—, de modo que la regla tiene un único punto conceptual y no puede desincronizarse.
+
+```text
+nivel actual (1..8)  -> ExperiencePolicy -> umbral del siguiente nivel, o MAX_LEVEL
+xp acumulada         -> ExperiencePolicy -> nivel alcanzado (puede cruzar varios de golpe)
+```
+
+- **Lo que está**: el diseño, el modelo de dominio, la migración `008-hero-progressions`, los adaptadores y la suite de pruebas (Tasks #188, #189 y #190). Ver [la evidencia de HU-08](../evidence/HU-08-calculo-de-experiencia-requerida-por-nivel.md) y el [diseño](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-08-progresion.md).
+- La **experiencia solo crece**: subir de nivel no la descuenta, y en el nivel máximo sigue acumulándose sin descartarse. El nivel persistido es la tabla aplicada al acumulado, y esa coherencia se comprueba al leer el documento.
+- **La recompensa no se calcula aquí.** `10 × 1,2^(1d8)` es de Missions y la tirada `1d8` es de Combat ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)); Player/Inventory recibe un importe entero y lo acredita.
+- El umbral es función del **nivel** y no de las estadísticas: **no** interviene en `computeEffectiveStats` ni en el contrato `equipped-hero`, que sigue sin llevar nivel. Ver las limitaciones correspondientes en §14.
+
 ### Experiencia por derrota de un rival (HU-09)
 
 La recompensa de experiencia `10 × 1,2^(1d8)` se otorga **al derrotar a un rival NPC en una misión (JvE)**, según la aclaración funcional del Product Owner. **El PvP («Jugar Online») no la otorga.** La responsabilidad se reparte entre tres contextos, porque ninguna de las tres piezas puede vivir en los otros dos:
@@ -77,7 +93,22 @@ Player/Inv-> acredita cada derrota y recalcula el nivel con la tabla de HU-08
 
 - **Combat no calcula experiencia** y **Missions no genera aleatoriedad**: `ADR-021` da la exclusiva del azar a Combat y `ADR-019` da la propiedad del estado del héroe a Player/Inventory. La tirada se persiste **antes de responder**, de modo que un reintento no vuelve a consumir el cursor aleatorio.
 - La acreditación es **idempotente** por `operationId` determinista, con ledger propio en Player/Inventory (`_id = operationId`) y actualización de la progresión en la misma transacción. Un reintento nunca duplica experiencia.
-- **Estado:** **solo diseño** (Task #439). Las Tasks de implementación (#440, #441, #442, #443) y la verificación E2E (#444) están `open` y no se dan por desbloqueadas. Ver el [contrato](../contracts/hu-09-experience-reward-v1.md), el [diseño](hu-09-experiencia-mision.md) y la [evidencia](../evidence/HU-09-experiencia-por-derrota-de-un-rival.md).
+- **Estado:** **implementada y verificada de extremo a extremo; NO aceptada.** Las cuatro piezas existen (Combat `#440`, Player/Inventory `#441`, Missions `#442` y `#443`) y la cadena se recorre entera: 12/12 casos en verde sobre las tres piezas reales, con el reporte en [`hu-09-ejecucion-e2e.json`](../evidence/hu-09-ejecucion-e2e.json). Falta la revisión por pares y la aprobación del PO (`CA-09`), y la decisión `P-2` —redondeo al más próximo frente a truncamiento— sigue abierta. Ver el [contrato](../contracts/hu-09-experience-reward-v1.md), el [diseño](hu-09-experiencia-mision.md) y la [evidencia](../evidence/HU-09-experiencia-por-derrota-de-un-rival.md).
+- **Límite conocido:** el escenario sustituye el resultado de la simulación de HU-72 y el perfil del héroe —son **la misma dependencia**: la ruta de simulación de Combat existe, pero valida `hero.profile.effectiveStats` y `hero.profile.subtype`, y sin la ruta interna de perfil de Player/Inventory (`HU-71.2`) no hay perfil real que enviarle—, más el compromiso del héroe y el testimonio. La tirada, el cálculo, la acreditación y el nivel **sí** son los reales. Está declarado en la evidencia, pieza por pieza.
+
+### Bloqueo de equipamiento en combate (HU-29)
+
+Con una batalla **activa**, el equipamiento con el que el héroe **entró** permanece fijo: toda mutación del loadout —arma, armadura o ítem— se **rechaza** con un mensaje explicativo y el loadout **no se modifica**. Al terminar la batalla la restricción **deja de aplicarse**. La regla **precede** a la operación de equipar de HU-28; no la reimplementa ni toca las capacidades 2/6/2.
+
+```text
+estado de batalla publicado -> RestriccionEquipamientoEnCombate -> procede | rechazado con motivo
+```
+
+- **El estado de batalla lo publica Combat**, no Player/Inventory, y llega como un **compromiso** que Player/Inventory guarda y consulta localmente, no como una consulta al vecino en el camino crítico del equipamiento. El diseño no prescribía transporte; la implementación sí tuvo que fijarlo y lo hizo en [`hu-29-battle-commitment-v1`](../contracts/hu-29-battle-commitment-v1.md): `ADR-019` ya había decidido el **QUÉ** —Player/Inventory posee los **compromisos** del héroe (`BATTLE`, `MISSION`, `AUCTION`, `TOURNAMENT`) y Combat publica el compromiso **al iniciar** y lo **libera al terminar**, de forma síncrona y con `operationId`—, y el contrato solo fija el **CÓMO**.
+- **El loadout no se clona.** Como la mutación no se aplica, no hace falta un snapshot que demuestre «sin modificaciones»: una copia sería una segunda versión de la misma verdad.
+- **Sin lock permanente.** No hay nada que «desbloquear»: hay una condición que se cumple mientras dure la batalla.
+- **Estado:** **diseñada e implementada en ramas, sin mergear y sin aceptar.** El diseño es la Task [#231](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/231); la implementación es [#232](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/232), en Player/Inventory (PR [#26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26)) y Combat (PR [#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/55)), con el contrato [`hu-29-battle-commitment-v1`](../contracts/hu-29-battle-commitment-v1.md) (PR [#165](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/165)). La verificación de aceptación es [#233](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/233) y **no se ha hecho**: no hay prueba de extremo a extremo entre los dos servicios, falta la decisión del PO sobre el copy del mensaje y sigue sin implementarse la exclusión cruzada entre propósitos. La integración es la que `ADR-019` ya había decidido: **compromiso publicado por Combat al iniciar y liberado al terminar**, con `operationId` de idempotencia, y **no** una consulta de Player/Inventory a Combat en el camino crítico del equipamiento. Ver el [diseño](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-29-bloqueo-equipamiento-combate.md) y [la evidencia](../evidence/HU-29-bloqueo-equipamiento-en-combate.md).
+- Diagramas: [caso de uso](../diagrams/hu-29-use-case.puml), [actividad](../diagrams/hu-29-activity.puml), [secuencia](../diagrams/hu-29-sequence.puml), [dominio](../diagrams/hu-29-domain.puml).
 
 ## 5. Arquitectura interna común
 
@@ -210,24 +241,70 @@ Se enumeran juntas porque quien lea este documento necesita conocerlas antes de 
 7. **Aceptación humana de HU-39 en curso.** La entrega técnica está desplegada;
    el ciclo real de TOTP, asignación, Catalog y retirada se conserva como
    evidencia pendiente de completar.
-8. **HU-09 está solo diseñada, y su alcance acordado la bloquea más allá de HU-08.**
-   La experiencia por derrota de un rival se otorga en el camino **JvE**, que
-   coordina Missions; pero **Missions no tiene hoy ninguna ruta de negocio ni
-   ninguna tabla**, y el flujo de misión (`HU-72.2`, `HU-74.2`) sigue `open` y solo
-   diseñado. Acreditar la experiencia exige además que **HU-08 esté en `develop`**
-   (hoy entregada en PRs sin mergear). Consecuencia dicha sin adornos: **HU-09 no
-   puede cerrarse en el Sprint 2** mientras esa cadena no exista. Ver el
-   [contrato](../contracts/hu-09-experience-reward-v1.md).
-9. **La decisión de redondeo de HU-09 sigue abierta y está marcada como provisional.**
+8. **`CA-03` de HU-08 quedó divergente, y bloquea la aceptación de la historia.** El
+   criterio sigue enunciando el umbral como `100 × 1,2^(Nivel−1)` —que da `100, 120,
+   144, 172,8, 207,36, 248,832, 298,5984`— y el código aplica la tabla aprobada
+   después por el PO. **No es una diferencia de redondeo**: el cociente entre las dos
+   series no es constante, así que ninguna precisión convierte una en la otra. La
+   tabla gobierna el cálculo y la divergencia está medida en la evidencia de HU-08.
+   Requiere que el Product Owner **reescriba `CA-03`**; el Issue no se ha modificado.
+9. **`CA-06` de HU-08 sin implementar, y bloquea la aceptación de la historia.** El
+   Product Owner **ya dio la regla**: la estadística del nivel 1 multiplicada por el
+   nivel actual, con el equipamiento aplicado después. Sigue fuera de HU-08 porque la
+   propia HU declara que **no** recalcula reglas de combate, y porque implementarla
+   tocaría `computeEffectiveStats` y el contrato `equipped-hero`. **Y hay un caso que
+   la aclaración no resuelve:** las estadísticas expresadas como **dados** —el `1d8`
+   que Combat documenta en su `AttackProfile`— no tienen definida la multiplicación
+   por nivel. Como `CA-08` establece que un criterio obligatorio fallido impide
+   aceptar la HU, HU-08 no puede aceptarse mientras `CA-06` siga asignado a esta
+   historia. Requiere decisión de PO y arquitectura: implementarlo aquí, moverlo a
+   otra historia, o reformularlo como no obligatorio. El precedente es HU-07/`CA-09`,
+   que se declaró fuera de alcance con cita textual.
+10. **`equipped-hero` no lleva el nivel del héroe.** El contrato interno que Combat
+    consume es un subconjunto deliberado, y su propio código documenta que «si Combat
+    necesita escalar por nivel, es una decision de producto pendiente». Con `CA-06` ya
+    con fórmula, esta decisión es el camino crítico de esa parte: ampliar
+    `EquippedHeroDto` es un cambio de contrato con su propio proceso.
+11. **La política de redondeo de la recompensa de experiencia sigue abierta, y no es
+    de Player/Inventory.** `10 × 1,2^(1d8)` —la XP por muerte de NPC en misiones
+    JvE— es de Missions, y su tirada `1d8` es de Combat ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)).
+    El PO describió el redondeo al entero más próximo y ofreció el truncamiento como
+    alternativa. La tabla de umbrales no tiene fracciones que redondear, así que esto
+    no afecta al cálculo del nivel.
+12. **HU-09 ya no está bloqueada: está implementada y verificada, y sigue SIN aceptar.**
+   El bloqueo que se registró aquí —Missions sin rutas ni tablas, `HU-72.2`/`HU-74.2`
+   solo diseñadas y `HU-08` sin mergear— se ha resuelto: las tres piezas están en
+   `develop` y la cadena de experiencia se recorre de extremo a extremo, con 12/12
+   casos en verde sobre tres repositorios sin cambios pendientes
+   ([reporte](../evidence/hu-09-ejecucion-e2e.json)). Lo que queda **no es técnico**:
+   revisión por pares y aprobación del PO (`CA-09`).
+   Ver el [contrato](../contracts/hu-09-experience-reward-v1.md) y la
+   [evidencia](../evidence/HU-09-experiencia-por-derrota-de-un-rival.md).
+13. **La decisión de redondeo de HU-09 sigue abierta y está marcada como provisional.**
    Que la experiencia deba ser **entera** es una decisión tomada; **cómo** se convierte
    `14,4` en entero no lo es hasta que se confirme **redondeo al entero más próximo**
    frente a **truncamiento**. El contrato adopta el redondeo al más próximo con la marca
    provisional visible, y la regla vive en un único punto para que confirmarla no toque
    nada más. Ver el [contrato](../contracts/hu-09-experience-reward-v1.md) §15.
-10. **`missions` no está en el allow-list interno de Player/Inventory.** Hoy es
+14. **`missions` no está en el allow-list interno de Player/Inventory.** Hoy es
     `['commerce', 'notifications', 'combat']`. La ruta de acreditación de
-    experiencia se acotará con `@InternalCallers('missions')` **sin** ampliar la
-    lista global: es una decisión de mínimo privilegio, no un pendiente.
+    experiencia se acota con `@InternalCallers('missions')` **sin** ampliar la
+    lista global: es una decisión de mínimo privilegio, no un pendiente. La cadena
+    de HU-09 lo ejerce de verdad (`S-05`, `S-06`).
+11. **El bloqueo de equipamiento en combate (HU-29) está implementado en ramas, sin mergear ni
+    verificar, y su decisión funcional sigue parcialmente abierta.** El código existe en
+    Player/Inventory (PR [Player-Inventory #26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26),
+    ya al día con `develop`) y en Combat (PR [#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/55)),
+    con el contrato [`hu-29-battle-commitment-v1`](../contracts/hu-29-battle-commitment-v1.md), pero
+    **nada está en `develop`** y **no hay prueba de extremo a extremo entre los dos servicios**: eso
+    es la Task [#233](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/233). La
+    implementación aplica la lectura literal de «batalla activa» (`IN_BATTLE`; ampliarlo a
+    `PREPARING` rompería el lobby de preparación de HU-15.3) y el **texto del mensaje** sigue
+    pendiente del PO. La épica **no** entra en el bloqueo: la HU nombra arma, armadura e ítem, y HU-28
+    excluye `EPICA` de las categorías equipables. La exclusión cruzada entre propósitos (`MISSION` y
+    `BATTLE`) **no** se ha implementado y queda declarada como límite. Ver el
+    [diseño](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-29-bloqueo-equipamiento-combate.md)
+    y [la evidencia](../evidence/HU-29-bloqueo-equipamiento-en-combate.md).
 
 Ninguna es un descuido. Cada una tiene su motivo registrado y su condición de desbloqueo.
 

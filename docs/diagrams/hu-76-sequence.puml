@@ -1,0 +1,26 @@
+@startuml hu-76-sequence
+title HU-76 — Resultado de misión, logros y perfil (secuencia)
+autonumber
+
+actor "Jugador" as Player
+participant "Web\n(perfil)" as Web
+participant "Missions\n(evaluador de logros)" as Missions
+database "PostgreSQL\n(missions)" as DB
+participant "Player/Inventory\n(Team Alfa)" as Inventory
+
+Missions -> DB : SELECT MissionSettled no procesados\nFOR UPDATE SKIP LOCKED
+Missions -> DB : Leer reporte (HU-74) y evidencia\ndel Máster (HU-73)
+Missions -> Missions : Armar el hecho normalizado\ny evaluar el catálogo
+Missions -> DB : Progreso, desbloqueos y hecho procesado\nen una transacción
+opt Reconocimiento que es producto
+  Missions -> Inventory : POST /api/internal/v1/inventory/grants\noperationId determinista
+  Inventory --> Missions : 200
+  Missions -> DB : Reconocimiento CREDITED
+end
+
+Player -> Web : Abrir el perfil
+Web -> Missions : GET /api/v1/missions/me/achievements
+Missions -> DB : Catálogo y progreso del jugador
+Missions --> Web : 200 LOCKED, IN_PROGRESS o UNLOCKED
+Web --> Player : Logros y reconocimientos
+@enduml

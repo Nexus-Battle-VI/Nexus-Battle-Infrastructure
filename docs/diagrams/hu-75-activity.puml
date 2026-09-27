@@ -1,0 +1,64 @@
+@startuml hu-75-activity
+!theme plain
+title HU-75 — Actividad: elegir dificultad al matricular
+
+skinparam defaultFontName sans-serif
+
+start
+:Jugador selecciona misión y nivel;
+
+if (¿Testimonio válido?) then (no)
+  :Responder 401;
+  stop
+endif
+
+if (¿Dificultad del vocabulario?) then (no)
+  :Responder 400 UNKNOWN_DIFFICULTY;
+  stop
+endif
+
+:Leer clears del jugador para ESA misión;
+
+if (¿Nivel desbloqueado?) then (no)
+  :Responder 422 PROGRESSION_LOCKED
+  con el nivel faltante;
+  stop
+endif
+
+:Aplicar reglas de HU-70
+(héroe libre, misión disponible);
+note right
+  Fuera del alcance de HU-75.
+  Un rechazo de HU-70 no
+  se disfraza como progresión.
+end note
+
+if (¿HU-70 acepta?) then (no)
+  :Propagar error de HU-70;
+  stop
+endif
+
+:Persistir matrícula con difficulty;
+note right
+  rewardTier se publica en GET
+  de niveles, no se persiste
+  en la matrícula actual.
+end note
+
+if (¿Simulación HU-72 disponible?) then (sí)
+  :Pedir a Combat difficulty
+  + multiplicador aprobado;
+  if (¿Misión cerrada COMPLETED?) then (sí)
+    :Registrar MissionDifficultyClear;
+  endif
+else (no)
+  :Queda matrícula con nivel;
+  note right
+    El +50 % / +100 % no
+    se puede demostrar aún.
+  end note
+endif
+
+stop
+
+@enduml

@@ -1,0 +1,90 @@
+@startuml hu-75-domain
+!theme plain
+title HU-75 — Fragmento conceptual del dominio de dificultad
+
+skinparam defaultFontName sans-serif
+skinparam classAttributeIconSize 0
+
+class Mission {
+  id
+  estadoTablon
+}
+
+enum DifficultyLevel {
+  NORMAL
+  HEROIC
+  LEGENDARY
+  MYTHIC
+}
+
+class DifficultyPolicy {
+  anterior(nivel)
+  acepta(nivel, clears)
+  mensajeBloqueo(nivel)
+}
+
+class MissionDifficultyClear {
+  playerId
+  missionId
+  difficulty
+  completedAt
+}
+
+class Enrollment {
+  id
+  playerId
+  missionId
+  heroId
+  difficulty
+  result
+}
+
+class DifficultyDescriptor {
+  difficulty
+  enemyStatMultiplier
+  rewardTier
+}
+
+enum RewardTier {
+  STANDARD
+  IMPROVED
+  PREMIUM
+  EXCLUSIVE
+}
+
+class CombatSimulationRequest <<external>> {
+  difficulty
+  enemyStatMultiplier
+}
+
+class RewardGrant <<external>> {
+  operationId
+  rewardTier
+}
+
+Mission "1" o-- "4" DifficultyLevel : ofrece
+Enrollment --> Mission
+Enrollment --> DifficultyLevel
+DifficultyDescriptor --> RewardTier
+DifficultyDescriptor --> DifficultyLevel
+MissionDifficultyClear --> Mission
+MissionDifficultyClear --> DifficultyLevel
+DifficultyPolicy ..> MissionDifficultyClear : consulta
+DifficultyPolicy ..> DifficultyLevel : ordena
+Enrollment ..> CombatSimulationRequest : envía si HU-72
+DifficultyDescriptor ..> RewardGrant : futura frontera HU-10
+
+note right of DifficultyPolicy
+  Heroico exige clear NORMAL
+  de la misma misión.
+  Legendario exige HEROIC.
+  Mítico exige LEGENDARY.
+end note
+
+note bottom of CombatSimulationRequest
+  Missions no posee vida ni daño.
+  Mítico viaja como código
+  hasta que el PO fije números.
+end note
+
+@enduml

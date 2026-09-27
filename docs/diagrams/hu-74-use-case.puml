@@ -1,0 +1,28 @@
+@startuml hu-74-use-case
+title HU-74 — Reporte e historial de misiones (casos de uso)
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Jugador" as Player
+actor "Cierre de misión\n(HU-72)" as Settlement
+actor "Entregas de recompensas\n(HU-10, HU-73)" as Rewards
+
+rectangle "Missions (Team Beta)" {
+  usecase "Generar el reporte\n(CA-01, CA-02, CA-03)" as UC1
+  usecase "Consultar un reporte" as UC2
+  usecase "Consultar el historial\n(CA-05)" as UC3
+  usecase "Consultar el resumen\ndel historial (CA-05)" as UC4
+  usecase "Actualizar el estado\nde una recompensa" as UC5
+}
+
+Settlement --> UC1
+Player --> UC2
+Player --> UC3
+Player --> UC4
+Rewards --> UC5
+
+note right of UC2
+  Misión en curso:
+  404 REPORT_NOT_AVAILABLE (CA-04).
+end note
+@enduml

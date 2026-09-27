@@ -40,7 +40,26 @@ services:
 
   mongo:
     image: mongo:8
-    mem_limit: 384m
+    # 640m, y no 384m: con 384m el nucleo mataba a mongod por falta de memoria
+    # unas dos veces al dia (19 reinicios en ~8,5 dias, y cada uno corta a
+    # Combat, Player-Inventory, Catalog y Notifications unos segundos).
+    #
+    # Lo que llenaba el limite era mongod (~220 MiB de memoria anonima en
+    # regimen) MAS el `mongosh` del healthcheck, que en cada ejecucion reserva
+    # ~157 MiB anonimos (y ~103 MiB de ficheros mapeados) dentro de ESTE MISMO
+    # cgroup. Con el healthcheck de abajo el `mongosh` ya no compite, pero el
+    # margen se deja: quien abra un `mongosh` a mano con `docker exec` -es lo que
+    # se hace para diagnosticar- vuelve a sumar ~260 MiB al proceso servidor.
+    #
+    # Cabe en el nodo: t4g.small tiene 1841 MiB, Postgres esta limitado a 288m y
+    # el sistema, Docker y el agente de SSM usan ~250 MiB. Los limites suman
+    # ~1180 MiB y queda mas de un tercio de la RAM para la cache de ficheros.
+    #
+    # NO se toca la cache de WiredTiger (`--wiredTigerCacheSizeGB`): Mongo la
+    # calcula ya con el limite del cgroup y abre con `cache_size=256M`, que es
+    # el minimo permitido (0,256 GB). Fijarla no ahorra nada y solo podria
+    # subirla.
+    mem_limit: 640m
     pids_limit: 256
     ports:
       - '27017:27017'
@@ -77,12 +96,41 @@ services:
       # Solo lectura y con dueno 999 (el usuario `mongodb` de la imagen): mongod
       # RECHAZA un keyfile con permisos mas abiertos que 0600.
       - ./secrets/mongo-keyfile:/etc/mongo/keyfile:ro
+    # El healthcheck NO arranca `mongosh`.
+    #
+    # Antes hacia `mongosh ... db.adminCommand("ping")` cada 10 s. `mongosh` es un
+    # Node.js completo: reserva ~157 MiB anonimos por ejecucion, DENTRO del cgroup
+    # de mongod, y eso era lo que empujaba al contenedor por encima de su limite
+    # (102 de las 121 muertes por falta de memoria fueron un `mongosh`, y 1342 de
+    # las 1461 conexiones de una hora fueron suyas, con su cola de registros).
+    #
+    # Ahora un `perl` de la propia imagen manda un `hello` del protocolo de Mongo
+    # (OP_MSG) y comprueba que la respuesta trae `ok: 1`. Cuesta ~1 MiB, no
+    # necesita credenciales -Mongo atiende `hello` sin autenticar- y por eso ya
+    # no pone la contrasena de root en la linea de comandos de un proceso. Falla
+    # si nadie escucha, si la respuesta no es un `ok: 1` y, gracias a `alarm 4`,
+    # si mongod acepta la conexion y no responde.
+    #
+    # Es MENOS que el `ping` autenticado de antes en una cosa: no comprueba que
+    # las credenciales de root funcionen. Los servicios ejercitan a diario las
+    # suyas, y un fallo de autenticacion les sale a ellos, no aqui.
+    #
+    # Cada `$` va duplicado (`$$`) porque compose interpola la variable si no.
     healthcheck:
       test:
-        [
-          'CMD-SHELL',
-          'mongosh --quiet --username root --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval ''db.adminCommand("ping")''',
-        ]
+        - CMD
+        - perl
+        - -MIO::Socket::INET
+        - -e
+        - |
+          alarm 4;
+          $$s = IO::Socket::INET->new("127.0.0.1:27017") or exit 1;
+          $$e = "\x10hello\0" . pack("V", 1) . "\x02\$$db\0" . pack("V", 6) . "admin\0";
+          $$d = pack("V", length($$e) + 5) . $$e . "\0";
+          print $$s pack("V4", 21 + length($$d), 1, 0, 2013), pack("V", 0), "\0", $$d;
+          read($$s, $$h, 16) == 16 or exit 1;
+          read($$s, $$r, unpack("V", $$h) - 16);
+          exit($$r =~ /\x01ok\0\0{6}\xf0\x3f/ ? 0 : 1);
       interval: 10s
       timeout: 5s
       retries: 5

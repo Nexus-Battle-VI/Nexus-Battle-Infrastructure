@@ -1,0 +1,28 @@
+@startuml hu-72-activity
+title HU-72 — Simular y cerrar la misión (actividad)
+
+start
+:Hecho MissionEnrollmentStarted (HU-70);
+:Crear MissionExecution QUEUED con un operationId nuevo;
+repeat
+  :El planificador toma la ejecución\n(FOR UPDATE SKIP LOCKED);
+  :Marcar REQUESTED y llamar a Combat\ncon el mismo operationId;
+  backward:Esperar al siguiente intento\n(5 s, 30 s, 2 min, luego cada 10 min);
+repeat while (¿503, tiempo agotado o red, y queda plazo hasta endsAt + 30 min?) is (sí) not (no)
+if (¿Combat respondió 200?) then (sí)
+  :Guardar resumen, bitácora y seedRef\nSIMULATED, resultado sellado;
+  :Esperar hasta endsAt;
+  :Evaluar objetivos con el resumen;
+  if (¿El héroe cayó o falta un objetivo principal?) then (sí)
+    :Matrícula FAILED (CA-04);
+  else (no)
+    :Matrícula COMPLETED (CA-06)\ny clear de HU-75;
+  endif
+  :SETTLED y hecho MissionSettled\nen la misma transacción;
+else (no: 400, 409, 422 o plazo agotado)
+  :Matrícula y ejecución VOIDED (propuesta)\ny hecho MissionSettled;
+endif
+:Liberar al héroe con el operationId del compromiso\n(reintentar hasta recibir 204);
+:Anotar heroReleasedAt (CA-05);
+stop
+@enduml
