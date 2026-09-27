@@ -1,0 +1,57 @@
+@startuml hu-29-activity
+title HU-29 — Actividad: bloquear mientras la batalla esta activa, liberar al terminar
+
+start
+
+:Llega una solicitud de modificar\nel equipamiento de un heroe;
+note right
+  Es la MISMA operacion de HU-28.
+  Aqui no se reimplementa.
+end note
+
+:Consultar el estado de batalla\nPUBLICADO para ese heroe;
+
+if (¿Hay batalla activa?) then (si)
+  :Rechazar la solicitud:\nel equipamiento de entrada permanece\nfijo hasta el fin de ESA batalla;
+  :Producir el mensaje explicativo\ndel motivo;
+  :NO persistir ninguna modificacion;
+  note right
+    No hay estado parcial
+    ni copia que restaurar:
+    la escritura nunca ocurre.
+  end note
+  :Responder el rechazo con su motivo;
+  stop
+else (no)
+  :Esta regla NO interviene;
+  :Continuar por el flujo normal de\ninventario y equipamiento (HU-28);
+  note right
+    Propiedad, categoria,
+    capacidad 2/6/2 y recalculo
+    son de HU-28.
+  end note
+  stop
+endif
+
+' La liberacion es un EVENTO del contexto de combate, no una accion del jugador:
+' por eso es un flujo aparte, con su propio inicio.
+start
+
+:Evento: la batalla termina;
+note right
+  Lo produce el contexto de combate
+  (HU-21). Este diseño modela el
+  evento, no como se detecta.
+end note
+
+:Dejar de aplicar la restriccion;
+note right
+  No hay nada que «desbloquear»:
+  hay una condicion que se cumple
+  mientras dure la batalla.
+end note
+
+:Un intento posterior rige por el\nflujo normal de inventario (HU-28);
+
+stop
+@enduml
