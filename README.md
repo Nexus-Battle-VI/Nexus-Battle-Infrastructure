@@ -25,7 +25,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [integration.md](docs/architecture/integration.md) | Comunicación entre contextos |
 | [security.md](docs/architecture/security.md) | Seguridad, identidad y RBAC desplegados |
 | [hu-39-role-management.md](docs/architecture/hu-39-role-management.md) | Diseño, matriz RBAC y contratos conceptuales de HU-39 |
-| [hu-09-experiencia-mision.md](docs/architecture/hu-09-experiencia-mision.md) | Diseño de la experiencia por derrota de un rival en misión (HU-09). **Solo diseño** |
+| [hu-09-experiencia-mision.md](docs/architecture/hu-09-experiencia-mision.md) | Diseño de la experiencia por derrota de un rival en misión (HU-09). **Implementado y verificado de extremo a extremo; HU no aceptada** |
 | [hu-70-matriculacion-mision.md](docs/architecture/hu-70-matriculacion-mision.md) | Diseño de HU-70: tablón, detalle y matrícula con reserva del héroe, y su contrato conceptual |
 | [hu-71-rotaciones-habilidades.md](docs/architecture/hu-71-rotaciones-habilidades.md) | Diseño de HU-71: estrategia de hasta tres rotaciones, versión optimista y decisión de la IA por turno |
 | [hu-72-simulacion-mision.md](docs/architecture/hu-72-simulacion-mision.md) | Diseño de HU-72: simulación asíncrona en Combat, cierre en `endsAt`, liberación del héroe y propuesta de contrato |
@@ -93,7 +93,7 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | [catalog-events-v1.asyncapi.yaml](docs/contracts/catalog-events-v1.asyncapi.yaml) | AsyncAPI propuesto de `catalog.product.created` V1 |
 | [auction-settlement-events-v1.asyncapi.yaml](docs/contracts/auction-settlement-events-v1.asyncapi.yaml) | Contrato AsyncAPI de `auction.settled.v1` para HU-65.6 (Management #328) |
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
-| [hu-09-experience-reward-v1.md](docs/contracts/hu-09-experience-reward-v1.md) | Contrato de la recompensa de experiencia por derrota de un rival (HU-09). **Diseño — sin implementación** |
+| [hu-09-experience-reward-v1.md](docs/contracts/hu-09-experience-reward-v1.md) | Contrato de la recompensa de experiencia por derrota de un rival (HU-09). **Implementado en Combat, Player-Inventory y Missions; `P-2` cerrada** |
 | [hu-29-battle-commitment-v1.md](docs/contracts/hu-29-battle-commitment-v1.md) | Compromiso de batalla del héroe (HU-29): las dos rutas internas de Combat → Player/Inventory y el bloqueo del loadout. **Diseño — sin implementación** |
 
 ### Gobierno

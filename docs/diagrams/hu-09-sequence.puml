@@ -10,7 +10,7 @@ participant "Player-\nInventory" as Inventory
 == Cierre del enfrentamiento JvE (HU-72) ==
 Combat --> Missions : simulación (combatOutcome, combatLog)
 Missions -> Missions : enumerar CADA derrota\n(encounter + enemyInstanceId del combatLog)
-Missions -> Missions : ¿hay al menos una derrota?\nno -> no hay recompensas (CA-08)
+Missions -> Missions : ¿hay al menos una derrota válida de un NPC?\nno (o misión VOIDED) -> no hay recompensas (CA-08)
 
 == 1. Persistir las recompensas ANTES de pedir nada ==
 loop por cada derrota

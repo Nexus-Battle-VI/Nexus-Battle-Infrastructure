@@ -5,13 +5,13 @@
 - **Requisito trazado:** `RF-09`
 - **Bounded context:** Missions (coordinación) + Combat (tirada) + Player/Inventory (estado del héroe)
 - **Contrato entregado:** [hu-09-experience-reward-v1](../contracts/hu-09-experience-reward-v1.md)
-- **Reporte de ejecución:** [`hu-09-ejecucion-e2e.json`](hu-09-ejecucion-e2e.json) — 12/12 casos en verde, tres repositorios sin cambios pendientes
-- **Estado:** **verificación técnica entregada (Task `#444`). Las tres piezas de la cadena —Combat, Missions y Player/Inventory— están implementadas y la cadena se recorre de extremo a extremo.**
-  **La HU NO está aceptada**: falta la revisión por pares y la aprobación del PO, y `P-2` sigue abierta. La visualización en Web (`#443`) no forma parte de esta verificación.
+- **Reporte de ejecución:** [`hu-09-ejecucion-e2e.json`](hu-09-ejecucion-e2e.json) — **13/13 escenarios en verde** (`S-00` a `S-12`), regenerado con la tabla de HU-08 vigente
+- **Estado:** **técnicamente verificada y lista para revisión y aceptación.** Las tres piezas de la cadena —Combat, Missions y Player/Inventory— están implementadas y la cadena se recorre de extremo a extremo con los criterios funcionales definitivos de [#18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/18): **`P-2` está CERRADA** (redondeo al entero más próximo) y **`CA-08` se rige por la derrota válida de un NPC**.
+  **La HU NO está aceptada ni cerrada por este documento**: falta la revisión por pares y la aprobación del PO (`CA-09`). La visualización en Web (`#443`) no forma parte de esta verificación.
 
 ## Lo primero: qué NO dice este documento
 
-Este documento **no declara la HU aceptada**. Que la cadena esté en verde es verificación técnica, no aceptación: esta exige revisión por pares y aprobación del PO, y el Project ya confundió una cosa con la otra con HU-29 y HU-31.
+Este documento **no declara la HU aceptada**. Que la cadena esté en verde es verificación técnica, no aceptación: esta exige revisión por pares y aprobación del PO, y el Project ya confundió una cosa con la otra con HU-29 y HU-31. Tampoco cierra la HU ni sus Tasks.
 
 Y dice, en su propia tabla, **qué piezas se ejercen de verdad y cuáles se sustituyen**. Un escenario que prueba dobles y lo llama «la cadena» es peor que no tener escenario.
 
@@ -28,25 +28,26 @@ Y dice, en su propia tabla, **qué piezas se ejercen de verdad y cuáles se sust
 
 | Nivel | Estado |
 | --- | --- |
-| Cadena completa misión ganada → tirada → recompensa → acreditación → nivel | **Comprobado**, 19 derrotas reales (`S-01`) |
+| Cadena completa misión con derrotas de NPC → tirada → recompensa → acreditación → nivel | **Comprobado**, 19 derrotas reales (`S-01`) |
 | Los ocho valores de `1d8` con el importe del contrato, acreditados de verdad | **Comprobado** (`S-02`) |
-| Subida de un nivel, de varios y nivel máximo sin descarte | **Comprobado** (`S-03`) |
+| Subida de un nivel, de varios y nivel máximo sin descarte, con la **tabla acumulada vigente de HU-08** (`100/300/500/700/900/1.100/1.300`) | **Comprobado** (`S-03`) |
 | Idempotencia del cierre (no vuelve a tirar ni a crear recompensas) | **Comprobado** (`S-04`) |
 | Replay de la acreditación (mismo `operationId`, `applied:false`) | **Comprobado** (`S-05`) |
 | `409` por clave reutilizada con otro contenido, **en las dos fronteras** | **Comprobado** (`S-06`) |
-| `CA-08`: sin victoria válida no hay tirada, ni recompensa, ni acreditación | **Comprobado**, en sus dos formas (`S-07`) |
+| `CA-08`: sin **derrota válida de un NPC** no hay tirada, ni recompensa, ni acreditación | **Comprobado**: `FAILED` sin bajas y `VOIDED` por simulación rechazada (`S-07`) |
+| `CA-08`: una misión `FAILED` con NPC ya derrotados **conserva** la XP devengada | **Comprobado** (`S-12`), con la bitácora de la simulación como **doble declarado** (ver la tabla de piezas) |
 | Dos derrotas del mismo arquetipo son dos recompensas distintas | **Comprobado**, 10 derrotas de `sombra-corrompida` en 2 encuentros (`S-08`) |
 | Una tirada sin acreditar la termina el barrido, sin volver a tirar | **Comprobado** (`S-09`) |
 | Auditoría cruzada: ninguna tirada huérfana, en los dos sentidos | **Comprobado** (`S-10`) |
 | Guardas de no-duplicación en verde **y capaces de fallar** | **Comprobado**, por control negativo y por mutación (`S-11`) |
 | `CA-09` (condición de aceptación de la HU) | **NO es un escenario**: se documenta aquí, no se prueba |
 | Revisión por pares | **PENDIENTE** |
-| Aceptación del PO | **PENDIENTE**, y condicionada por `P-2` |
+| Aceptación del PO | **PENDIENTE** (`P-2` ya no la condiciona: está cerrada) |
 | Visualización en Web (`#443`) | **No entra** en esta verificación; la superficie pública es el reporte de misión de HU-74 |
 | Escala, carga y concurrencia reales | **No comprobado**: el escenario es 1 jugador, 1 héroe y un servicio por pieza |
-| La ruta interna de perfil de héroe (`HU-71.2`) | **Sustituida** por el doble de desarrollo: sigue sin estar en `develop`, y es la causa de que también se sustituya el resultado de la simulación |
+| La ruta interna de perfil de héroe (`HU-71.2`) | **Sustituida** por el doble de desarrollo. La ruta **ya está en `develop`** (Player-Inventory PR [#48](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/48), mergeado el 2026-09-24), pero la cadena **todavía no se ha migrado** a ella ni se ha vuelto a medir: es un pendiente real |
 | Producción real (Cognito, AWS, réplicas) | **No comprobado**: no hay Cognito en la cadena y los contenedores son locales |
-| El escenario en Linux, en CI | **Comprobado**: el job `Cadena HU-09` corre en `ubuntu-latest` y está en verde (12/12) |
+| El escenario en Linux, en CI | **Comprobado** en su día (12/12 en el PR [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19)); **la ejecución de esta actualización está en el CI de su PR** — ver «La cadena también corre en CI» |
 | Que la simulación de la misión la produzca Combat | **NO comprobado**: se sustituye, con el motivo medido. Ver «Un hallazgo» |
 
 ### Qué piezas fueron REALES y cuáles simuladas
@@ -58,15 +59,16 @@ Las tres piezas de la cadena son **código de producción en ejecución**, no do
 | Missions | **REAL** | La aplicación NestJS real de este repositorio, con `PERSISTENCE_DRIVER=postgres` sobre un PostgreSQL 17 en contenedor. Sus adaptadores son los de producción: `PostgresExperienceRewardRepository`, `PostgresReportRepository`, `CombatExperienceRollClient`, `PlayerInventoryExperienceClient` — el caso `S-00` **afirma el nombre de la clase** que el contenedor resolvió para cada token, así que un doble colado se vería |
 | Combat | **REAL, como proceso** | `node dist/main.js` del repositorio hermano, sobre un MongoDB 8 real en réplica, con sus planificadores encendidos. Es quien **tira el dado**: las 19 caras de `S-01` salen de su motor centralizado, y el lote queda persistido en `experience-rolls` con el `operationId` del contrato |
 | Player/Inventory | **REAL, como proceso** | `node dist/main.js` del repositorio hermano, sobre el mismo MongoDB. Es quien **acredita**: los asientos de `experience_grants` y el documento `hero-progressions` que se leen en los casos son los suyos, escritos por su propia ruta interna |
-| Resultado de la simulación de Combat (HU-72) | **SUSTITUIDO** | `COMBAT_SIMULATION_DRIVER=memory`, el doble de desarrollo (`ScriptedCombatSimulation`). **No es que Combat no exista** — su ingreso de simulación está en `develop` desde el PR [#44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/44) —: es que **rechaza el contenido** con `422 MISSION_CONTENT_INVALID` porque lo primero que valida es `hero.profile.effectiveStats` y `hero.profile.subtype`, y el perfil que Missions puede enviar hoy no los trae. **Verificado, no supuesto**: véase «Un hallazgo», más abajo. **No se sustituye nada de HU-09**: las derrotas que produce ese doble son las del contenido de la misión, y a partir de ahí la tirada, el cálculo y la acreditación son los reales |
-| Perfil del héroe (HU-71.2) | **SUSTITUIDO** | `HERO_ABILITIES_DRIVER=memory`. Es **la misma dependencia** que la fila anterior: la ruta interna de perfil de héroe es el PR [#48](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/48) de Player-Inventory, todavía abierto. El día que entre, las dos sustituciones caen con un cambio de una línea |
+| Resultado de la simulación de Combat (HU-72) | **SUSTITUIDO** | `COMBAT_SIMULATION_DRIVER=memory`, el doble de desarrollo (`ScriptedCombatSimulation`). **No es que Combat no exista** — su ingreso de simulación está en `develop` desde el PR [#44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/44) —: cuando se midió (con el perfil del doble), **rechazaba el contenido** con `422 MISSION_CONTENT_INVALID` porque lo primero que valida es `hero.profile.effectiveStats` y `hero.profile.subtype`, y el perfil del doble no los trae. Véase «Un hallazgo», más abajo. **No se sustituye nada de HU-09**: las derrotas que produce ese doble son las del contenido de la misión, y a partir de ahí la tirada, el cálculo y la acreditación son los reales |
+| Bitácora de la simulación en `S-12` | **SUSTITUIDA, y solo ahí** | Para reproducir una misión `FAILED` **con NPC ya derrotados** (`CA-08`) se parte de la bitácora del doble de desarrollo y se recorta tras la tercera derrota, cerrándola con `HERO_DEFEATED` (`DefeatedAfterKillsSimulation`). **No es una simulación real de Combat**, y por eso este escenario no permite afirmar «cadena totalmente real»: la afirmación que sostiene es *«una misión final `FAILED` NO revoca la XP de los NPC válidamente derrotados»*. Las tiradas de Combat, la coordinación de Missions, la acreditación de Player/Inventory y el reporte **sí** son reales |
+| Perfil del héroe (HU-71.2) | **SUSTITUIDO** | `HERO_ABILITIES_DRIVER=memory`. Es **la misma dependencia** que la fila del resultado de la simulación. La ruta interna de perfil (Player-Inventory PR [#48](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/48)) **ya está en `develop`**; falta migrar la cadena a `HERO_ABILITIES_DRIVER=http` y `COMBAT_SIMULATION_DRIVER=http` y volver a medir |
 | Compromiso del héroe | **SUSTITUIDO** | `HERO_COMMITMENTS_DRIVER=memory`. La ruta existe ya en `develop` (HU-70, PR [#50](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/50)), pero no se ha cambiado en esta Task: no aporta nada a la cadena de la recompensa |
 | Testimonio del jugador | **SUSTITUIDO** | Un verificador de tokens fijo: no hay Cognito en la cadena. Solo afecta a *quién* llama al reporte, no a la cadena de la recompensa |
 | Puerto de tirada en `S-02` | **SUSTITUIDO, y solo ahí** | Para cubrir las **ocho** caras en una sola misión se guioniza el puerto de tirada con caras `1..8` en ciclo. **La acreditación sigue siendo la real de Player/Inventory**, y `S-01` —el caso de la cadena completa— usa la tirada **real** de Combat |
 | Reloj | **NO se sustituye** | Los clientes internos firman con HMAC y Player/Inventory acepta un sello de ±30 s: adelantar el reloj rompería la cadena. El tiempo se maneja con dos **datos de partida**: la ventana de la matrícula se desplaza al pasado (una hora exacta, terminando un segundo antes) y el escalonado de reintento se vence escribiendo `next_attempt_at` |
 | Base de datos | **REAL** | PostgreSQL 17 y MongoDB 8 en contenedores (Testcontainers), no dobles en memoria |
 
-### Los doce casos, y qué observó cada uno
+### Los trece escenarios, y qué observó cada uno
 
 Los valores son los que quedaron escritos en el [reporte de ejecución](hu-09-ejecucion-e2e.json); no se resumen «a ojo».
 
@@ -75,15 +77,16 @@ Los valores son los que quedaron escritos en el [reporte de ejecución](hu-09-ej
 | `S-00` | Las tres piezas reales y arriba | Combat y Player/Inventory responden `ready`; Missions resuelve `PlayerInventoryExperienceClient`, `CombatExperienceRollClient`, `PostgresExperienceRewardRepository` y `PostgresReportRepository` |
 | `S-01` | La cadena completa | 19 derrotas → **19 tiradas** en un solo lote con el `operationId` del contrato → **19 recompensas** `CREDITED` → **19 asientos** con la clave de cada instancia → **447 XP**, nivel **3** |
 | `S-02` | Los ocho valores de `1d8` | Caras `1..8` cubiertas, importes `12, 14, 17, 21, 25, 30, 36, 43`, **439 XP** acreditados de verdad en Player/Inventory |
-| `S-03` | Subida de uno, de varios y nivel máximo (valores ejecutados con la tabla anterior; ver nota de alineación) | `195 → 207`, nivel **2** (+1); `190 → 629`, nivel **3** (+2); desde `12.800` → `13.239`, nivel **8**, `levelsGained: 0` y **sin descartar experiencia** |
+| `S-03` | Subida de uno, de varios y nivel máximo, con la **tabla acumulada vigente de HU-08** | (a) frontera `99 → 183` (7 derrotas), la **primera** acreditación cruza el umbral de 100 y el nivel pasa a **2** (+1); (b) desde `290` (nivel 2) hasta `729`, nivel **5**, `levelsGained: 3` (varios umbrales en una misma misión); (c) desde `1.300` hasta `1.739`, nivel **8** y **sin descartar experiencia**. La expectativa de nivel sale de un `expectedLevel` independiente escrito con los umbrales del PO |
 | `S-04` | Repetir el cierre | El lote es el mismo documento (mismas caras y misma fecha de creación); siguen 19 recompensas, 19 líneas y 19 asientos |
 | `S-05` | Replay de la acreditación | Misma petición, mismo `operationId` → `200` con `applied: false`; la progresión queda idéntica |
 | `S-06` | Clave reutilizada con otro contenido | `409 OPERATION_ID_REUSED` en Combat y `409 EXPERIENCE_GRANT_CONFLICT` en Player/Inventory; **nada sobrescrito** |
-| `S-07` | `CA-08` | (a) héroe derrotado y sin bajas enemigas → 0 recompensas, 0 tiradas pedidas, 0 asientos; (b) simulación rechazada → matrícula `VOIDED`, informe `404`, 0 recompensas y 0 asientos |
+| `S-07` | `CA-08`: sin derrota válida de NPC | (a) héroe derrotado y sin bajas enemigas → matrícula **`FAILED`**, 0 recompensas, 0 tiradas pedidas, 0 asientos y **ninguna progresión**; (b) simulación rechazada → matrícula `VOIDED`, informe `404`, 0 recompensas y 0 asientos |
 | `S-08` | Dos derrotas del mismo arquetipo | 10 derrotas de `sombra-corrompida` repartidas en **2 encuentros**, con `sombra-corrompida#1` presente en los dos; **10 claves distintas**, ninguna colapsada |
 | `S-09` | Recuperación de una tirada sin acreditar | Con Player/Inventory caído: 19 recompensas `ROLLED` con importe y **sin acreditar** (no es un defecto, contrato §9.1); al volver el servicio y vencer el escalonado, el barrido las acredita **con la misma cara y el mismo importe**, sin volver a tirar |
 | `S-10` | Auditoría cruzada | Toda cara tiene recompensa, línea y asiento, y todo asiento tiene su cara: 19/19/19/19 y **0 tiradas huérfanas**; informe ajeno `404 REPORT_NOT_FOUND` y misión en curso `404 REPORT_NOT_AVAILABLE` |
-| `S-11` | Guardas de no-duplicación | Las dos guardas en verde (una sola suite cada una) y **su control negativo ejecutado** |
+| `S-11` | Guardas de no-duplicación | Las dos guardas en verde (una sola suite cada una) y **su control negativo ejecutado**. Las guardas se lanzan con `--reporters=default --verbose`: Jest cambia a un reportero compacto cuando detecta un agente (`AI_AGENT`) y sin pedirlo de forma explícita el control negativo no se veía en esos entornos (así falló `S-11` en una ejecución local previa, por el entorno y no por la guarda) |
+| `S-12` | `CA-08`: `FAILED` con NPC derrotados | Un héroe que derrota a **3 NPC** y muere: matrícula **`FAILED`**, **3 recompensas** `CREDITED` con tiradas reales de Combat (caras `4, 2, 1` → `21 + 14 + 12 = 47 XP`), 3 asientos en Player/Inventory, progresión `currentXp = 47` (nivel 1) y las tres líneas en el reporte. Un **segundo barrido** no toca el ledger ni la progresión: **nada revierte la XP**. La bitácora de esta simulación es un doble declarado |
 
 ### La idempotencia, frontera por frontera
 
@@ -161,7 +164,7 @@ Se comprobó de verdad, poniendo `COMBAT_SIMULATION_DRIVER=http` y ejecutando la
 | Se mira qué valida Combat primero | `hero.profile.effectiveStats` y `hero.profile.subtype` (`mission-simulation-request.ts`, líneas 203-207) |
 | Se mira qué envía Missions | El perfil del doble de `HERO_ABILITIES_DRIVER=memory`: `{ heroId, abilities }`, **sin** `subtype` ni `effectiveStats` |
 
-**Conclusión:** la sustitución del resultado de la simulación y la del perfil del héroe son **la misma dependencia**, y esa dependencia es `HU-71.2` (Player-Inventory PR [#48](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/48)), que sigue abierta. No se sostiene diciendo «Combat no existe»: existe y **rechaza lo que Missions puede enviarle hoy**. El reporte lo dice así, y el cambio que retira la sustitución es de una línea (`COMBAT_SIMULATION_DRIVER` a `http`) el día que ese perfil sea real.
+**Conclusión:** la sustitución del resultado de la simulación y la del perfil del héroe son **la misma dependencia**, y esa dependencia es `HU-71.2` (Player-Inventory PR [#48](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/48)), que **cuando se midió estaba abierta y hoy ya está mergeada** (2026-09-24). No se sostiene diciendo «Combat no existe»: existía y **rechazaba lo que Missions podía enviarle con el perfil del doble**. **Lo medido entonces no se ha repetido con el perfil real**: retirar la sustitución exige migrar `HERO_ABILITIES_DRIVER` y `COMBAT_SIMULATION_DRIVER` a `http` y volver a medir, y hasta entonces sigue siendo un doble declarado.
 
 ### Reporte de ejecución
 
@@ -170,23 +173,30 @@ El reporte completo, con commits, ambiente, casos, valores observados, cobertura
 | Dato | Valor |
 | --- | --- |
 | Comando | `npm run test:e2e:chain` (Missions) |
-| Plataforma | Windows 11, Node `v24.19.0` |
+| Plataforma | Windows 11, Node `v24.20.0` |
 | Bases | `postgres:17-alpine` y `mongo:8.0` (réplica), Testcontainers |
-| Commits | Missions `7d9462e` · Combat `05b3914` · Player/Inventory `ae680dc` — **los tres sin cambios pendientes** |
-| Casos | **12/12 en verde** |
-| Cobertura de la cadena (informativa) | Sentencias `56,79 %` · Ramas `30,81 %` · Funciones `45,93 %` · Líneas `55,66 %` |
-| Duración | 43 s |
-| Límites declarados | 9, en el propio reporte |
+| Commits | Missions `1b75edb` (rama `fix/hu-09-finalizar-redondeo-ca-08`, sin cambios pendientes) · Combat `2c56839` (`develop`) · Player/Inventory `cb1853f` (`develop`, sin cambios pendientes) |
+| Estado del árbol de Combat | El reporte marca `dirty: true` **solo por un directorio sin seguir ajeno** (`tools/`, herramientas locales de quien ejecuta) que no forma parte del código probado: no hay ningún archivo versionado modificado |
+| Escenarios | **13/13 en verde** (`S-00` a `S-12`) |
+| Cobertura de la cadena (informativa) | Sentencias `56,85 %` · Ramas `30,98 %` · Funciones `45,93 %` · Líneas `55,72 %` |
+| Duración | 113 s |
+| Límites declarados | 10, en el propio reporte |
 
 Y las otras dos suites de Missions, sobre **el mismo commit**, para que «suites» no sea una promesa:
 
 | Suite | Comando | Resultado |
 | --- | --- | --- |
-| Unitaria | `npm run test:unit` | **41 suites, 952 pruebas** en verde |
+| Unitaria | `npm run test:unit` | **42 suites, 957 pruebas** en verde |
+| De integración | `npm run test:integration` | **11 suites, 124 pruebas** en verde (ver la nota de contención) |
+| Cobertura (unitaria + integración) | `npm run test:coverage` | **53 suites, 1.081 pruebas** en verde · `98,24 %` sentencias · `91,33 %` ramas · `98,72 %` funciones · `98,37 %` líneas |
 | Contra PostgreSQL real | `npm run test:db` | **13 suites, 217 pruebas** en verde · `96,71 %` sentencias · `89,7 %` ramas · `98,36 %` funciones |
-| De la cadena | `npm run test:e2e:chain` | **1 suite, 12 casos** en verde · `56,79 %` sentencias |
+| De la cadena | `npm run test:e2e:chain` | **1 suite, 13 escenarios** en verde · `56,85 %` sentencias |
 
-Las dos primeras crecieron con el contenido v2 (de 30 suites y 712 pruebas a 41 y 952; de 10 y 160 a 13 y 217), y la cobertura de la cadena bajó porque el servicio tiene más código que la cadena no ejerce: **la suite mide la cadena, no la superficie del servicio**, y sus umbrales viven en las otras dos configuraciones.
+**Nota de contención, sin ocultarla.** La primera ejecución de `npm run test:coverage` (unitaria e integración **en paralelo**) dejó **4 suites de integración en rojo (14 pruebas)** por tiempos de espera de 5 s en los hooks, en una máquina con Docker y otras cargas activas. **No era un defecto**: las mismas suites de integración pasan **11/11 y 124/124 ejecutadas en serie** (`jest --selectProjects integration -i`), y la cobertura repetida en serie (`jest --coverage -i`) dio 53/53 suites y 1.081/1.081 pruebas.
+
+Y la regresión en los hermanos, sin modificarlos: **Combat** 12 suites / 180 pruebas unitarias de HU-09 y azar y 11 pruebas contra MongoDB real de `experience-rolls`; **Player/Inventory** 14 suites / 224 pruebas de experiencia, progresión y acreditaciones y 25 pruebas contra MongoDB real (`experience_grants`, `hero-progressions` y la migración `013`). Todas en verde.
+
+La cobertura de la cadena es baja porque el servicio tiene más código que la cadena no ejerce: **la suite mide la cadena, no la superficie del servicio**, y sus umbrales viven en las otras configuraciones.
 
 La cobertura es **informativa y deliberadamente sin umbral**: los umbrales viven donde se pueden exigir sin contenedores (`jest.config.ts` y `jest.db.config.ts`). Esta suite mide la cadena, no la superficie del servicio.
 
@@ -196,8 +206,9 @@ El workflow [`cadena-hu-09.yml`](https://github.com/Nexus-Battle-VI/Nexus-Battle
 
 | Ejecución | Ref de los hermanos | Resultado |
 | --- | --- | --- |
-| [PR #19, `pull_request`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/36001296059) | `develop` de los dos | **12/12 en verde** en Linux, sobre el commit rebasado tras el contenido v2 |
-| [Lanzada a mano](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/35959730007) | Combat `test/hu-09-6-control-guarda-azar` | **12/12 en verde**, antes de que ese PR estuviera mergeado |
+| [PR #19, `pull_request`](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/36001296059) | `develop` de los dos | 12/12 en verde en Linux (verificación **anterior** a los criterios definitivos, con la tabla previa de HU-08) |
+| [Lanzada a mano](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/actions/runs/35959730007) | Combat `test/hu-09-6-control-guarda-azar` | 12/12 en verde, antes de que ese PR estuviera mergeado (histórico) |
+| PR de esta actualización (`fix/hu-09-finalizar-redondeo-ca-08`) | `develop` de los dos | **El resultado en Linux es el del CI de ese PR**; este documento no lo anticipa |
 
 Tres cosas que conviene saber al leer el artefacto de CI:
 
@@ -210,12 +221,13 @@ Tres cosas que conviene saber al leer el artefacto de CI:
 
 | # | Origen | Contenido |
 | --- | --- | --- |
-| 1 | Requisito explícito del Issue #18 | Fórmula `10 × 1,2^(1d8)`; `1d8` entero `1..8` del motor centralizado; la XP se acumula; se verifica el umbral tras acreditar; sin victoria válida no hay recompensa |
+| 1 | Requisito explícito del Issue #18 | Fórmula `10 × 1,2^(1d8)`; `1d8` entero `1..8` del motor centralizado; la XP se acumula; se verifica el umbral tras acreditar; sin derrota válida de NPC no hay recompensa |
+| 1b | Decisión definitiva del PO (Management #18) | **`P-2` cerrada: redondeo al entero más próximo** (`12, 14, 17, 21, 25, 30, 36, 43`; truncamiento descartado). **`CA-08`: la recompensa nace de la derrota válida de un NPC**, no de que la misión termine `COMPLETED`: `FAILED` con bajas conserva la XP; `VOIDED`, ejecución rechazada, simulación inválida o ausencia de derrota no generan la recompensa |
 | 2 | Aclaración funcional del PO (posterior al enunciado) | La fórmula es de **JvE** (muerte de NPC en misión); **PvP no la otorga**; Missions coordina y calcula; Combat tira; Player/Inventory acredita. **Una recompensa, una tirada y una acreditación por cada NPC derrotado**, con clave por instancia real de la derrota |
 | 3 | Decisión arquitectónica vigente | `ADR-019` (ownership y HMAC interno) y `ADR-021` (Combat, única autoridad de aleatoriedad) |
 | 4 | Contrato reutilizado como plantilla | `POST /api/internal/v1/inventory/grants` (Player-Inventory, HU-59/HU-69): forma del endpoint interno y del ledger idempotente |
 | 5 | Decisión técnica de esta Task | Las dos operaciones internas, los `operationId` deterministas, los estados de la recompensa, la matriz de fallos y la elección de operación propia para la tirada |
-| 6 | Fuera de alcance | HU-10, HU-30, HU-32/HU-73, PvP y `CA-06` de HU-08 |
+| 6 | Fuera de alcance | HU-10, HU-30, HU-32/HU-73 y PvP. (`CA-06` de HU-08 —el nivel como multiplicador de estadísticas— es de HU-08 y no interviene en el importe de esta HU) |
 
 ## Contrato entregado
 
@@ -242,15 +254,15 @@ Dos defectos del contrato, encontrados al preparar la implementación de Combat.
 
 Y un límite que queda escrito en lugar de tácito: **Combat no valida que la misión exista ni que el héroe sea elegible**. La confianza se apoya en el HMAC, en la lista cerrada (`missions` es hoy el único autorizado) y en la idempotencia.
 
-## Decisiones abiertas del PO
+## Decisiones del PO
 
 | # | Decisión | Estado |
 | --- | --- | --- |
 | `P-1` | Una recompensa por **rival derrotado** o una por victoria | **CERRADA: una por rival derrotado**, con clave por instancia real de la derrota |
-| `P-2` | Redondeo **al más próximo** o **truncamiento** | **PROVISIONAL: al más próximo**: `12, 14, 17, 21, 25, 30, 36, 43`. Con truncamiento: `12, 14, 17, 20, 24, 29, 35, 42` |
+| `P-2` | Redondeo **al más próximo** o **truncamiento** | **CERRADA: al entero más próximo**: `12, 14, 17, 21, 25, 30, 36, 43`. El truncamiento (`12, 14, 17, 20, 24, 29, 35, 42`) queda **descartado** |
 | `P-3` | Corrección del enunciado de #18 (Misiones/JvE y dependencia de la cadena de Misiones) | **Ejecutada** el 2026-09-23 en el cuerpo del Issue |
 
-**`P-2` se mantiene marcada como provisional a propósito.** Que la XP deba ser entera es una decisión tomada; **cómo** se convierte `14,4` en entero no lo es hasta que se confirme «redondeo al entero más cercano» frente a truncamiento.
+**No queda ninguna decisión funcional abierta que condicione la aceptación técnica.** `P-2` se cerró y no se retiró por conveniencia: la política vive en un único punto (`Math.round` en la política de Missions), Player/Inventory recibe siempre un entero, y las pruebas fijan las ocho caras y el contraste `4 → 21` (no `20`) y `8 → 43` (no `42`).
 
 ## Bloqueos, medidos
 
@@ -261,7 +273,7 @@ Los que había el 2026-09-23 y lo que ha pasado con cada uno. **Ninguno bloquea 
 | **HU-08** (#17) | **Resuelto**: `HeroProgression` y el umbral por nivel están en `develop` de Player-Inventory (`f54e176`, `6ba0f5e`) | `#441` compila y acredita; `S-03` comprueba la subida de nivel con la tabla vigente |
 | **HU-24** (#71) | `closed` | El motor existe: `BoundedRandom.nextInt(8) + 1`, y es el que tira en `S-01` |
 | **Cadena de Misiones** | **Resuelto**: `HU-70`, `HU-71`, `HU-72`, `HU-74`, `HU-75` y `HU-76` están implementados en `develop` de Missions | `#442` existe y la cadena se recorre entera |
-| **HU-71.2 — ruta interna del perfil de héroe** | **ABIERTO** (Player-Inventory PR [#48](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/48)) | Es la **única** dependencia que obliga a sustituir algo de la cadena que no sea el resultado de la simulación, y de hecho es la causa de las dos sustituciones: Combat **rechaza** el contenido precisamente porque el perfil que Missions puede enviar es el doble de desarrollo |
+| **HU-71.2 — ruta interna del perfil de héroe** | **Resuelto en `develop`** (Player-Inventory PR [#48](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/48), mergeado el 2026-09-24); **la cadena aún no se migró** | Era la causa de las dos sustituciones (resultado de la simulación y perfil del héroe): con el perfil del doble, Combat **rechazaba** el contenido. Migrar la cadena a `http` y volver a medir es un pendiente real, **no** una dependencia externa |
 | **Combat #49 — control negativo de la guarda del azar** | **Resuelto**: mergeado en `develop` | Mientras no estuvo, el job `Cadena HU-09` del PR de Missions se puso rojo en `S-11` **con razón**: la guarda que la cadena ejecuta es la de Combat y todavía no sabía fallar. Ese rojo se verificó antes de mergear lanzando el workflow a mano con `combat_ref` |
 | **Web** (`#443`) | Sin empezar | No afecta a esta verificación: la superficie pública de HU-09 es el reporte de misión de HU-74, no una pantalla nueva |
 
@@ -271,14 +283,15 @@ Los que había el 2026-09-23 y lo que ha pasado con cada uno. **Ninguno bloquea 
 
 | CA | Qué exige | Dónde se comprueba | Resultado |
 | --- | --- | --- | --- |
-| `CA-01` flujo principal | Ganar la misión devenga experiencia | `S-01` (cadena completa, 19 derrotas y 447 XP) | Verde |
-| `CA-02` se aplica al héroe ganador | La XP va al héroe del resultado | `S-01`/`S-03` por `heroId` en las claves y en `hero-progressions` | Verde |
+| `CA-01` flujo principal | Derrotar a un NPC en una misión JvE devenga experiencia | `S-01` (cadena completa, 19 derrotas y 447 XP) | Verde |
+| `CA-02` se aplica al héroe que derrotó al NPC | La XP va al héroe de la misión | `S-01`/`S-03` por `heroId` en las claves y en `hero-progressions` | Verde |
 | `CA-03` fórmula `10 × 1,2^(1d8)` | El importe es el del contrato | `S-02` (ocho caras) + guarda de la fórmula (`S-11`) | Verde |
 | `CA-04` `1d8` entero `1..8` del motor centralizado | La cara viene de Combat | `S-01` (19 caras reales, todas en `1..8`) + guarda del azar (`S-11`) | Verde |
 | `CA-05` sin fuente de aleatoriedad distinta | Nadie más tira | Guarda estática de Combat (`S-11`), **verificada por mutación** | Verde |
 | `CA-06` se acumula en el perfil | La XP se suma, no se reemplaza | `S-01` (`currentXp` = suma de las 19 recompensas) y `S-03` | Verde |
-| `CA-07` verifica el umbral tras acreditar | Sube de nivel, incluido el salto múltiple | `S-03` (+1, +2 y nivel máximo sin descarte) | Verde |
-| `CA-08` sin victoria válida no se otorga | Ni tirada, ni recompensa, ni acreditación | `S-07`, en sus dos formas (derrota sin bajas y simulación rechazada) | Verde |
+| `CA-07` verifica el umbral tras acreditar | Sube de nivel, incluido el salto múltiple, con la tabla vigente de HU-08 | `S-03` (frontera `99 + 12`, varios umbrales desde `290` y nivel máximo desde `1.300` sin descarte) | Verde |
+| `CA-08` sin derrota válida de NPC no se otorga | Ni tirada, ni recompensa, ni acreditación | `S-07`: **`FAILED` sin bajas** y **`VOIDED`** por simulación rechazada; pruebas unitarias `hu-09-ca08-resultado-mision.spec.ts` (A: `FAILED` con bajas, B: `FAILED` sin bajas, C: `VOIDED` por resultado inválido, D: simulación rechazada) | Verde |
+| `CA-08` una misión `FAILED` con NPC ya derrotados conserva su XP | Se tira, se calcula y se acredita; nada lo revierte | `S-12` (3 derrotas, 47 XP, segundo barrido sin cambios) y la prueba unitaria A | Verde, **con la bitácora como doble declarado** |
 | `CA-09` condición de aceptación de la HU | — | **No es un escenario.** Se satisface con la revisión por pares y la aprobación del PO, que están **pendientes** | — |
 
 ## Peligros registrados para quien implemente
@@ -296,14 +309,12 @@ Los que había el 2026-09-23 y lo que ha pasado con cada uno. **Ninguno bloquea 
 
 ## Qué falta para cerrar HU-09
 
-1. **Confirmación de `P-2`** por el PO (redondeo al más próximo o truncamiento); hasta entonces el contrato mantiene la marca provisional. Es la única decisión funcional abierta.
-2. **Merge de los PRs que siguen abiertos:** Missions [#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/17) (HU-09.4) y [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19) (esta verificación). `#440`, `#441`, `#442` (vía #18), el PR de la guarda de Combat y los tres de esta evidencia ya están mergeados.
-3. **Revisión por pares** de lo entregado, que es lo que la Task `#444` **no** puede darse a sí misma.
-4. **Aceptación del PO** (`CA-09`), que es lo que convierte la verificación en aceptación.
-5. **Opcional, si el PO la pide:** la visualización en Web (`#443`), que no forma parte de esta verificación.
-6. **Cuando `HU-71.2` entre en `develop`:** pasar `COMBAT_SIMULATION_DRIVER` a `http` y quitar del escenario las dos sustituciones que dependen de él —el resultado de la simulación y el perfil del héroe—. Es el primer candidato a caer de la tabla de límites, y el cambio está medido: hoy, con `http`, la misión se anula con `MISSION_CONTENT_INVALID`.
-7. **Mantener la cadena verde cuando `develop` se mueva.** El escenario ya se rompió una vez por el contenido v2 y las dos roturas eran del andamiaje, no de HU-09: conviene que el job `Cadena HU-09` siga siendo obligatorio en los PRs que tocan el contenido de misión o las migraciones.
-
+1. **Revisión por pares** de lo entregado, que es lo que la Task `#444` **no** puede darse a sí misma.
+2. **Aceptación del PO** (`CA-09`), que es lo que convierte la verificación técnica en aceptación. **`P-2` ya no es un pendiente**: está cerrada.
+3. **Merge de los PRs de esta alineación** (Missions y este de Infrastructure) y **que su CI esté en verde**, incluido el job `Cadena HU-09` en Linux. Los PRs históricos de Missions #17 (cerrado, sustituido por #18) y #19, #22 y #24 ya están resueltos.
+4. **Opcional, si el PO la pide:** la visualización en Web (`#443`), que no forma parte de esta verificación.
+5. **Migrar la cadena a `HERO_ABILITIES_DRIVER=http` y `COMBAT_SIMULATION_DRIVER=http`** (la ruta de perfil, HU-71.2, ya está en `develop`) y volver a medir. Es el primer candidato a caer de la tabla de límites; **no se ha probado** que hoy funcione, y `S-12` seguirá necesitando un doble mientras la simulación real de Combat no produzca una misión perdida con bajas reproducible.
+6. **Mantener la cadena verde cuando `develop` se mueva.** El escenario ya se rompió una vez por el contenido v2 y las roturas eran del andamiaje, no de HU-09: conviene que el job `Cadena HU-09` siga siendo obligatorio en los PRs que tocan el contenido de misión o las migraciones.
 
 ## Alineación con la progresión de HU-08
 
@@ -322,7 +333,7 @@ Los ejemplos de nivel que usa esta evidencia siguen la **tabla vigente de HU-08 
 
 Sin decimales en ningún punto, y con el nivel máximo 8 sin descarte de experiencia. **No existe nivel 9.**
 
-> **Nota sobre `S-03` y la cadena E2E.** Los valores concretos de `S-03` (`195 → 207`, `190 → 629`, desde `12.800`) se ejecutaron con la **tabla temporal anterior**. Con la tabla vigente los mismos importes dan: `195 → 207` sigue en nivel **2** (+1); `190 → 629` pasa de nivel **2** a **4** (+2); y desde `1.300` → `1.539` el nivel se queda en **8** sin descartar XP. La fórmula de recompensa `10 × 1,2^(1d8)` y los importes `12, 14, 17, 21, 25, 30, 36, 43` **no cambian**. La cadena E2E (`npm run test:e2e:chain` de Missions, PR #19) debe **reejecutarse** con Player-Inventory actualizado antes de citar estos números como vigentes.
+> **`S-03` y la cadena E2E, ya reejecutados.** La cadena se actualizó a la tabla vigente y se volvió a ejecutar con Player-Inventory de `develop` (`cb1853f`): `S-03` comprueba la frontera `99 + 12 = 111` (nivel 1 → 2), varios umbrales en una misma misión desde `290` (nivel 2 → 5, `levelsGained: 3`) y el nivel máximo desde `1.300` (nivel 8, XP conservada). La fórmula de recompensa `10 × 1,2^(1d8)` y los importes `12, 14, 17, 21, 25, 30, 36, 43` **no cambian**. Los valores antiguos de este escenario (`195 → 207`, `190 → 629`, `12.800`) ya **no** corresponden a los tests actuales.
 
 ## Pull requests de HU-09
 
@@ -331,10 +342,11 @@ Sin decimales en ningún punto, y con el nivel máximo 8 sin descarte de experie
 | `#439` diseño y contrato | Infrastructure | [#147](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/147) | mergeado |
 | `#440` tirada en Combat | Combat | [#43](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/43) | mergeado |
 | `#441` acreditación en Player/Inventory | Player-Inventory | [#47](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/47) | mergeado |
-| `#442` coordinación y fórmula en Missions | Missions | [#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/17) (1/3 y 2/3) y [#18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/18) (3/3: la línea en el reporte) | **#17 abierto**, #18 mergeado |
+| `#442` coordinación y fórmula en Missions | Missions | [#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/17) (1/3 y 2/3) y [#18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/18) (3/3: la línea en el reporte) | **#17 cerrado** (su contenido llegó a `develop` con #18), #18 mergeado |
 | `#443` visualización de la experiencia en Web | Web | — | **sin empezar**; fuera de esta verificación |
 | `#444` control negativo de la guarda del azar | Combat | [#49](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/49) | mergeado |
-| `#444` cadena E2E, guardas y workflow | Missions | [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19) | **abierto** |
+| `#444` cadena E2E, guardas y workflow | Missions | [#19](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/19); fixtures [#22](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/22) y umbrales de HU-08 [#24](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions/pull/24) | mergeados |
+| Alineación definitiva (`P-2` cerrada, `CA-08`, `S-12`) | Missions · Infrastructure | PR de Missions `fix/hu-09-finalizar-redondeo-ca-08` · PR de Infrastructure `docs/hu-09-cerrar-p2-ca-08` | **abiertos, sin mergear** |
 | `#444` esta evidencia y el reporte | Infrastructure | [#157](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/157), [#158](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/158) | mergeados |
 
 **Ninguno de estos PRs cierra la User Story #18.** Cierran Tasks subordinadas; la aceptación de la HU exige la revisión por pares y la aprobación del PO.
@@ -364,5 +376,5 @@ Sin decimales en ningún punto, y con el nivel máximo 8 sin descarte de experie
 
 ## La HU no está aceptada
 
-Ni este documento, ni el reporte de ejecución, ni ningún PR de la Task `#444` declaran HU-09 aceptada. Lo que hay es **verificación técnica en verde sobre tres repositorios sin cambios pendientes**, con las sustituciones declaradas en su sitio. La aceptación (`CA-09`) exige revisión por pares y aprobación del PO, y `P-2` sigue abierta.
+Ni este documento, ni el reporte de ejecución, ni ningún PR de la Task `#444` ni de la alineación declaran HU-09 aceptada o cerrada. Lo que hay es **verificación técnica en verde** (13 escenarios sobre las tres piezas, con las sustituciones declaradas en su sitio) y una HU **lista para revisión y aceptación**. La aceptación (`CA-09`) exige revisión por pares y aprobación del PO; `P-2` está cerrada y ya no la condiciona.
 

@@ -113,7 +113,7 @@ Eso es lo que esas historias necesitan como punto de partida; **ninguna esta imp
 | HU-23 (#70) | Apuesta de creditos en batalla |
 | HU-30 (#77) | Caida de items al terminar |
 | HU-29 (#76) | Liberacion del bloqueo de equipamiento (consume el estado terminal) |
-| HU-09 (#18) | Experiencia por victoria |
+| HU-09 (#18) | Experiencia por derrota de un NPC en misión JvE |
 
 ## Plantilla de evidencia (para el comentario de cierre de #420)
 

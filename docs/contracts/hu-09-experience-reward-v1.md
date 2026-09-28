@@ -1,35 +1,37 @@
 # Contrato HU-09 — Recompensa de experiencia por derrota de un rival (v1)
 
-- **Estado:** **implementado en las tres piezas y verificado de extremo a extremo; la HU no está aceptada.** Las Tasks [#440](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/440) (Combat), [#441](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/441) (Player-Inventory) y [#442](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/442) (Missions) están entregadas, y la Task [#444](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/444) recorre la cadena con las tres piezas reales: 12/12 casos en verde ([reporte](../evidence/hu-09-ejecucion-e2e.json) · [evidencia](../evidence/HU-09-experiencia-por-derrota-de-un-rival.md)). [#443](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/443) (Web) queda fuera de esa verificación. Que la cadena esté en verde **no es aceptación**: esta exige revisión por pares y aprobación del PO, y `P-2` sigue abierta (§15).
+- **Estado:** **implementado en las tres piezas y verificado de extremo a extremo; la HU no está aceptada.** Las Tasks [#440](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/440) (Combat), [#441](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/441) (Player-Inventory) y [#442](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/442) (Missions) están entregadas, y la Task [#444](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/444) recorre la cadena con las tres piezas reales: 13/13 escenarios en verde, `S-00` a `S-12` ([reporte](../evidence/hu-09-ejecucion-e2e.json) · [evidencia](../evidence/HU-09-experiencia-por-derrota-de-un-rival.md)). [#443](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/443) (Web) queda fuera de esa verificación. Que la cadena esté en verde **no es aceptación**: esta exige revisión por pares y aprobación del PO, y `P-2` **ya no está abierta**: se cerró con el redondeo al entero más próximo (§6, §15).
 - **Bloqueada por:** ~~`HU-08` ([#17](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/17)), entregada en los PRs [Nexus-Battle-Player-Inventory#42](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/42), [#43](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/43) y [#44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/44), pendientes de merge~~ → **HU-08 está en `develop`** de Player-Inventory (`f54e176`, `6ba0f5e`); y `HU-24` ([#71](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/71)), **cerrada**. Consume el umbral de niveles de HU-08 y el motor de aleatoriedad de HU-24 sin reabrir ninguno de los dos.
 - **Historia:** [HU-09 #18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/18) · `RF-09` · [EPIC-01 #1](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/1) · Team Alfa (Player/Inventory) + Team Beta (Missions) + Team Alfa (Combat) · `ACT-02 — Preparar héroe, equipo e inventario` → `Gestionar progresión y Poder`.
 - **Arquitectura aplicada, sin reabrirla:** [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md) (Player/Inventory es dueño del estado del héroe y solo él escribe su Mongo; HMAC interno; listas cerradas de servicios por ruta) y [ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md) (Combat es la única autoridad de aleatoriedad; no hay `/random`, `/rng` ni `/seed`, ni microservicio de RNG).
 - **Aclaración funcional del PO:** la fórmula `10 × 1,2^(1d8)` pertenece a la **muerte de un rival NPC en una misión (JvE)**; **no** se otorga por PvP ni por «Jugar Online». Missions coordina y calcula la recompensa; Combat no conoce la fórmula. Registrada en el comentario de trazabilidad de [#18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/18).
+- **Decisiones definitivas del PO en [#18](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/18) (ya incorporadas al cuerpo de la HU):** (1) **`P-2` CERRADA — redondeo al entero más próximo**; el truncamiento queda descartado (§6, §15). (2) **`CA-08`: la recompensa nace de una derrota válida de un NPC**, no de que la misión termine `COMPLETED`; una misión `FAILED` **conserva** la XP de los NPC ya derrotados y una `VOIDED` no devenga esta recompensa (§14.1).
 - **Unidad de la recompensa (decidida):** **una recompensa, una tirada y una acreditación por cada NPC derrotado**, identificadas por la **instancia real de la derrota** (encuentro + enemigo), no por el arquetipo. Ver §4.
 - **Diagramas:** [caso de uso](../diagrams/hu-09-use-case.puml), [actividad](../diagrams/hu-09-activity.puml), [secuencia](../diagrams/hu-09-sequence.puml), [dominio](../diagrams/hu-09-domain.puml).
-- **Contratos vecinos, referenciados y no reabiertos:** [hu-72-mission-simulation-v1](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/132) (**propuesta abierta, sin mergear**), [hu-74-mission-report-v1](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/135) (**propuesta abierta, sin mergear**) y [hu-22-reward-contract-v1](hu-22-reward-contract-v1.md) §7, que es la **plantilla** del endpoint interno de acreditación.
+- **Contratos vecinos, referenciados y no reabiertos:** [hu-72-mission-simulation-v1](hu-72-mission-simulation-v1.md) (PR [#132](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/132), **mergeado**), [hu-74-mission-report-v1](hu-74-mission-report-v1.md) (PR [#135](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/135), **mergeado**) y [hu-22-reward-contract-v1](hu-22-reward-contract-v1.md) §7, que es la **plantilla** del endpoint interno de acreditación.
 
 ## 1. Qué exige la HU y qué no
 
 **Requisito explícito (`RF-09`, Issue #18):**
 
-- al terminar un combate con victoria se calcula y se acredita al héroe ganador una cantidad de experiencia igual a `10 × 1,2^(1d8)`;
+- por **cada NPC derrotado válidamente** durante una misión JvE se calcula y se acredita al héroe una cantidad de experiencia igual a `10 × 1,2^(1d8)`;
 - `1d8` es un entero pseudoaleatorio entre 1 y 8 obtenido del motor centralizado de HU-24; **HU-09 no lo genera localmente**;
 - el valor de `1d8` se usa como **exponente**: no se suma ni se multiplica directamente;
 - la experiencia se **acumula** a la que el héroe ya tenía; no la reemplaza;
 - después de acreditarla se verifica el umbral del siguiente nivel con las reglas de **HU-08** y, si se alcanza, se ejecuta la progresión;
-- si no existe un resultado válido que dé derecho a la recompensa, **no se otorga**.
+- si no existe una **derrota válida de un NPC**, **no se otorga** (`CA-08`); la recompensa depende de la derrota, no de que la misión completa termine `COMPLETED` (§14.1).
 
 ### 1.1 Clasificación de lo decidido
 
 | # | Tipo | Contenido |
 | --- | --- | --- |
-| 1 | Requisito explícito (Issue #18) | Fórmula `10 × 1,2^(1d8)`; `1d8` entero `1..8` del motor centralizado; la XP se acumula; se verifica el umbral tras acreditar; sin victoria válida no hay recompensa. |
+| 1 | Requisito explícito (Issue #18) | Fórmula `10 × 1,2^(1d8)`; `1d8` entero `1..8` del motor centralizado; la XP se acumula; se verifica el umbral tras acreditar; sin derrota válida de un NPC no hay recompensa (`CA-08`, §14.1). |
 | 2 | Aclaración funcional del PO (posterior al enunciado) | La fórmula es de **JvE (muerte de NPC en misión)**; PvP / «Jugar Online» **no** la otorga. Missions coordina y calcula; Combat solo tira; Player/Inventory solo acredita. |
 | 3 | Decisión arquitectónica `Accepted`, reutilizada | ADR-019 (ownership y HMAC interno), ADR-021 (única autoridad de aleatoriedad). |
 | 4 | Contrato existente, reutilizado como plantilla | `POST /api/internal/v1/inventory/grants` (Player-Inventory, HU-59/HU-69) para la forma del endpoint interno y del ledger idempotente. |
 | 5 | Decisión técnica interna (este documento) | Forma exacta de las dos operaciones internas, `operationId` deterministas, estados de la recompensa en Missions, matriz de fallos y contrato de la tirada. |
-| 6 | Fuera de alcance | HU-10 (recompensa por misión completada), HU-30 (caída de ítems), HU-32/HU-73 (épica por derrota de Máster), PvP, y `CA-06` de HU-08 (el nivel como multiplicador de estadísticas). |
+| 5b | Decisión definitiva del PO (Management #18) | Redondeo al entero más próximo (`P-2` cerrada) y semántica de `CA-08` por derrota válida de NPC (§6, §14.1). |
+| 6 | Fuera de alcance | HU-10 (recompensa por misión completada), HU-30 (caída de ítems), HU-32/HU-73 (épica por derrota de Máster), PvP. |
 
 ## 2. Ownership (recap de ADR-019, no se reabre)
 
@@ -89,7 +91,7 @@ El identificador **no puede ser `rivalRef`** (el arquetipo del enemigo): una mis
 donde `encounter` es el índice del encuentro y `combatant` es `<enemyRef>#<n>`, la instancia concreta. **La clave de una derrota es `encounter` + `combatant`.**
 
 - `summary.enemiesDefeated[]` (conteos por arquetipo) **no sirve** para identificar recompensas: agrega y pierde la instancia. Sirve para cuadrar totales, no para devengar.
-- El nombre exacto de los campos depende del contrato de HU-72, que sigue siendo una **propuesta abierta** (PR #132). Lo que este contrato exige es la **propiedad**, no el nombre: **la clave tiene que ser única por derrota real**, y si HU-72 renombra los campos, la clave se renombra con ellos.
+- El nombre exacto de los campos depende del contrato de HU-72 (PR #132, ya mergeado). Lo que este contrato exige es la **propiedad**, no el nombre: **la clave tiene que ser única por derrota real**, y si HU-72 renombra los campos, la clave se renombra con ellos.
 - Si el modelo de HU-72 cambiara y dejara de exponer las bajas una a una, **HU-09 no puede degradarse a una tirada por misión**: eso cambiaría la regla de negocio. Lo que habría que cambiar es HU-72.
 
 ### 4.2 Consecuencia de escala, asumida
@@ -177,7 +179,7 @@ Cabeceras del esquema vigente de ADR-019: `x-internal-service: missions`, `x-int
 
 | Opción | Contenido | Valoración |
 | --- | --- | --- |
-| **A** | Extender la respuesta de `POST /api/internal/v1/combat/simulations` (HU-72) con la tirada | Un viaje menos, pero **acopla HU-09 a un contrato que aún no está mergeado** (PR #132) y obliga a producir la tirada dentro de la simulación, incluso cuando el resultado no da derecho a recompensa |
+| **A** | Extender la respuesta de `POST /api/internal/v1/combat/simulations` (HU-72) con la tirada | Un viaje menos, pero **acopla HU-09 al contrato de HU-72**, que en el momento de la decisión aún no estaba mergeado (PR #132) y obliga a producir la tirada dentro de la simulación, incluso cuando el resultado no da derecho a recompensa |
 | **B (elegida)** | Operación propia de Combat, invocada por Missions **después** de saber que hubo victoria | Desacopla HU-09 de HU-72, mantiene intacto el contrato de simulación, permite persistir la tirada antes de cualquier efecto remoto y es directamente verificable con `operationId` |
 
 **No es exponer aleatoriedad**, que es lo que `ADR-021` prohíbe: la operación no acepta un rango, no devuelve el índice ni la semilla, no es parametrizable y es idempotente por `operationId`. Es una operación de dominio («resolver las tiradas de las derrotas de esta misión»), el mismo criterio con el que HU-22 resuelve el cofre dentro de Combat.
@@ -190,7 +192,7 @@ Cabeceras del esquema vigente de ADR-019: `x-internal-service: missions`, `x-int
 experiencia = redondear(10 × 1,2^(1d8))     con 1d8 ∈ {1..8}
 ```
 
-| `1d8` | Valor exacto | Al entero más próximo (**propuesta**) | Con truncamiento (alternativa) |
+| `1d8` | Valor exacto | **Al entero más próximo (VIGENTE)** | Truncamiento (**alternativa descartada**, solo histórica) |
 | ---: | ---: | ---: | ---: |
 | 1 | 12 | **12** | 12 |
 | 2 | 14,4 | **14** | 14 |
@@ -201,11 +203,11 @@ experiencia = redondear(10 × 1,2^(1d8))     con 1d8 ∈ {1..8}
 | 7 | 35,831808 | **36** | 35 |
 | 8 | 42,9981696 | **43** | 42 |
 
-**`P-2` — decisión abierta.** El PO describió el redondeo **al entero más próximo** y ofreció el **truncamiento** como alternativa; ninguna de las dos está fijada por escrito en el Issue. El contrato adopta el redondeo al más próximo **como provisional** y la implementación debe dejar la regla en un único punto (la política pura de Missions) para que cambiarla no toque nada más.
+**`P-2` — CERRADA.** Decisión definitiva del PO (Management #18): se redondea **al entero más próximo** y el truncamiento queda **descartado**. La tabla vigente es `1 → 12`, `2 → 14`, `3 → 17`, `4 → 21`, `5 → 25`, `6 → 30`, `7 → 36`, `8 → 43`; las caras `4` y `8` son las que distinguen las dos reglas (`21` y no `20`; `43` y no `42`). La implementación mantiene la regla en un único punto (la política pura de Missions, `Math.round`), y una prueba fija los ocho valores y ese contraste.
 
 **La experiencia que cruza la frontera es siempre entera.** La tabla de umbrales de HU-08 está en enteros y comparar un acumulado fraccionario con ella sería una fuente de errores de frontera imposible de justificar. Player/Inventory **rechaza** un importe no entero en lugar de redondearlo por su cuenta.
 
-**Nota de aritmética:** con `1d8 = 8` la recompensa es `43`, y el umbral del nivel 1→2 es `200` (HU-08). Una sola victoria **no** sube de nivel a un héroe recién creado; sí puede subirlo si ya estaba cerca del umbral, y una sola acreditación puede cruzar **más de un umbral** si el acumulado previo lo permite.
+**Nota de aritmética (umbrales de HU-08 vigentes, XP acumulada):** `1→2 = 100`, `2→3 = 300`, `3→4 = 500`, `4→5 = 700`, `5→6 = 900`, `6→7 = 1.100`, `7→8 = 1.300`; el nivel 8 es el máximo. Con `1d8 = 8` la recompensa es `43`: una sola derrota **no** sube de nivel a un héroe recién creado (`43 < 100`), sí puede subirlo si ya estaba cerca del umbral (`99 + 12 = 111` pasa de 1 a 2), y una misma misión con muchas derrotas puede cruzar **más de un umbral**. HU-09 **consume** esta tabla y no la define: Player/Inventory es quien recalcula el nivel.
 
 ## 7. La acreditación: contrato Missions → Player/Inventory
 
@@ -287,10 +289,10 @@ PENDING ──► ROLLED ──► CREDITED
    └───────────┴──► FAILED   (rechazo terminal o cuerpo incoherente)
 ```
 
-| Estado | Significa | Se recupera tras reinicio |
-| --- | --- | --- |
 **Hay una recompensa por cada NPC derrotado**, y cada una tiene su propio estado, su propia clave y su propio ciclo de recuperación. No hay una recompensa agregada por misión.
 
+| Estado | Significa | Se recupera tras reinicio |
+| --- | --- | --- |
 | `PENDING` | Recompensa de esa derrota creada; aún no se pidió su tirada | Reintenta `POST §5.2` con el mismo `operationId` del lote |
 | `ROLLED` | La tirada de esa derrota está persistida en Combat; falta acreditar | Reintenta `POST §7` con el importe **ya calculado** y el mismo `operationId`; **no** vuelve a tirar |
 | `CREDITED` | Terminal. La acreditación de esa derrota está confirmada | No-op |
@@ -353,7 +355,7 @@ La representación del **estado** es obligatoria: mostrar como concedida una rec
 - **HU-30** ([#77](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/77)): probabilidad de caída de ítems.
 - **HU-32/HU-73**: épica obtenida por derrota de un Máster.
 - **PvP / «Jugar Online»**: no otorga experiencia por esta fórmula.
-- **`CA-06` de HU-08**: el nivel como multiplicador de estadísticas base; sigue sin implementar y sin ser de esta historia.
+- **`CA-06` de HU-08** (el nivel como multiplicador de estadísticas): es de HU-08 y **no interviene** en la fórmula ni en el importe de experiencia de esta historia.
 - Cambios a HU-21 (notificación de fin de batalla), HU-24/25/26 (motor y tablas) y al contrato de simulación de HU-72.
 
 ## 13. Compatibilidad y orden de despliegue
@@ -368,7 +370,10 @@ La representación del **estado** es obligatoria: mostrar como concedida una rec
 
 | Caso | Comportamiento exigido |
 | --- | --- |
-| Sin victoria válida ni NPC derrotado (`CA-08`) | No se crean recompensas, no se pide tirada, no se acredita |
+| Sin **ninguna derrota válida de un NPC** (`CA-08`), sea cual sea el estado final de la misión | No se crean recompensas, no se pide tirada, no se acredita |
+| Misión `FAILED` **con** NPC derrotados válidamente | Cada derrota **devenga y conserva** su XP: se tira, se calcula y se acredita; el fracaso posterior **no la revierte** (§14.1) |
+| Misión `VOIDED` | No devenga esta recompensa: el cierre no crea recompensas y, si existiera una pendiente inconsistente, el ciclo la rechaza (`MISSION_VOIDED`) sin acreditar |
+| Simulación rechazada o resultado inválido | La misión se anula (`VOIDED`): no hay derrota válida de la que sacar recompensa |
 | Participante `AI` o `heroId` nulo | No hay beneficiario: no hay recompensas |
 | **Dos enemigos del mismo arquetipo en la misma misión** | **Dos recompensas distintas**, con claves distintas por `encounter` + `enemyInstanceId`; identificar por `rivalRef` está prohibido |
 | El mismo arquetipo repetido dentro del mismo encuentro | La instancia (`#1`, `#2`, …) los separa |
@@ -382,12 +387,27 @@ La representación del **estado** es obligatoria: mostrar como concedida una rec
 | Una derrota falla con `422` | Esa recompensa queda `FAILED`; **las demás no se arrastran** |
 | Combat o Player/Inventory caídos | Reintento con el mismo `operationId`; las recompensas quedan pendientes y el barrido las termina |
 
+### 14.1 `CA-08` definitivo: la recompensa nace de la derrota válida del NPC
+
+Decisión del PO (Management #18). **La condición para devengar es la derrota válida de un NPC, no el resultado global de la misión.** Los estados de la misión son los del dominio vigente: `COMPLETED`, `FAILED` y `VOIDED`.
+
+| Situación | Recompensas | Tiradas | Acreditaciones |
+| --- | --- | --- | --- |
+| `COMPLETED` con derrotas | Una por derrota | Una por derrota | Una por derrota |
+| **`FAILED` con NPC derrotados válidamente** (el héroe cae después) | **Una por cada NPC ya derrotado** | Una por derrota | Una por derrota; **el héroe conserva la XP** |
+| `FAILED` sin ninguna derrota válida | 0 | 0 | 0 |
+| `VOIDED` (anulada, resultado inválido o simulación rechazada) | 0 | 0 | 0 |
+
+- **Implementación en Missions:** el cierre crea una recompensa `PENDING` por cada baja legible de la bitácora (`combatantDefeated`) **en la misma transacción** y sin mirar si el resultado fue `COMPLETED` o `FAILED`; solo la anulación la omite. **No** existe la condición «si la misión no es `COMPLETED`, no hay XP»: sería incorrecta.
+- **Una vez devengada, la XP no se revierte:** ni un cierre `FAILED` ni un barrido posterior deshacen una acreditación. Las derrotas que el héroe **no** llegó a lograr no devengan nada.
+- **Evidencia:** las pruebas unitarias `hu-09-ca08-resultado-mision.spec.ts` (Missions) cubren los cuatro casos, y el escenario `S-12` de la cadena E2E recorre `FAILED` con bajas con Combat y Player/Inventory reales (la bitácora de esa simulación es un doble declarado; ver la evidencia).
+
 ## 15. Decisiones abiertas
 
 | # | Decisión | Estado | Efecto si cambia |
 | --- | --- | --- | --- |
 | `P-1` | Una recompensa por **rival derrotado** o una por victoria | **CERRADA: una por rival derrotado**, con clave por instancia real (§4) | — |
-| `P-2` | Redondeo **al más próximo** o **truncamiento** | **PROVISIONAL: al más próximo** | Cambia un valor por cada `1d8` (`21`↔`20`, `25`↔`24`, `30`↔`29`, `36`↔`35`, `43`↔`42`); la regla vive en un único punto |
+| `P-2` | Redondeo **al más próximo** o **truncamiento** | **CERRADA: al entero más próximo** (decisión del PO, Management #18); truncamiento **descartado** | — (la regla vive en un único punto, `Math.round` en la política de Missions) |
 | `P-3` | Corrección del enunciado del Issue #18 | **Ejecutada** el 2026-09-23: el cuerpo dice ya Missions/JvE y declara la cadena de Misiones | — |
 
-**`P-2` sigue marcada como provisional a propósito.** Que la experiencia tenga que ser entera **sí** es una decisión tomada; **cómo** se convierte `14,4` en un entero no lo es hasta que se confirme «redondeo al entero más cercano» frente a truncamiento. La marca no se retira por conveniencia: mientras siga ahí, la política vive en un único punto para que confirmarla o cambiarla no toque nada más.
+**No queda ninguna decisión abierta que bloquee la aceptación técnica de esta historia.** `P-2` se cerró con el redondeo al entero más próximo y `CA-08` se fijó por derrota válida de NPC (§14.1). La aceptación funcional de HU-09 sigue siendo del PO y no la declara este documento.
