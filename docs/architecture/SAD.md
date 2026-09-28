@@ -67,7 +67,7 @@ semilla -> MT19937 -> Box-Müller -> Z ~ N(0,1) -> Φ(Z) -> indice uniforme 1..8
 
 Player/Inventory posee el **nivel** y la **experiencia acumulada** del héroe, en un agregado por `(jugador, héroe)` con su propio almacén. No es una decisión nueva de este documento: la ficha de ownership de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md) ya asigna a Player/Inventory el héroe, su equipamiento y sus estadísticas efectivas, y solo ese contexto escribe su Mongo.
 
-La regla vive **en proceso**, en `ExperiencePolicy`, como política pura: no persiste, no expone HTTP y no entrega experiencia. Contiene la **tabla de umbrales aprobada por el Product Owner** —`100 · 200 · 400 · 800 · 1.600 · 3.200 · 6.400 · 12.800`, de experiencia **acumulada** por nivel— y las dos direcciones de esa tabla: el umbral de un nivel y el nivel de un acumulado. El **umbral no se almacena** —es derivable del nivel—, de modo que la regla tiene un único punto conceptual y no puede desincronizarse.
+La regla vive **en proceso**, en `ExperiencePolicy`, como política pura: no persiste, no expone HTTP y no entrega experiencia. Contiene la **tabla de umbrales vigente** —`100 · 300 · 500 · 700 · 900 · 1.100 · 1.300`, de experiencia **acumulada** para **pasar** de cada nivel al siguiente; nivel máximo 8— y las dos direcciones de esa tabla: el umbral para salir de un nivel y el nivel de un acumulado. Esa tabla sustituye la fórmula original del PDF y la tabla temporal anterior por decisión funcional posterior. El **umbral no se almacena** —es derivable del nivel—, de modo que la regla tiene un único punto conceptual y no puede desincronizarse.
 
 ```text
 nivel actual (1..8)  -> ExperiencePolicy -> umbral del siguiente nivel, o MAX_LEVEL
@@ -241,13 +241,12 @@ Se enumeran juntas porque quien lea este documento necesita conocerlas antes de 
 7. **Aceptación humana de HU-39 en curso.** La entrega técnica está desplegada;
    el ciclo real de TOTP, asignación, Catalog y retirada se conserva como
    evidencia pendiente de completar.
-8. **`CA-03` de HU-08 quedó divergente, y bloquea la aceptación de la historia.** El
-   criterio sigue enunciando el umbral como `100 × 1,2^(Nivel−1)` —que da `100, 120,
-   144, 172,8, 207,36, 248,832, 298,5984`— y el código aplica la tabla aprobada
-   después por el PO. **No es una diferencia de redondeo**: el cociente entre las dos
-   series no es constante, así que ninguna precisión convierte una en la otra. La
-   tabla gobierna el cálculo y la divergencia está medida en la evidencia de HU-08.
-   Requiere que el Product Owner **reescriba `CA-03`**; el Issue no se ha modificado.
+8. **`CA-03` de HU-08 se corrige al umbral acumulado vigente.** El criterio enunciaba
+   `100 × 1,2^(Nivel−1)`; la fórmula original del PDF y la tabla temporal anterior
+   (`100 · 200 · … · 12.800`) quedan sustituidas por `100 · 300 · 500 · 700 · 900 ·
+   1.100 · 1.300` por decisión funcional posterior (no estaba en el PDF). La migración
+   `013-hero-progressions-cumulative-thresholds` recalcula el nivel de los héroes ya
+   persistidos sin tocar su XP. `CA-06` sigue sin implementarse.
 9. **`CA-06` de HU-08 sin implementar, y bloquea la aceptación de la historia.** El
    Product Owner **ya dio la regla**: la estadística del nivel 1 multiplicada por el
    nivel actual, con el equipamiento aplicado después. Sigue fuera de HU-08 porque la

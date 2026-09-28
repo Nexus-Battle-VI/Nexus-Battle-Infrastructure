@@ -75,7 +75,7 @@ Los valores son los que quedaron escritos en el [reporte de ejecución](hu-09-ej
 | `S-00` | Las tres piezas reales y arriba | Combat y Player/Inventory responden `ready`; Missions resuelve `PlayerInventoryExperienceClient`, `CombatExperienceRollClient`, `PostgresExperienceRewardRepository` y `PostgresReportRepository` |
 | `S-01` | La cadena completa | 19 derrotas → **19 tiradas** en un solo lote con el `operationId` del contrato → **19 recompensas** `CREDITED` → **19 asientos** con la clave de cada instancia → **447 XP**, nivel **3** |
 | `S-02` | Los ocho valores de `1d8` | Caras `1..8` cubiertas, importes `12, 14, 17, 21, 25, 30, 36, 43`, **439 XP** acreditados de verdad en Player/Inventory |
-| `S-03` | Subida de uno, de varios y nivel máximo | `195 → 207`, nivel **2** (+1); `190 → 629`, nivel **3** (+2); desde `12.800` → `13.239`, nivel **8**, `levelsGained: 0` y **sin descartar experiencia** |
+| `S-03` | Subida de uno, de varios y nivel máximo (valores ejecutados con la tabla anterior; ver nota de alineación) | `195 → 207`, nivel **2** (+1); `190 → 629`, nivel **3** (+2); desde `12.800` → `13.239`, nivel **8**, `levelsGained: 0` y **sin descartar experiencia** |
 | `S-04` | Repetir el cierre | El lote es el mismo documento (mismas caras y misma fecha de creación); siguen 19 recompensas, 19 líneas y 19 asientos |
 | `S-05` | Replay de la acreditación | Misma petición, mismo `operationId` → `200` con `applied: false`; la progresión queda idéntica |
 | `S-06` | Clave reutilizada con otro contenido | `409 OPERATION_ID_REUSED` en Combat y `409 EXPERIENCE_GRANT_CONFLICT` en Player/Inventory; **nada sobrescrito** |
@@ -307,20 +307,22 @@ Los que había el 2026-09-23 y lo que ha pasado con cada uno. **Ninguno bloquea 
 
 ## Alineación con la progresión de HU-08
 
-Los ejemplos de nivel que usan el contrato y esta evidencia son los de la **tabla entera y duplicativa** ya formalizada:
+Los ejemplos de nivel que usa esta evidencia siguen la **tabla vigente de HU-08 (umbrales acumulados para pasar de nivel)**: `1→2 = 100`, `2→3 = 300`, `3→4 = 500`, `4→5 = 700`, `5→6 = 900`, `6→7 = 1.100`, `7→8 = 1.300`. *Esta tabla sustituye la fórmula original del PDF y la tabla temporal anterior `100 · 200 · 400 · … · 12.800` por decisión funcional posterior.*
 
 | Acumulado | Nivel | Por qué |
 | --- | ---: | --- |
-| `< 200` | 1 | El nivel 1 es el suelo |
-| `200` … `399` | 2 | |
-| `400` … `799` | 3 | **`749` sigue siendo nivel 3**: el nivel 4 exige `800` |
-| `800` … `1.599` | 4 | |
-| `1.600` … `3.199` | 5 | |
-| `3.200` … `6.399` | 6 | |
-| `6.400` … `12.799` | 7 | |
-| `≥ 12.800` | 8 | La experiencia **sigue acumulándose** y el nivel permanece en 8 |
+| `0` … `99` | 1 | Ningún umbral alcanzado |
+| `100` … `299` | 2 | |
+| `300` … `499` | 3 | |
+| `500` … `699` | 4 | |
+| `700` … `899` | 5 | |
+| `900` … `1.099` | 6 | |
+| `1.100` … `1.299` | 7 | |
+| `≥ 1.300` | 8 | La experiencia **sigue acumulándose** y el nivel permanece en 8 |
 
-Sin decimales en ningún punto, y con el nivel máximo 8 sin descarte de experiencia. Verificado además que **no existe ningún `128.000`** en el repositorio: el último umbral es `12.800`.
+Sin decimales en ningún punto, y con el nivel máximo 8 sin descarte de experiencia. **No existe nivel 9.**
+
+> **Nota sobre `S-03` y la cadena E2E.** Los valores concretos de `S-03` (`195 → 207`, `190 → 629`, desde `12.800`) se ejecutaron con la **tabla temporal anterior**. Con la tabla vigente los mismos importes dan: `195 → 207` sigue en nivel **2** (+1); `190 → 629` pasa de nivel **2** a **4** (+2); y desde `1.300` → `1.539` el nivel se queda en **8** sin descartar XP. La fórmula de recompensa `10 × 1,2^(1d8)` y los importes `12, 14, 17, 21, 25, 30, 36, 43` **no cambian**. La cadena E2E (`npm run test:e2e:chain` de Missions, PR #19) debe **reejecutarse** con Player-Inventory actualizado antes de citar estos números como vigentes.
 
 ## Pull requests de HU-09
 
