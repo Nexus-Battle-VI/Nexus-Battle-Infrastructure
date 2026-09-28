@@ -93,6 +93,7 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | [catalog-events-v1.asyncapi.yaml](docs/contracts/catalog-events-v1.asyncapi.yaml) | AsyncAPI propuesto de `catalog.product.created` V1 |
 | [auction-settlement-events-v1.asyncapi.yaml](docs/contracts/auction-settlement-events-v1.asyncapi.yaml) | Contrato AsyncAPI de `auction.settled.v1` para HU-65.6 (Management #328) |
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
+| [hu-10-mission-completion-reward-v1.md](docs/contracts/hu-10-mission-completion-reward-v1.md) | Contrato de liquidación de recompensas de finalización de misión (HU-10.1): XP con origen propio, créditos de misión en Wallet, productos por `inventory/grants`, snapshot e idempotencia. **Diseño — sin implementación** |
 | [hu-09-experience-reward-v1.md](docs/contracts/hu-09-experience-reward-v1.md) | Contrato de la recompensa de experiencia por derrota de un rival (HU-09). **Implementado en Combat, Player-Inventory y Missions; `P-2` cerrada** |
 | [hu-29-battle-commitment-v1.md](docs/contracts/hu-29-battle-commitment-v1.md) | Compromiso de batalla del héroe (HU-29): las dos rutas internas de Combat → Player/Inventory y el bloqueo del loadout. **Diseño — sin implementación** |
 

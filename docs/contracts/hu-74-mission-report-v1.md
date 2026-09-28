@@ -152,7 +152,7 @@ GET /api/v1/missions/me/history/summary
 
 ## Fuera de este contrato
 
-- Calcular y entregar créditos, productos y experiencia: HU-10.
+- Calcular y entregar créditos, productos y experiencia de finalización: HU-10 ([contrato de HU-10](hu-10-mission-completion-reward-v1.md)). Añade líneas de origen `HU-10` y un campo aditivo `rewards[].progression`; la foto del reporte sigue inmutable.
 - Acreditar las épicas: HU-32 y Player/Inventory.
 - Exponer la bitácora completa: no se incluye en el reporte (decisión 7 del diseño).
 

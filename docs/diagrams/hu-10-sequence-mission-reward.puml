@@ -1,0 +1,58 @@
+@startuml hu-10-sequence-mission-reward
+title HU-10 — Secuencia: liquidación de recompensas de finalización de misión (diseño HU-10.1)
+
+actor Jugador
+participant "Web" as Web
+participant "Missions" as Missions
+database "Missions DB\n(liquidación, líneas,\nentregas)" as MDB
+participant "Player-\nInventory" as Inventory
+participant "Wallet" as Wallet
+participant "Combat" as Combat
+
+== Cierre de la misión (HU-72): nace la liquidación, en la MISMA transacción ==
+Combat --> Missions : resultado sellado (combatOutcome, loot ya sorteado)
+note right of Combat
+  El botín se sorteó DENTRO de la simulación (HU-72).
+  HU-10 no llama a Combat ni usa ningún RNG.
+end note
+Missions -> Missions : ¿desenlace COMPLETED o FAILED?\n(lista cerrada; VOIDED / IN_PROGRESS / otro: no liquida)
+Missions -> MDB : congelar liquidación desde execution.request.contentSnapshot\n(jugador y héroe de la matrícula, difficulty, rewardTier,\nobjetivos, settledAt, derechos por rewardKey)
+Missions -> MDB : líneas HU-10 PENDING + entregas\n(junto con líneas HU-09 / HU-72 / HU-73)
+note over Missions, MDB
+  Persistir la intención ANTES de llamar a nadie.
+  Después de esto nadie vuelve a leer la configuración.
+end note
+
+== Barrido de entregas: una operación idempotente POR LÍNEA ==
+loop por cada línea PENDING con intento vencido
+  alt XP de finalización (COMPLETED y FAILED)
+    Missions -> Inventory : POST …/players/{playerId}/heroes/{heroId}/experience\noperationId = mission:{enr}:reward:completion:xp\nsource.kind = MISSION_COMPLETION
+    Inventory --> Missions : 200 applied + progresión (HU-08)
+  else Créditos (si el contenido los declara para este desenlace)
+    Missions -> Wallet : POST /api/internal/v1/wallet/credits/mission-reward\noperationId = mission:{enr}:reward:{group}:{key}\noccurredAt = settledAt congelado
+    Wallet --> Missions : 200 applied + balance\n(sin victoryProgress ni cofres)
+  else Producto garantizado / bonificación
+    Missions -> Inventory : POST /api/internal/v1/inventory/grants\noperationId = uuidV5(NAMESPACE_HU10, mission:{enr}:reward:{group}:{key})
+    Inventory --> Missions : 200 applied
+  end
+  alt 200 (applied true o replay false)
+    Missions -> MDB : línea CREDITED (+ progresión) y entrega, en UNA transacción
+  else 422 / 400 / 409 inequívoco
+    Missions -> MDB : línea FAILED con motivo (las demás siguen)
+  else 503 / timeout / red / 401 / 409 ambiguo
+    Missions -> MDB : sigue PENDING, intentos+1, nextAttemptAt\n(reintento con el MISMO operationId y el MISMO cuerpo)
+  end
+end
+
+note over Missions, Inventory
+  NO se vuelve a entregar el botín de HU-72 (GrantMissionLoot)
+  NI la épica de HU-73 (GrantMasterEpics): siguen su propio flujo
+  y solo se reflejan en el reporte con su propia línea.
+end note
+
+== Lectura del reporte ==
+Jugador -> Web : abre el reporte
+Web -> Missions : GET /api/v1/missions/me/reports/{enrollmentId}
+Missions --> Web : rewards[] con estado real (PENDING | CREDITED | FAILED)\n+ progresión de la línea de XP HU-10
+Web --> Jugador : presenta; NO calcula montos, elegibilidad ni nivel
+@enduml
