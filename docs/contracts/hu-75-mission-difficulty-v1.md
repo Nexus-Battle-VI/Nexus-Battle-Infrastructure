@@ -100,7 +100,7 @@ Cuerpo de 422:
 }
 ```
 
-Web muestra `message`. No inventa el texto ni calcula el desbloqueo. La matrícula guarda `difficulty`; `rewardTier` no forma parte de su entidad persistida ni de su respuesta actual. Es un descriptor publicado por `GET`, pendiente de la liquidación de HU-10.
+Web muestra `message`. No inventa el texto ni calcula el desbloqueo. La matrícula guarda `difficulty`; `rewardTier` no forma parte de su entidad persistida ni de su respuesta actual. Es un descriptor publicado por `GET`; la liquidación de HU-10 lo congela como evidencia ([contrato de HU-10](hu-10-mission-completion-reward-v1.md) §4.1) sin derivar montos de él.
 
 ## Fixtures por estado de progresión
 
@@ -177,7 +177,7 @@ Ese insert es lo que desbloquea el siguiente nivel. Matricular no desbloquea. La
 
 - Tablón, bloqueo del héroe, temporizador: HU-70.
 - Bitácora y motor de daño: HU-72 / Combat.
-- Montos de créditos e ítems: HU-10.
+- Montos de créditos e ítems: HU-10 ([contrato de HU-10](hu-10-mission-completion-reward-v1.md)): los define el contenido aprobado de cada misión y dificultad, no este contrato.
 - Reporte para el jugador: HU-74.
 
 ## Extensión «misiones jugables» (compatible)

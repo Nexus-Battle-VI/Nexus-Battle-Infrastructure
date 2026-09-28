@@ -26,7 +26,11 @@ UC ..> UCCRED : <<include>>
 UC --> Jugador : el héroe acumula XP\ny puede subir de nivel
 
 note right of UC
-  A1  Sin victoria válida (CA-08): no se otorga nada
+  A1  Sin derrota válida de NPC (CA-08): no se otorga nada
+  A1b Misión FAILED con NPC ya derrotados (CA-08):
+      cada derrota devenga y CONSERVA su XP
+  A1c Misión VOIDED (anulada / inválida / rechazada):
+      no devenga esta recompensa
   A2  Sin héroe beneficiario (AI / heroId nulo)
   A3  Reintento con el mismo operationId
   A4  Rechazo terminal 422 -> FAILED, sin revertir la misión
