@@ -97,7 +97,7 @@ services:
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
       # `combat` se suma para HU-15: consume `/internal/accounts/:subject/battle-profile`
       # al resolver el ingreso a una sala de batalla.
-      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat
+      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat,auction
     # El avatar es obligatorio en el registro (HU-01), asi que sin un lugar
     # donde escribirlo NINGUNA cuenta puede crearse: el caso de uso guarda el
     # avatar antes que nada y respondia 500. La imagen ya trae el directorio

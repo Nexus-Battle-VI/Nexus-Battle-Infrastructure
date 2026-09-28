@@ -68,7 +68,7 @@ services:
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:?Define el secreto interno en .env}
       # `combat` se suma para HU-15: consume `/internal/accounts/:subject/battle-profile`
       # al resolver el ingreso a una sala de batalla.
-      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat
+      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat,auction
       PORT: 3000
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: postgres
