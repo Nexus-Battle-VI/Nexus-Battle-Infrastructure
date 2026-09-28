@@ -48,7 +48,7 @@ Este documento **no declara la HU aceptada**. Lo que existe es la especificació
 | Cobertura global | **89,5 % sentencias / 80,5 % ramas / 88,2 % funciones** — sobre el umbral del 80 % |
 | `lint`, `format:check`, `typecheck`, `build` | **Ejecutados y limpios** |
 | **Que el motor rechace persistir el umbral** | **Verificado con MongoDB real**: insertar `nextLevelThreshold` a mano falla |
-| Pruebas de redondeo del umbral | **NO aplican, y es un cambio**: la tabla aprobada es entera y no hay nada que redondear. El redondeo que sigue abierto es el de la **recompensa**, que es de Missions |
+| Pruebas de redondeo del umbral | **NO aplican, y es un cambio**: la tabla aprobada es entera y no hay nada que redondear. El redondeo de la **recompensa** (HU-09) es de Missions y ya está cerrado: al entero más próximo |
 | Casos de `CA-03` | **Existen**: fronteras exactas de los ocho niveles y ejemplos `99 + 1`, `90 + 430`, `1299 + 1`, `1300 + 5000` |
 | Casos de `CA-06` | **NO existen, y es deliberado**: la regla existe pero no es de esta historia. Ver `D-4` |
 | Revisión por pares | **PENDIENTE.** Es requisito del ruleset: 1 aprobación + Code Owner |
@@ -115,7 +115,7 @@ Umbral configurado en Jest: **80 %**. Artefacto publicado por CI: `coverage-play
 ### Observaciones para aceptación
 
 1. **La HU no puede aceptarse todavía.** `CA-03` enuncia una fórmula que ya no gobierna el cálculo y `CA-06` es obligatorio y no está implementado: por `CA-08`, HU-08 queda formalmente inaceptable mientras los dos sigan en su redacción actual. Son decisiones de Product Owner, no trabajo de desarrollo.
-2. **La política de redondeo del umbral ya no es una decisión pendiente**: la tabla aprobada es entera. Lo que sigue abierto es el redondeo de la **recompensa** (`10 × 1,2^(1d8)`), que vive en Missions y que Player/Inventory ni calcula ni decide.
+2. **La política de redondeo del umbral ya no es una decisión pendiente**: la tabla aprobada es entera. El redondeo de la **recompensa** (`10 × 1,2^(1d8)`) vive en Missions —Player/Inventory ni lo calcula ni lo decide— y está **cerrado** por el PO: al entero más próximo.
 3. **`CA-07` se cubre en proceso, no por HTTP.** No hay endpoint y ninguno está pedido; el consumidor verificado es el caso de uso y la operación reutilizable, no una ruta.
 4. **Falta la revisión por pares**, que el ruleset exige (1 aprobación + Code Owner) y que ningún desarrollador puede darse a sí mismo.
 5. **`EN-015` (#200) y `EN-016` (#201) siguen `open`.** Esta Task se apoya en lo ya existente: no añadió dependencias ni reporteros nuevos, salvo `json` en la configuración de cobertura, que es salida estándar de Jest.
@@ -172,9 +172,9 @@ Hay tres salidas para `CA-06` y **ninguna la puede elegir este documento**:
 
 Para `CA-03` la salida es una sola: **reescribir el criterio** para que diga que el umbral se obtiene de la tabla aprobada. Hasta entonces, este entregable **señala el hueco en lugar de taparlo**.
 
-## Decisión funcional pendiente: el redondeo de la recompensa
+## Decisión funcional (cerrada): el redondeo de la recompensa
 
-Ya **no** es una decisión sobre el umbral: la tabla aprobada es entera y no hay nada que redondear. Lo que sigue abierto es el redondeo de la **recompensa** `10 × 1,2^(1d8)`, que vive en Missions:
+Ya **no** es una decisión sobre el umbral: la tabla aprobada es entera y no hay nada que redondear. El redondeo de la **recompensa** `10 × 1,2^(1d8)` vive en Missions y **el PO lo cerró** (HU-09, `P-2`): al entero más próximo.
 
 | `1d8` | Valor exacto | Al entero más próximo |
 | ---: | ---: | ---: |
@@ -187,7 +187,7 @@ Ya **no** es una decisión sobre el umbral: la tabla aprobada es entera y no hay
 | 7 | 35,831808 | **36** |
 | 8 | 42,9981696 | **43** |
 
-El PO describió el redondeo **al entero más próximo** y ofreció el **truncamiento** como alternativa; con truncamiento, el `1d8 = 4` daría `20`. **No bloquea HU-08** —Player/Inventory recibe un importe ya entero— pero conviene cerrarlo antes de la Task de Missions que lo implemente.
+El PO fijó el redondeo **al entero más próximo** y descartó el **truncamiento** (con truncamiento, `1d8 = 4` daría `20`; el valor vigente es `21`). No afecta a HU-08: Player/Inventory recibe un importe ya entero.
 
 ## Contrato entregado
 

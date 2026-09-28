@@ -3,12 +3,12 @@ title HU-09 — Actividad: de la derrota de cada NPC a la experiencia acreditada
 
 start
 
-:Enfrentamiento JvE terminado;
+:Misión JvE cerrada\n(COMPLETED o FAILED; VOIDED no devenga);
 
 :Enumerar cada derrota\ndel combatLog (encuentro + instancia);
 
-if (¿Hay al menos una derrota\ny héroe beneficiario?) then (no)
-  :No se crea ninguna recompensa\n(CA-08);
+if (¿Hay al menos una derrota válida\nde un NPC y héroe beneficiario?) then (no)
+  :No se crea ninguna recompensa\n(CA-08: sin derrota válida de NPC);
   stop
 else (sí)
 endif
@@ -18,6 +18,11 @@ note right
   Antes de pedir la tirada:
   es lo que impide
   una tirada huérfana.
+
+  Nace de la DERROTA del NPC,
+  no de que la misión sea COMPLETED:
+  si termina FAILED después,
+  la XP ya devengada se conserva.
 end note
 
 :Pedir a Combat el lote de tiradas\noperationId = mission:{enrollmentId}:xp-rolls;
@@ -38,7 +43,7 @@ repeat
   if (¿Aceptada?) then (sí)
     :Player/Inventory acumula la XP\ny recalcula el nivel con la tabla de HU-08;
     :Marcar CREDITED esa derrota;
-  else (422 rechazo terminal)
+  elseif (¿422 rechazo terminal?) then (sí)
     :Marcar FAILED esa derrota;
     note right
       Las DEMÁS derrotas

@@ -1,27 +1,27 @@
 {
   "schemaVersion": 1,
   "kind": "hu-09-chain-e2e",
-  "startedAt": "2026-09-24T12:46:33.959Z",
-  "finishedAt": "2026-09-24T12:47:14.805Z",
+  "startedAt": "2026-09-28T15:05:51.412Z",
+  "finishedAt": "2026-09-28T15:07:44.654Z",
   "repositories": [
     {
       "repository": "Nexus-Battle-Missions",
-      "commit": "7d9462e7b304447df7515fb25370cbb10d9bca79",
+      "commit": "1b75edbf6183651297fdfc8e8636ea9df8ff5e6f",
       "dirty": false
     },
     {
       "repository": "Nexus-Battle-Combat",
-      "commit": "05b39142786f02cde8de96878abecd8602ff46df",
-      "dirty": false
+      "commit": "2c568394dc77362ddcd5016592339680a264a526",
+      "dirty": true
     },
     {
       "repository": "Nexus-Battle-Player-Inventory",
-      "commit": "ae680dc68355c11968fc534a3c80d8b8fc58053b",
+      "commit": "cb1853f82f973f8b88607089147b6044db496f6d",
       "dirty": false
     }
   ],
   "environment": {
-    "node": "v24.19.0",
+    "node": "v24.20.0",
     "platform": "win32",
     "postgres": "postgres:17-alpine (Testcontainers)",
     "mongo": "mongo:8.0 (Testcontainers, replica)",
@@ -39,11 +39,11 @@
       "result": "PASS",
       "observed": {
         "combat": {
-          "commit": "05b39142786f02cde8de96878abecd8602ff46df",
-          "dirty": false
+          "commit": "2c568394dc77362ddcd5016592339680a264a526",
+          "dirty": true
         },
         "playerInventory": {
-          "commit": "ae680dc68355c11968fc534a3c80d8b8fc58053b",
+          "commit": "cb1853f82f973f8b88607089147b6044db496f6d",
           "dirty": false
         },
         "missionsDrivers": "postgres + http + http"
@@ -127,19 +127,19 @@
       "result": "PASS",
       "observed": {
         "single": {
-          "before": 195,
-          "after": 279,
+          "before": 99,
+          "after": 183,
           "level": 2,
           "defeats": 7
         },
         "multiple": {
-          "before": 190,
-          "after": 629,
-          "level": 3,
-          "levelsGained": 2
+          "before": 290,
+          "after": 729,
+          "level": 5,
+          "levelsGained": 3
         },
         "maxLevel": {
-          "after": 13239,
+          "after": 1739,
           "level": 8
         }
       }
@@ -175,10 +175,11 @@
     },
     {
       "id": "S-07",
-      "name": "CA-08: sin victoria valida no se devenga nada",
+      "name": "CA-08: sin derrota valida de NPC no se devenga nada (FAILED sin bajas, VOIDED)",
       "result": "PASS",
       "observed": {
-        "defeat": {
+        "failedWithoutDefeats": {
+          "status": "FAILED",
           "rewards": 0,
           "rolls": 0,
           "grants": 0
@@ -229,17 +230,41 @@
       "name": "Guardas de no-duplicacion (formula y azar)",
       "result": "PASS",
       "observed": {
-        "missions": "npm run test:unit -- --testPathPatterns hu-09-reward-policy",
-        "combat": "npm run test:unit -- --testPathPatterns hu-09-no-alternative-randomness",
+        "missions": "npm run test:unit -- --testPathPatterns hu-09-reward-policy --reporters=default --verbose",
+        "combat": "npm run test:unit -- --testPathPatterns hu-09-no-alternative-randomness --reporters=default --verbose",
         "controlNegativo": "ejecutado en las dos guardas"
+      }
+    },
+    {
+      "id": "S-12",
+      "name": "CA-08: mision FAILED con NPC derrotados conserva la XP (bitacora doble)",
+      "result": "PASS",
+      "observed": {
+        "missionStatus": "FAILED",
+        "defeats": 3,
+        "faces": [
+          4,
+          2,
+          1
+        ],
+        "amounts": [
+          21,
+          14,
+          12
+        ],
+        "totalXp": 47,
+        "level": 1,
+        "grants": 3,
+        "revokedAfterSecondSweep": false
       }
     }
   ],
   "failed": 0,
-  "passed": 12,
+  "passed": 13,
   "limitations": [
     "El resultado de la simulacion de Combat se sustituye por el doble de desarrollo, y NO porque Combat no exista: su ingreso de simulacion esta en develop (HU-72, PR #44) pero RECHAZA el contenido con 422 MISSION_CONTENT_INVALID, porque lo primero que valida es `hero.profile.effectiveStats` y `hero.profile.subtype` y el perfil que Missions puede enviar hoy es el doble de desarrollo. Comprobado con `COMBAT_SIMULATION_DRIVER=http`: la ejecucion termina en VOIDED con `outcome_reason = MISSION_CONTENT_INVALID`.",
-    "El perfil del heroe se sustituye por el doble de desarrollo, y es LA MISMA dependencia que el punto anterior: la ruta interna de perfil (HU-71.2, Player Inventory PR #48) todavia no esta en develop. El dia que entre, el escenario pasa a `COMBAT_SIMULATION_DRIVER=http` y las dos sustituciones caen juntas.",
+    "El perfil del heroe se sustituye por el doble de desarrollo, y es LA MISMA dependencia que el punto anterior. La ruta interna de perfil (HU-71.2, Player Inventory PR #48) YA esta en develop, pero esta cadena NO se ha migrado todavia a `HERO_ABILITIES_DRIVER=http` / `COMBAT_SIMULATION_DRIVER=http` y no se ha vuelto a medir con el perfil real: es un pendiente, no un hecho. Cuando se migre, las dos sustituciones caen juntas.",
+    "S-12 (CA-08, mision FAILED con NPC derrotados) sustituye ademas la BITACORA de la simulacion: parte de la del doble de desarrollo y la recorta tras la tercera derrota, cerrandola con HERO_DEFEATED. Las tiradas de Combat, la coordinacion de Missions, la acreditacion de Player/Inventory y el reporte son reales. NO es una simulacion real de Combat.",
     "El compromiso del heroe se sustituye por el doble de desarrollo (HERO_COMMITMENTS_DRIVER=memory).",
     "El testimonio del jugador se sustituye: no hay Cognito en la cadena.",
     "En el escenario de los ocho valores de 1d8 se sustituye el puerto de tirada por caras 1..8; la acreditacion sigue siendo la real de Player/Inventory.",
