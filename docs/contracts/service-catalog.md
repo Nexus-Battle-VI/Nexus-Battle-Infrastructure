@@ -254,6 +254,10 @@ Todas las rutas de Missions están integradas en `develop` (Tasks #366, #370, #3
 
 En el despliegue (`compose/nodes/app.yml`), Missions usa los drivers `http`, el planificador de HU-72, el barrido de experiencia de HU-09 y el reconciliador de matrículas `PENDING`. **Esa configuración solo debe llegar a producción cuando las imágenes de Missions, Combat y Player/Inventory publicadas desde `main` ya incluyan estas rutas**: si no, cada matrícula queda en `PENDING` hasta que el reconciliador la expire.
 
+#### Diseño HU-10.1 — liquidación de recompensas de misión (**NO implementado**)
+
+[hu-10-mission-completion-reward-v1](hu-10-mission-completion-reward-v1.md) **propone** tres cambios internos aditivos, **ninguno vigente todavía**, que este catálogo no lista como capacidad hasta que se integren HU-10.2, HU-10.3 y HU-10.5: (1) un origen `MISSION_COMPLETION` en `POST /api/internal/v1/players/:playerId/heroes/:heroId/experience` (Player-Inventory, `missions`); (2) `POST /api/internal/v1/wallet/credits/mission-reward` (Wallet, solo `missions`; **no** reutiliza `battle-reward`, que es de HU-22/JcJ); (3) `rewards[].progression` opcional en el reporte de Missions. Los productos reutilizan `POST /api/internal/v1/inventory/grants` sin cambios.
+
 ### Notifications
 
 Su entrada principal sigue siendo la cola de mensajes; el contrato de eventos está en [event-catalog.md](event-catalog.md). Desde HU-38 (Management #46) tiene además superficie HTTP propia, **implementada e integrada en `develop`**, detrás de `CATALOG_NOTIFICATIONS_HTTP_ENABLED` (opcional, `false` por defecto en el propio servicio -ver [Nexus-Battle-VI/Nexus-Battle-Notifications#20](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/20)-; la composición de referencia de este repositorio la habilita, ver `compose/compose.example.yml` y `compose/nodes/app.yml`).

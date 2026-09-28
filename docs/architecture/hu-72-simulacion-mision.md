@@ -47,7 +47,7 @@
 | P-S3 | Llamada síncrona a Combat con reintentos del mismo `operationId`. Combat guarda la simulación y responde lo mismo ante ese `operationId`. | ADR-019 fija el modo síncrono y la idempotencia por `operationId`. |
 | P-S4 | Missions envía **todo** lo que Combat necesita: perfil congelado del héroe, rotaciones, encuentros con perfiles base de enemigos, multiplicador de dificultad, configuración del Máster y presupuesto de tiempo. Combat no consulta a Missions. | Hoy los combatientes IA de Combat no tienen perfil (HU-18); sus estadísticas son contenido de Missions. |
 | P-S5 | Missions evalúa los objetivos con los hechos del resumen que devuelve Combat; Combat no conoce los objetivos. | Los objetivos son contenido de la misión, no reglas de combate. |
-| P-S6 | Objetivos evaluables en esta versión: `DEFEAT_BOSS`, `CLEAR_ENCOUNTERS`, `MIN_HEALTH_PERCENT` y `DEFEAT_MASTER`. | Cubren los objetivos del ejemplo del curso que se pueden decidir sin botín. Los de botín esperan a HU-10. |
+| P-S6 | Objetivos evaluables en esta versión: `DEFEAT_BOSS`, `CLEAR_ENCOUNTERS`, `MIN_HEALTH_PERCENT` y `DEFEAT_MASTER`. | Cubren los objetivos del ejemplo del curso que se pueden decidir sin botín. Los de botín dependen del botín ya sorteado por la simulación (P-J1); HU-10 no vuelve a sortearlo ([contrato de HU-10](../contracts/hu-10-mission-completion-reward-v1.md) §11). |
 | P-S7 | Resultado técnico `VOIDED` (misión anulada: sin penalización, sin *clear* y sin recompensas) cuando Combat rechaza la configuración o se agota el plazo de reintentos. El héroe se libera. | Un error técnico no es un fallo del jugador. Propone añadir `VOIDED` al vocabulario de estados de HU-70. |
 | P-S8 | Plazo de reintentos: hasta `endsAt + 30 min`. Mientras tanto la matrícula sigue `IN_PROGRESS`. | Coincide con el margen del compromiso de HU-70 (P-M8). |
 | P-S9 | La bitácora completa se guarda en Missions junto al resumen. El jugador no ve nada del resultado antes de `endsAt`. | HU-74 construye el reporte con ella. ADR-019: un resultado reproducible para auditoría, pero no predecible para el jugador. |
@@ -234,11 +234,11 @@ Los escenarios con datos de ejemplo están en los [fixtures](../contracts/hu-72-
 2. **Resultado cuando se agota el tiempo sin cumplir los objetivos, o cuando el héroe gana los combates pero falta un objetivo principal.** Propuesta: `FAILED` con motivo `TIME_LIMIT`. La HU solo define fallo por derrota.
 3. **Abandono y penalización.** La HU nombra el abandono pero no hay contrato de cancelación ni penalización definida (§7.8.7).
 4. **Anulación técnica `VOIDED`** (P-S7): nombre, efectos y si se notifica al jugador.
-5. **Vocabulario de objetivos** (P-S6). Los de botín, como «encontrar 3 fragmentos», dependen de HU-10.
+5. **Vocabulario de objetivos** (P-S6). Los de botín, como «encontrar 3 fragmentos», dependen del botín que la simulación ya resuelve; HU-10 solo lo consolida ([contrato de HU-10](../contracts/hu-10-mission-completion-reward-v1.md) §11).
 6. **IA de los enemigos** («estrategias predefinidas», §7.8.6): la define Combat.
 7. **Perfiles de enemigos y jefe.** Son contenido de las misiones del curso (§7.8.4) y no hay issue. Hoy los combatientes IA de Combat no tienen perfil.
 8. **Escalado por encuentro.** La fórmula del incremento progresivo es contenido; cómo se combina con el multiplicador de HU-75 y cómo se redondea sigue abierto también en HU-75.
-9. **Botín aleatorio** (HU-10): debe salir del generador de Combat (CA-03). ¿Se sortea dentro de la simulación?
+9. **Botín aleatorio**: debe salir del generador de Combat (CA-03). **Resuelto: se sortea dentro de la simulación de HU-72** (`loot` en el resultado, P-J1). HU-10 **no** lo vuelve a sortear: solo lo consolida en la liquidación y el reporte ([contrato de HU-10](../contracts/hu-10-mission-completion-reward-v1.md) §11).
 10. **Perfil del héroe por `heroId`.** Opción A: la respuesta del compromiso de HU-70 trae el perfil congelado. Opción B: una ruta interna nueva. Lo decide Team Alfa.
 11. **Renovar el compromiso** si Combat tarda más que el margen de 30 minutos.
 12. **Tamaño y retención de la bitácora.**

@@ -175,7 +175,7 @@ Objetivos del ejemplo del curso:
 | Explorar las 5 cámaras | `CLEAR_ENCOUNTERS` (5) | Sí |
 | No bajar del 50 % de vida | `MIN_HEALTH_PERCENT` (50) | No |
 | Derrotar al Máster si aparece | `DEFEAT_MASTER` | No |
-| Encontrar los 3 fragmentos del Sello | Botín: **no evaluable en v1** (HU-10) | No |
+| Encontrar los 3 fragmentos del Sello | Botín: **no evaluable en v1**. El botín ya lo sortea la simulación (P-J1); HU-10 no lo vuelve a sortear ([contrato de HU-10](hu-10-mission-completion-reward-v1.md) §11) | No |
 
 ## Hecho interno al cerrar
 
@@ -229,7 +229,7 @@ POST /api/internal/v1/inventory/commitments/{operationId}/extend
 - Reglas de aparición y recompensa del Máster: HU-73.
 - Reporte e historial: HU-74.
 - Niveles de dificultad y su escalado: HU-75.
-- Montos y botín: HU-10.
+- Montos de finalización: HU-10 ([contrato de HU-10](hu-10-mission-completion-reward-v1.md)). El botín aleatorio **ya lo resuelve esta simulación**; HU-10 no lo sortea de nuevo.
 - Logros: HU-76.
 - Cancelación y penalización: sin HU en Sprint 2.
 

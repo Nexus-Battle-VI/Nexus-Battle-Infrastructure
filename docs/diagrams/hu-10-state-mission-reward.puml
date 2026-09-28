@@ -1,0 +1,42 @@
+@startuml hu-10-state-mission-reward
+title HU-10 — Estados de una línea de recompensa de finalización y de su liquidación (diseño HU-10.1)
+
+[*] --> PENDING : cierre COMPLETED o FAILED\n(derecho congelado, elegible)
+
+state "Línea de recompensa (HU-10)" as Line {
+  state PENDING
+  state CREDITED
+  state FAILED
+
+  PENDING --> CREDITED : 200 (applied true o replay applied false)\nconfirmación del contexto dueño
+  PENDING --> FAILED : 422 · 400 · 409 inequívoco\n(rechazo terminal)
+  PENDING --> PENDING : 503 · timeout · red · respuesta ilegible\n401 · 409 ambiguo de inventario\n(intentos+1, MISMO operationId)
+  CREDITED --> [*]
+  FAILED --> [*]
+}
+
+note right of PENDING
+  Derecho calculado ≠ entrega acreditada.
+  PENDING nunca se muestra como concedida.
+end note
+
+note right of FAILED
+  Terminal para el barrido.
+  No arrastra a las demás líneas.
+  (Reproceso manual: pendiente T-1)
+end note
+
+state "Liquidación (estado DERIVADO de sus líneas)" as Settlement {
+  state NOT_APPLICABLE : sin derechos elegibles
+  state SETTLING : alguna línea PENDING
+  state SETTLED : todas CREDITED
+  state SETTLED_WITH_FAILURES : ninguna PENDING\ny alguna FAILED
+  SETTLING --> SETTLED
+  SETTLING --> SETTLED_WITH_FAILURES
+}
+
+note bottom of Settlement
+  No liquidan: IN_PROGRESS · VOIDED · ABANDONED (regla pendiente P-HU10-1).
+  Un desenlace desconocido no liquida (lista cerrada COMPLETED | FAILED).
+end note
+@enduml
