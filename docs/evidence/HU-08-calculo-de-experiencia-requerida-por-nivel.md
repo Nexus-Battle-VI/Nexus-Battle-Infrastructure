@@ -7,7 +7,7 @@
 - **Bounded context:** Player / Inventory · Team Alfa
 - **Pull Requests (Player/Inventory, contra `develop`, en orden de integración):** [#42](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/42) diseño (`docs/hu-08-1-diseno-progresion`) → [#43](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/43) implementación (`feat/hu-08-2-umbral-experiencia`) → [#44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/44) pruebas (`test/hu-08-3-pruebas-progresion`)
 - **Matriz de trazabilidad:** [Nexus-Battle-Player-Inventory/docs/hu-08-matriz-de-pruebas.md](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-08-matriz-de-pruebas.md)
-- **Estado:** diseño, implementación y suite de pruebas entregados, **ajustados a la aclaración funcional del Product Owner**. **La HU no está aceptada**: falta revisión por pares y aceptación del PO, y `CA-03` y `CA-06` siguen sin resolverse.
+- **Estado:** diseño, implementación y suite de pruebas entregados, **ajustados a la decisión funcional vigente de umbrales acumulados**. **La HU no está aceptada**: falta revisión por pares y aceptación del PO, y `CA-06` sigue sin implementarse (`CA-03` se corrige en Management al nuevo criterio).
 
 ## Qué cambió en esta revisión, y por qué
 
@@ -16,11 +16,11 @@ El Product Owner aclaró la regla funcional **después** del enunciado original 
 | Origen | Contenido | ¿Gobierna hoy? |
 | --- | --- | --- |
 | **Requisito original** (HU `#17`) | `CA-03`: el umbral se calcula con `100 × 1,2^(Nivel − 1)` | **No** |
-| **Aclaración del PO** (posterior y aprobada) | Tabla de umbrales acumulados `100 · 200 · 400 · 800 · 1.600 · 3.200 · 6.400 · 12.800`; el nivel sale del acumulado; la XP no se resta; un otorgamiento puede cruzar varios niveles; en el nivel 8 la XP sigue creciendo y no se descarta; la XP es entera y es del héroe | **Sí** |
+| **Decisión funcional vigente** (posterior y aprobada) | Umbrales de XP acumulada para **pasar** de nivel: `1→2 = 100 · 2→3 = 300 · 3→4 = 500 · 4→5 = 700 · 5→6 = 900 · 6→7 = 1.100 · 7→8 = 1.300` (nivel máximo 8, sin nivel 9); *esta tabla sustituye la fórmula original del PDF y la tabla temporal anterior `100 · 200 · 400 · … · 12.800` por decisión funcional posterior — no estaba en el PDF*; el nivel sale del acumulado; la XP no se resta; un otorgamiento puede cruzar varios niveles; en el nivel 8 la XP sigue creciendo y no se descarta; la XP es entera y es del héroe | **Sí** |
 | **Decisión arquitectónica** (`ADR-019`, `ADR-021`) | La tirada `1d8` nace en Combat y se persiste antes de cualquier efecto remoto; Missions coordina y calcula `10 × 1,2^(1d8)`; **Combat no calcula la recompensa**; Player/Inventory solo acredita la XP al `heroId` | Sí, y no es de esta HU |
 | **Decisión técnica** (estas Tasks) | La tabla vive en un único punto; `amount` es XP acumulada y no un incremento; `restore` rechaza un documento incoherente; se retira el campo `decimal` y la aritmética racional | Sí, y es revisable |
 
-**La divergencia con `CA-03` está medida, no tapada:** la fórmula antigua da `100, 120, 144, 172,8, 207,36, 248,832, 298,5984` y la tabla aprobada da otra serie. **No es una diferencia de redondeo** —el cociente entre ambas no es constante (1,667 en el nivel 2; 2,778 en el nivel 3)—, así que ninguna precisión convierte una en la otra. Gobierna la tabla; el Issue **no** se ha modificado y requiere corrección del PO.
+**La tabla de progresión vigente sustituye la fórmula original del PDF y la tabla temporal anterior por decisión funcional posterior.** La fórmula original da `100, 120, 144, 172,8, 207,36, 248,832, 298,5984`; la tabla temporal anterior daba `100 · 200 · 400 · 800 · 1.600 · 3.200 · 6.400 · 12.800` (con semántica «XP para estar en el nivel»); la vigente da `100 · 300 · 500 · 700 · 900 · 1.100 · 1.300` («XP para pasar»). Son tres series distintas. El PDF no se edita y **no** se afirma que esta tabla estuviera en él. `CA-03` y la frase de contexto del Issue `#17` se reescriben en Management con la tabla vigente.
 
 ## Estado de la verificación: qué se comprobó y qué NO
 
@@ -35,20 +35,21 @@ Este documento **no declara la HU aceptada**. Lo que existe es la especificació
 | Adaptadores Mongo y en memoria, con bloqueo optimista | **Implementados** |
 | Registro en el contenedor y operación reutilizable | **Implementados**, con prueba de cableado |
 | Tabla de umbrales aprobada, aplicada en un único punto | **Verificada** contra la tabla de referencia del PO, guardada en `test/fixtures/experience-threshold-reference.json` |
-| Regresión con los vectores del PO | **Verificada**: `749 → 3`, `849 → 4`, `890 → 4`, `3.500 → 6`, `13.000 → 8`, `13.500 → 8`, `190 + 700`, `749 + 100` |
+| Regresión con las fronteras del PO | **Verificada**: `0,99 → 1`, `100,299 → 2`, `300,499 → 3`, `500,699 → 4`, `700,899 → 5`, `900,1099 → 6`, `1100,1299 → 7`, `1300 → 8`; `99 + 1`, `90 + 430`, `1299 + 1`, `1300 + 5000` |
+| Datos ya persistidos con la tabla anterior | **Migración `013-hero-progressions-cumulative-thresholds`**: recalcula el nivel con los umbrales vigentes y **no toca la XP**; idempotente; verificada con MongoDB real |
 | Control de tabla única | **Ejecutado**: `no-duplicate-experience-thresholds.spec.ts` falla si otro archivo reproduce la serie o la calcula con una expresión |
 | Coherencia nivel ↔ acumulado | **Verificada** en el dominio y contra MongoDB real: un documento incoherente da error controlado |
 | Determinismo | **Verificado**: 50 consultas por nivel de referencia, 50 resoluciones por acumulado, y el orden no altera el resultado |
-| Pruebas unitarias | **Ejecutadas: 32 suites / 697 pruebas, en verde** |
-| Pruebas de integración HTTP | **Ejecutadas: 10 suites / 105 pruebas, en verde** |
-| Pruebas contra MongoDB real | **Ejecutadas: 8 suites / 80 pruebas, en verde** |
+| Pruebas unitarias | **Ejecutadas: 881 pruebas, en verde** |
+| Pruebas de integración HTTP | **Ejecutadas: 15 suites / 164 pruebas, en verde** |
+| Pruebas contra MongoDB real | **Ejecutadas: 12 suites / 107 pruebas, en verde** (incluye la migración `013`) |
 | Casos de HU-08 | **121 en total**: 109 en la suite unitaria y 12 en la de base de datos |
-| Cobertura de la regla (`ExperiencePolicy`) | **97,4 % sentencias · 92,9 % ramas · 100 % funciones** |
-| Cobertura global | **92,4 % sentencias / 84,0 % ramas / 90,8 % funciones** — sobre el umbral del 80 % |
+| Cobertura de la regla (`ExperiencePolicy`) | Cubierta por las fronteras exactas, el barrido monótono y la regresión contra el fixture (ver `npm run test:coverage`) |
+| Cobertura global | **89,5 % sentencias / 80,5 % ramas / 88,2 % funciones** — sobre el umbral del 80 % |
 | `lint`, `format:check`, `typecheck`, `build` | **Ejecutados y limpios** |
 | **Que el motor rechace persistir el umbral** | **Verificado con MongoDB real**: insertar `nextLevelThreshold` a mano falla |
 | Pruebas de redondeo del umbral | **NO aplican, y es un cambio**: la tabla aprobada es entera y no hay nada que redondear. El redondeo que sigue abierto es el de la **recompensa**, que es de Missions |
-| Casos de `CA-03` | **NO existen, y es deliberado**: el criterio enuncia la fórmula sustituida. Ver `D-3` |
+| Casos de `CA-03` | **Existen**: fronteras exactas de los ocho niveles y ejemplos `99 + 1`, `90 + 430`, `1299 + 1`, `1300 + 5000` |
 | Casos de `CA-06` | **NO existen, y es deliberado**: la regla existe pero no es de esta historia. Ver `D-4` |
 | Revisión por pares | **PENDIENTE.** Es requisito del ruleset: 1 aprobación + Code Owner |
 | Aceptación del PO | **PENDIENTE**, y bloqueada por `CA-03` y `CA-06` |
@@ -101,9 +102,9 @@ Umbral configurado en Jest: **80 %**. Artefacto publicado por CI: `coverage-play
 
 | # | Defecto | Estado |
 | --- | --- | --- |
-| D-1 | La regla estaba expresada con la fórmula `100 × 1,2^(Nivel−1)` que el PO sustituyó por la tabla | **Corregido** en `#188` y `#189`: la política aplica la tabla y la suite fija los ocho valores |
+| D-1 | La regla estaba expresada con la fórmula `100 × 1,2^(Nivel−1)` que el PO sustituyó por la tabla | **Corregido**: la política aplica los siete umbrales acumulados vigentes y la suite fija las fronteras exactas; la migración `013` corrige los niveles ya persistidos |
 | D-2 | El umbral podía persistirse por descuido en un cambio futuro | **Prevenido**: `additionalProperties: false` y una prueba contra MongoDB real que lo comprueba |
-| D-3 | `CA-03` enuncia la fórmula sustituida: **bloquea la aceptación de la HU** | **Abierto.** Requiere que el PO reescriba el criterio |
+| D-3 | `CA-03` enunciaba la fórmula sustituida | **Corregido en Management** (HU `#17`): `CA-03` y la frase de contexto describen ahora la tabla vigente |
 | D-4 | `CA-06` es criterio obligatorio sobre materia fuera de alcance, ahora con fórmula del PO pero sin implementar y sin cubrir las estadísticas de dado | **Abierto.** Requiere decisión de PO y arquitectura |
 | D-5 | La migración `007` chocaba con la de HU-65, que ya ocupaba ese número en `develop` | **Corregido** al integrar: renumerada a `008-hero-progressions` |
 
@@ -123,9 +124,9 @@ Umbral configurado en Jest: **80 %**. Artefacto publicado por CI: `coverage-play
 
 | Criterio | Estado | Evidencia |
 | --- | --- | --- |
-| **CA-01** — El nivel actual produce el umbral del siguiente nivel | **Cubierto y probado** | `experience-policy.spec.ts`: nivel 1 → `200` hacia el 2; nivel 4 → `1600` hacia el 5; nivel 7 → `12800` hacia el 8 |
+| **CA-01** — El nivel actual produce el umbral del siguiente nivel | **Cubierto y probado** | `experience-policy.spec.ts`: nivel 1 → `100` hacia el 2; nivel 4 → `700` hacia el 5; nivel 7 → `1300` hacia el 8; nivel 8 → `MAX_LEVEL` |
 | **CA-02** — Los héroes progresan de nivel 1 a nivel 8 | **Cubierto y probado** | `MIN_HERO_LEVEL` / `MAX_HERO_LEVEL` y `HeroLevel`, que valida la invariante. `hero-progression.spec.ts` rechaza nivel 0 y 9, y el acumulado incoherente |
-| **CA-03** — El umbral se calcula con `100 × 1,2^(Nivel−1)` | **DIVERGENTE — no se declara cumplido** | El código aplica la tabla aprobada por el PO. La serie antigua se conserva en el fixture (`supersededFormula`) y una prueba comprueba que la tabla **no** la reproduce. Ver `D-3` |
+| **CA-03** — Umbral acumulado para avanzar de nivel (tabla vigente) | **Cubierto y probado** | El código aplica `100 · 300 · 500 · 700 · 900 · 1.100 · 1.300`. La fórmula original y la tabla temporal anterior se conservan en el fixture (`supersededFormula`, `supersededTable`) y una prueba comprueba que la tabla vigente **no** las reproduce. `CA-03` y su frase de contexto se reescriben en Management (HU `#17`) |
 | **CA-04** — El cálculo usa como entrada el nivel actual | **Cubierto y probado** | La firma recibe `currentLevel` y nada más. Se rechazan `'3'`, `null`, `NaN`, decimales y fuera de rango |
 | **CA-05** — El sistema no calcula un siguiente nivel fuera del rango máximo | **Cubierto y probado** | Nivel 8 → `status: 'MAX_LEVEL'` con `forNextLevel: null`. La operación no puede producir un nivel 9 |
 | **CA-06** — El nivel actúa como factor multiplicador sobre el resto de las estadísticas | **FUERA DE ALCANCE — y con la HU formalmente inaceptable mientras siga así** | El PO ya dio la regla, pero no es de esta historia y no cubre las estadísticas de dado. **No se automatiza ninguna prueba** de este criterio, de forma deliberada |
@@ -136,8 +137,8 @@ Umbral configurado en Jest: **80 %**. Artefacto publicado por CI: `coverage-play
 
 | Regla aclarada por el PO | Cómo se verifica |
 | --- | --- |
-| La XP es **acumulada** y no se resta al subir | `749 + 100 = 849` con nivel 4, en el agregado y leyendo el caso de uso |
-| Un solo otorgamiento puede **cruzar varios niveles** | `190 + 700 = 890` deja al héroe en el nivel 4, no en el 2 |
+| La XP es **acumulada** y no se resta al subir | `99 + 1 = 100` con nivel 2 (la XP no vuelve a 0), en el agregado y leyendo el caso de uso |
+| Un solo otorgamiento puede **cruzar varios niveles** | `90 + 430 = 520` deja al héroe en el nivel 4, no en el 2 |
 | En el **tope** la XP sigue creciendo y no se descarta | `13.000 + 500 = 13.500`, nivel 8, sin rechazo |
 | La XP es **entera** | `14,4` se rechaza en el agregado; la recompensa se redondea antes de llegar |
 | El nivel sale del **acumulado** | Los cuatro vectores del PO y las fronteras exactas de los ocho umbrales |

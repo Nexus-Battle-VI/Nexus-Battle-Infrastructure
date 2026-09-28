@@ -242,15 +242,17 @@ Mismas cabeceras internas que §5.2, con `x-internal-service: missions`.
   "applied": true,          // false en un replay idempotente
   "heroId": "…",
   "level": 4,
-  "currentXp": 890,         // ACUMULADO total; nunca se descuenta
+  "currentXp": 520,         // ACUMULADO total; nunca se descuenta
   "leveledUp": true,
   "levelsGained": 1,
-  "nextLevel": { "status": "AVAILABLE", "forNextLevel": 5, "amount": 1600 },
+  "nextLevel": { "status": "AVAILABLE", "forNextLevel": 5, "amount": 700 },
   "maxLevel": 8
 }
 ```
 
 `nextLevel` y `maxLevel` son **derivados en la lectura** con `thresholdForNextLevel()` de HU-08; no se persisten y no forman parte de la clave de idempotencia.
+
+**Semántica de `nextLevel.amount` (HU-08 vigente):** es la XP **acumulada** necesaria para **pasar del nivel actual al siguiente** (`1→2 = 100`, `2→3 = 300`, … `7→8 = 1.300`), no la XP necesaria «para estar» en `forNextLevel` ni un incremento. En el nivel máximo (8) la respuesta es `{ "status": "MAX_LEVEL", "currentLevel": 8, "forNextLevel": null, "amount": null }` y no existe nivel 9. La fórmula de recompensa `10 × 1,2^(1d8)` no cambia.
 
 | HTTP | `code` | Cuándo |
 | --- | --- | --- |
