@@ -1,110 +1,107 @@
 # HU-29 — Evidencia del diseño y de la implementación del bloqueo de equipamiento en combate
 
 - **Issue central:** [Nexus-Battle-VI/Nexus-Battle-Management#76](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/76)
-- **Task de este entregable:** [#231](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/231) (diseño · `open`), ampliada con la implementación de [#232](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/232) (`open`)
-- **Tasks posteriores:** [#233](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/233) (pruebas de aceptación · `open`)
-- **Fecha:** 2026-09-24 (diseño del 2026-09-23; la sección de implementación es de la misma fecha)
+- **Tasks:** [#231](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/231) (diseño) · [#232](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/232) (implementación) · [#233](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/233) (pruebas de aceptación)
+- **Fecha de esta revisión:** 2026-10-01 (diseño original del 2026-09-23/24; esta revisión audita `develop` real, añade la verificación de extremo a extremo entre los dos servicios reales y la presentación en Web)
 - **Requisito trazado:** `RF-29`
-- **Bounded context:** Player / Inventory · Team Alfa
+- **Bounded context:** Player / Inventory (regla y compromiso) · Combat (lifecycle y compromiso saliente) · Web (presentación)
 - **Diseño:** `Nexus-Battle-Player-Inventory/docs/hu-29-bloqueo-equipamiento-combate.md`
-- **Contrato de la integración:** `docs/contracts/hu-29-battle-commitment-v1.md` (Infrastructure PR [#165](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/165))
+- **Contrato de la integración:** `docs/contracts/hu-29-battle-commitment-v1.md`
 - **Fuentes editables:** `docs/diagrams/hu-29-use-case.puml`, `hu-29-activity.puml`, `hu-29-sequence.puml`, `hu-29-domain.puml`
-- **Estado:** **diseñado e implementado en ramas, sin mergear y sin verificar.** No cierra la HU, **no la da por desbloqueada** y **no sustituye a la Task `#233`**: lo que hay son los dos PR de implementación, con sus pruebas propias, y la verificación de aceptación sigue pendiente.
 
-## Estado de la verificación: qué se comprobó y qué NO
+## Estado a 2026-10-01
 
-Este documento **no declara la HU aceptada**. Declararla sería repetir el error que el Project ya
-cometió: HU-29 figura `Done` en el Project **sin una sola línea en `develop`**. Lo que existe hoy es
-la especificación de diseño que la Task `#231` pide **y** la implementación de `#232` en ramas, con
-sus propias pruebas; **ninguna de las dos está mergeada**, y la verificación de aceptación de `#233`
-**no se ha hecho**.
+**El backend está mergeado en `develop` de los dos servicios y verificado de extremo a extremo entre
+los dos servicios reales.** La presentación en Web y la propia prueba de extremo a extremo viven en
+dos PR todavía abiertos, sin mergear.
+
+| Pieza | Repositorio / PR | Estado |
+| --- | --- | --- |
+| Diseño de la regla | Player-Inventory `docs/hu-29-bloqueo-equipamiento-combate.md` (PR #45) | **Mergeado** |
+| Contrato del compromiso de batalla | Infrastructure [#165](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/165) | **Mergeado** (`9e9bed38c4c8acfea995509b1c3186db28be8a65`) |
+| Evidencia y SAD (esta Task, versión anterior) | Infrastructure [#148](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/148) | **Mergeado** (`780166f9ef174cab7eb4e7b135c918f36c4e8a75`) |
+| Guard, `locked`, compromiso `BATTLE`, rutas internas | Player-Inventory [#26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26) | **Mergeado** (`ff0e13f2b6a8d6f7257ad679381489ca1b7e8990`) |
+| Matriz P1/P2/P3 + registro | Player-Inventory [#59](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/59) | **Mergeado** (`db7a9dbdfd1739a48ba53ed7ecd7168ac0b649b5`) |
+| Comprometer al iniciar, liberar al terminar | Combat [#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/55) | **Mergeado** (`eff40a34673dbf668407bf29c723e1fb4d7bcff7`) |
+| Presentación (`locked`, `409 battle_lock`) | Web [#191](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/191) | **Abierto, sin mergear** (`2255194b274f401ef5d20371023e5d9b819ae34b`). El PR anterior, Web #90, se cerró sin mergear; esta rama es nueva, auditada contra el `develop` actual |
+| Verificación de extremo a extremo entre los dos servicios reales | Combat [#62](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/62) | **Abierto, sin mergear** (`f471f26595b5e61197113c28293dee9d00360e88`). 13/13 escenarios en verde, 4 ejecuciones consecutivas |
+| Esta revisión de evidencia/SAD/README | Infrastructure (esta rama, `docs/hu-29-final-acceptance`) | **Abierta, sin mergear** |
+
+**Este documento no declara la HU aceptada.** El backend está mergeado y verificado; la aceptación de
+`#76` requiere además que Web #191 y Combat #62 se mergeen, y la decisión explícita del equipo/PO (ver
+«Lo que falta para cerrar HU-29»).
+
+## Qué se comprobó en el diseño (vigente, sin cambios)
 
 | Nivel | Estado |
 | --- | --- |
 | Caso de uso, actividades, secuencia y fragmento de dominio | **Entregados** en el diseño |
-| Fuentes editables de los cuatro diagramas | **Entregadas** en `docs/diagrams/hu-29-*.puml`; las cuatro **abren sin error** con la imagen que usa CI (`ghcr.io/plantuml/plantuml:1.2026.6 -checkonly`, salida `0`). El `-checkonly` no es un colador: con un `.puml` roto a propósito devuelve `200` |
-| Cobertura de arma, armadura e ítem como mutaciones bloqueadas | **Modelada**; las tres por igual, la categoría no altera la decisión |
-| Rechazo + mensaje explicativo + equipo intacto | **Modelados** |
-| Liberación al terminar la batalla | **Modelada**: la restricción deja de aplicarse |
-| HU-28 no rediseñada | **Verificado**: el diseño la precede y no toca capacidades 2/6/2 ni recálculo |
-| Revisión de persistencia | **Comprobada**: **no se crea ningún snapshot ni copia del loadout**. Como la mutación no llega a intentarse, no hay nada que restaurar, y una copia sería una segunda versión de la misma verdad. El diseño razona y descarta la alternativa de forma expresa |
-| Sin firmas ni endpoints | **Verificado**: las cuatro menciones a `lockLoadout`, `EquipmentLockService`, `if (inBattle)` y HTTP están **en la sección que los prohíbe** |
-| Trazabilidad `RF-29 → HU-29 → Diseño` | **Presente**, en la cabecera del diseño y en su §9 |
-| Escenarios de prueba | **10 identificados** (los 5 de la Task más 5 derivados) |
-| **Implementación** | **Existe, en ramas y sin mergear**: el guard y el compromiso en Player/Inventory (PR [#26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26)) y el lado de Combat que compromete y libera (PR [#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/55)). **No está en `develop`** |
-| **Pruebas de la implementación** | **Existen en las dos ramas** y están verdes (el CI del PR de Combat, en verde; queda un hallazgo ajeno de intermitencia en `test:db`, ver «Implementación»). Son pruebas de la implementación, **no** la verificación de aceptación de `#233` |
-| Endpoint o contrato HTTP | **Contratado**: `hu-29-battle-commitment-v1` (Infrastructure PR [#165](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/165)). El diseño no lo prescribía —era mandato de la Task— y la implementación sí necesitaba fijarlo |
-| Revisión por pares | **PENDIENTE** en los tres PR |
-| Aceptación del PO | **PENDIENTE**, y depende de las decisiones de la sección siguiente |
-| PR de este entregable | [#148](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/148) |
+| Fuentes editables de los cuatro diagramas | **Entregadas** en `docs/diagrams/hu-29-*.puml`; las cuatro abren sin error con la imagen que usa CI (`ghcr.io/plantuml/plantuml:1.2026.6 -checkonly`) |
+| Cobertura de arma, armadura e ítem como mutaciones bloqueadas | **Modelada e implementada**; las tres por igual, la categoría no altera la decisión (`decideEquipmentChange`, `it.each` sobre las tres) |
+| Rechazo + mensaje explicativo + equipo intacto | **Modelado e implementado**, verificado además en el E2E real (§«Verificación de extremo a extremo») |
+| Liberación al terminar la batalla | **Modelada e implementada**, verificada en el E2E real con el fin de batalla disparado por el mecanismo real de Combat |
+| HU-28 no rediseñada | **Verificado**: el guard corre antes de cualquier lectura/escritura del loadout y no toca capacidades 2/6/2 ni recálculo |
+| Revisión de persistencia | **Comprobada**: no se crea ningún snapshot ni copia del loadout; la prueba compara el DTO completo antes/después, no solo «no se creó nada» |
+| Trazabilidad `RF-29 → HU-29 → Diseño` | **Presente** |
 
-## Qué queda pendiente y por qué no se inventó
+## Decisiones que el diseño dejaba abiertas, y cómo quedaron
 
-La Task `#231` exige que los pendientes queden **explícitos** en lugar de resueltos por
-intuición. Son seis, y este diseño los deja escritos:
+1. **Qué cuenta como «combate iniciado» / «batalla activa».** Resuelto: la lectura literal de la HU,
+   `IN_BATTLE`. `PREPARING` no bloquea — se verificó explícitamente en el E2E real (E-00/E-02): la
+   sala llega a `PREPARING` y el equipamiento sigue `locked:false`.
+2. **El texto del mensaje.** No se fija un copy oficial único — **y no hace falta**: el requisito
+   exige que el mensaje *explique el motivo*, no una frase normativa. Player-Inventory publica
+   `"No se puede modificar el equipamiento porque el heroe participa en una batalla activa."`
+   (`EquipmentCombatLockPolicy`); Web lo mapea a una explicación localizada en es/en/fr/pt.
+3. **`HU-014`.** Sigue citada como bloqueo declarado en el diseño original; su contenido no se
+   inventó ni fue necesario resolverlo para esta implementación.
+4. **Si la épica entra en el bloqueo.** No: la HU nombra arma, armadura e ítem, y HU-28 excluye
+   `EPICA` de las categorías equipables. No se amplió.
+5. **El transporte de la señal de liberación.** Resuelto por `ADR-019`: compromiso publicado por
+   Combat al iniciar, liberado al terminar, síncrono, con `operationId` de idempotencia. Verificado
+   real en el E2E.
+6. **La exclusión cruzada entre propósitos** (`MISSION` y `BATTLE` a la vez). **Sigue sin
+   implementarse**, a propósito: es una regla de producto distinta a HU-29, declarada como límite
+   en el contrato §10. No es una condición de aceptación de esta HU.
 
-1. **Qué cuenta como «combate iniciado» / «batalla activa».** No está el criterio de borde. El
-   diseño modela un **estado que el contexto de combate publica** y **no inventa el ciclo de
-   vida**. Lo que sí puede decirse con evidencia: el contrato de HU-21 define
-   `WAITING_FOR_PLAYERS`, `PREPARING`, `IN_BATTLE`, `FINISHED` y `CANCELLED`, y la lectura
-   literal de la HU apunta a **`IN_BATTLE`**. **Ampliar el bloqueo a `PREPARING` rompería el
-   lobby de preparación de HU-15.3**, donde el jugador equipa a propósito.
-2. **El texto del mensaje.** Se modela que **explica el motivo**; el copy no se fija.
-3. **`HU-014`.** Se cita como bloqueo declarado; su contenido **no se inventa**.
-4. **Si la épica entra en el bloqueo.** La HU nombra arma, armadura e ítem, y **no** la épica;
-   además HU-28 excluye `EPICA` de las categorías equipables. **No se amplía sin decisión.**
-5. **El transporte de la señal de liberación.** Se modela el **evento**, no cómo llega.
-6. **El mecanismo de integración.** `ADR-019` ya lo enmarca —Player/Inventory posee los
-   **compromisos** del héroe y Combat publica el compromiso al iniciar y lo libera al terminar—
-   y este diseño **no reabre** esa decisión.
+## Qué es real y qué está sustituido
 
-## Implementación (Task #232): qué existe hoy, y dónde
+**Real en Player-Inventory y Combat** (código de producción, mergeado en `develop`):
 
-Medido el 2026-09-24, contra `develop` de cada repositorio:
+- la regla que rechaza la mutación del loadout con batalla activa, con `reason: 'battle_lock'`;
+- el campo `locked` en `GET .../equipment`;
+- las dos rutas internas del compromiso, con `@InternalCallers('combat')`, sin ampliar el
+  allow-list global de Player-Inventory (que ya contenía `combat`);
+- la llamada saliente de Combat (HMAC, `operationId` UUID v5 determinista) al iniciar, y la
+  liberación al terminar con reintento en el reconciliador;
+- la caducidad obligatoria (`expiresAt`): un compromiso vencido no bloquea.
 
-| Repositorio | Rama / PR | Estado | Qué aporta |
-| --- | --- | --- | --- |
-| Infrastructure | `docs/hu-29-2-contrato-compromiso-batalla` · PR [#165](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/165) | `open`, mergeable | El contrato `hu-29-battle-commitment-v1`: las dos rutas internas, sus errores, la idempotencia y el orden de despliegue |
-| Player / Inventory | `feat/hu-29-equipment-lock` · PR [#26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26) | `open`, `MERGEABLE`, al día con `develop` | La **regla**: el guard que rechaza la mutación, `locked` en la lectura, el compromiso `BATTLE` y sus dos rutas internas |
-| Combat | `feat/hu-29-compromiso-equipamiento-batalla` · PR [#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/55) | `open` | La **otra mitad**: comprometer al iniciar, liberar al terminar y reconciliar la liberación perdida |
-| Web | rama `feat/hu-29-battle-lock-feedback` · PR [#90](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/90) `closed` | **parada** | Consumiría `locked` y el `409`. **No forma parte de este entregable y no se ha tocado** |
+**Verificado de extremo a extremo, real, en Combat PR #62** (ver sección dedicada más abajo): Combat
+real → HMAC real → Player-Inventory real → MongoDB real de cada servicio. Es la pieza que faltaba:
+hasta esta revisión, las suites de Combat (`test:db`, `test:integration`) sustituían
+`BattleHeroCommitmentPort` por un doble que registra, y nadie había ejercitado la cadena real contra
+un Player-Inventory real.
 
-**Nada de esto está en `develop` todavía.** La evidencia de esta sección es el contenido de esos PR,
-no una afirmación sobre lo desplegado.
+## Qué NO resuelve, aunque el backend ya esté mergeado
 
-### Qué es real y qué está sustituido
-
-**Real** —código de producción, no andamios—:
-
-- la regla que **rechaza** la mutación del loadout con batalla activa, con `reason: 'battle_lock'`;
-- el campo `locked` en `GET .../equipment`, para que la interfaz no reimplemente la regla;
-- las dos rutas internas del compromiso, con `@InternalCallers('combat')` y **sin ampliar** el allow-list global de Player/Inventory, que ya contenía `combat`;
-- la llamada saliente de Combat (HMAC, `operationId` UUID v5 determinista) al iniciar, y la liberación al terminar con reintento en el reconciliador;
-- la caducidad obligatoria (`expiresAt`): un compromiso vencido **no** bloquea.
-
-**Sustituido en las pruebas, y dicho**: en las suites HTTP y de base de datos de Combat no hay un
-Player/Inventory real detrás, así que el puerto se sustituye por un doble que **registra** —igual que
-ya se hacía con el héroe equipado—, y lo que se comprueba es el cableado: que iniciar compromete el
-héroe de cada humano de la sala. El cliente HTTP tiene su propia prueba unitaria, que fija además el
-`operationId` como **valor dorado**. **No hay todavía una prueba de extremo a extremo con los dos
-servicios reales**: eso es `#233`.
-
-### Qué NO resuelve, aunque ya haya código
-
-1. **La exclusión cruzada entre propósitos** («un héroe, un compromiso» entre `MISSION` y `BATTLE`) sigue sin existir: hoy un héroe podría quedar comprometido a las dos cosas. Está escrito como límite conocido en el contrato §10, no fingido.
-2. **El copy del mensaje** sigue pendiente del PO: lo contratado es que **explica el motivo**.
-3. **La épica** sigue fuera del bloqueo: la HU nombra arma, armadura e ítem, y HU-28 excluye `EPICA` de lo equipable.
+1. **La exclusión cruzada entre propósitos** (`MISSION` y `BATTLE` a la vez) sigue sin existir. Está
+   escrita como límite conocido en el contrato §10 y en el SAD §14, no fingida ni oculta.
+2. **El copy del mensaje** no tiene un texto oficial único — no lo exige la HU.
+3. **La épica** sigue fuera del bloqueo.
 4. **`HU-014`** sigue citada como bloqueo declarado; su contenido no se inventa.
 
-### Fallar cerrado, y su consecuencia operativa
+Ninguno de estos cuatro puntos es una condición de aceptación de HU-29; se mantienen documentados
+como lo que son, límites fuera de este alcance.
+
+## Fallar cerrado, y su consecuencia operativa
 
 Sin `PLAYER_INVENTORY_SERVICE_BASE_URL` configurada, Combat arranca el compromiso con un doble que
-**rechaza** y registra `battle_commitment_client_sin_configurar`. Es deliberado —mejor un inicio de
-batalla que falla que un bloqueo que existe en el papel y nunca se dispara— y tiene consecuencia
-declarada: hasta que las rutas existan en el entorno **y** la URL esté puesta,
-`POST /rooms/:id/start` responde `503`. Es el orden de despliegue del contrato §11.
+**rechaza** y registra `battle_commitment_client_sin_configurar`. Es deliberado — mejor un inicio de
+batalla que falla que un bloqueo que existe en el papel y nunca se dispara — y tiene consecuencia
+declarada: hasta que las rutas existan en el entorno **y** la URL esté puesta, `POST /rooms/:id/start`
+responde `503`. Es el orden de despliegue del contrato §11.
 
-### Eventos de registro
+## Eventos de registro
 
 | Evento | Nivel | Cuándo |
 | --- | --- | --- |
@@ -114,84 +111,143 @@ declarada: hasta que las rutas existan en el entorno **y** la URL esté puesta,
 | `battle_commitment_liberacion_fallo` | `error` | La liberación al terminar falló (fire-and-forget); quedan el reintento y la caducidad |
 | `battle_commitment_reconciliacion_fallo` | `error` | El reintento de la liberación falló para un participante |
 
-### Verificación de las ramas
+## Verificación por repositorio (medida en esta revisión, 2026-10-01)
 
-| Puerta | Player / Inventory | Combat |
-| --- | --- | --- |
-| `lint`, `format:check`, `typecheck`, `build` | verde | verde |
-| Suites | 59 suites / **1024 pruebas** | 117 suites / **2865** (unit) · 12 suites / **190** (integración) |
-| Cobertura | 89,39 % sentencias · **80,24 % ramas** | 95,5 % sentencias · **88,8 % ramas** |
-| Base de datos real (Testcontainers) | 10 suites / 102 pruebas | 10 suites / 205 pruebas |
-| CI del PR | verde | verde (`Calidad y pruebas`) |
+### Combat (rama `test/hu-29-e2e-equipment-lock`, sobre `develop` al día)
 
-**El CI de los PR está en verde** (Combat PR #55: `Calidad y pruebas` `pass`). Queda **un hallazgo
-ajeno** a esta HU, que **no** reproduce en CI y sí en una máquina Windows: el `test:db` de Combat cae
-de forma intermitente con un `MongoNotConnectedError` lanzado por `IntervalRewardWorkflowScheduler.tick`
-(HU-22) **después** de que la prueba cierre el cliente de Mongo; el error aterriza en la ventana de la
-prueba que esté corriendo y el conjunto de suites que falla cambia entre ejecuciones. Es una fuga de
-temporizador —el planificador debería detenerse en el apagado— y merece su propio issue.
-
-> **Corrección, medida y no heredada.** Una versión anterior de esta sección afirmaba que `develop`
-> estaba rojo y que el CI de los PR saldría rojo por **dos** fallos preexistentes. Era falso: el fallo
-> de `test/unit/mission-ability-policy.spec.ts` se midió sobre una copia local de `develop` anclada en
-> `05b3914`, y el commit `cd57ff8` (`test(combat): [HU-71/72] comparar con PvP solo la bonificacion
-> inmediata tras HU-19 v2`, PR #53) ya lo había arreglado. El CI de un PR prueba la **fusión** con el
-> `develop` vigente, así que lo incluía. Tras rebasar la rama: 117 suites / 2865 pruebas, **0 fallos**.
-
-## Matriz P1/P2/P3 y registro (Task #233)
-
-La Task pide automatizar **tres casos** y el **registro**. Está en
-`Nexus-Battle-Player-Inventory/test/unit/hu-29-3-matriz-bloqueo.spec.ts`
-(PR [#59](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/59), **apilado** sobre el #26: prueba
-código que todavía no está en `develop`).
-
-| # | Caso del enunciado | Prueba | Qué afirma |
-| --- | --- | --- | --- |
-| **P1** | fuera de batalla → `ok true` (o delega) | `P1 fuera de batalla: la mutacion pasa…` y `P1 fuera de batalla: se DELEGA en HU-28…` | la mutación pasa, la lectura publica `locked: false`, y un producto que no es del jugador sigue siendo **404** (no un `battle_lock` por defecto) |
-| **P2** | en batalla → `ok false battle_lock`, equipo igual | `P2 en batalla: rechaza con reason: battle_lock y el equipo queda EXACTAMENTE igual` | el **DTO completo idéntico** antes y después (equipo, estadísticas efectivas, deltas, efectos) y la **versión del loadout intacta**, con el héroe llegando a la batalla **ya equipado** |
-| **P3** | fin batalla → lock liberado | `P3 fin de batalla: el lock se libera…` y `P3 (red de seguridad): un compromiso VENCIDO…` | el **mismo** cambio que se rechazó ahora pasa; y la **caducidad** libera sin liberación explícita, que es la red bajo la reconciliación |
-| **Log** | «Test + log» | `registra el rechazo con reason: battle_lock…`, `registra el exito fuera de batalla…`, `un rechazo que NO es el bloqueo no se registra como bloqueo` | `equipment_change_rejected` (`warn`, con `reason`) y `equipment_change_applied` (`info`), y **nada** en los demás rechazos |
-
-**Cómo se ejecuta:** en Player/Inventory, `npx jest --selectProjects unit --testPathPatterns hu-29-3-matriz` → **8/8**.
-
-**El estado de batalla no se simula con un doble**: empezar una batalla es **comprometer** al héroe y terminarla es
-**liberarlo**, que es lo que hace Combat por la ruta interna, así que la suite no puede pasar por un camino que en
-producción no existe.
-
-**Que las guardas pueden fallar** (lo que hace que un verde diga algo). Dos mutaciones, revertidas después:
-
-| Mutación | Qué se pone rojo |
+| Puerta | Resultado |
 | --- | --- |
-| `decideEquipmentChange` devuelve siempre `ok: true` | P2, P3 y la caducidad (**3** pruebas) |
-| El controlador deja de emitir `equipment_change_rejected` | La del registro (**1** prueba) |
+| `typecheck` | ✅ |
+| `lint` | ✅ |
+| `format:check` | ✅ |
+| `test:unit` | ✅ 117 suites / **2892 pruebas** |
+| `test:integration` | ✅ 12 suites / **190 pruebas** |
+| `test:db` (MongoDB real, Testcontainers) | ✅ 10 suites / **208 pruebas**; cobertura 94,87 % sentencias / 83,87 % ramas (umbral 80 %) |
+| `build` | ✅ |
+| `test:e2e:hu-29` (nuevo, extremo a extremo real) | ✅ **13/13**, 4 ejecuciones consecutivas sin inestabilidad |
 
-**Lo que esta suite NO aporta, dicho:** **no mueve la cobertura** (89,39 % sentencias / 80,24 % ramas, igual antes y
-después). Esos caminos ya estaban cubiertos por las suites de HU-29.2; lo que añade es la **trazabilidad de los tres
-casos del enunciado** y el registro a nivel unitario. Y **sigue sin haber prueba de extremo a extremo entre los dos
-servicios**: el enunciado de `#233` pide unitarios y registro, así que no es un requisito de esta Task — pero es la
-verificación que falta para poder afirmar los criterios de aceptación de punta a punta, y se deja escrito como tal en
-lugar de darla por hecha.
+### Player-Inventory (`develop`, sin cambios de código en esta revisión — ya cumplía el contrato completo)
+
+Auditado en esta revisión y confirmado contra el código real de `develop` (no una medición heredada):
+el guard resuelve antes de cualquier lectura/escritura del loadout, el índice único parcial
+`{playerId, heroId}` sobre compromisos `ACTIVE` impide dos compromisos simultáneos a nivel de motor,
+la expiración se aplica tanto por filtro de consulta como por liberación perezosa, la liberación es
+idempotente, y la identidad del jugador se deriva siempre del sujeto verificado (JWT o, en este
+entorno de prueba, `AUTH_MODE=disabled`), nunca de un campo manipulable del cuerpo. No se modificó
+ningún archivo de producción de este repositorio: ya cumplía el contrato íntegro.
+
+## Verificación de extremo a extremo entre los dos servicios reales (Task #233)
+
+**El hueco que esta Task existía para cerrar.** Hasta esta revisión, `BattleHeroCommitmentPort`
+siempre se sustituía por un doble (`recordingBattleCommitments()`) en las suites de Combat; nadie
+había demostrado que Combat realmente provoca el bloqueo en un Player-Inventory real.
+
+**Dónde vive:** Combat PR [#62](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/62),
+`test/e2e/hu-29/equipment-lock.e2e.spec.ts`, fuera de `test:db`/CI (script dedicado
+`npm run test:e2e:hu-29`): necesita el repositorio Player-Inventory desplegado localmente, en el
+mismo checkout multirepo, porque levanta su build real como proceso aparte. El runner de GitHub
+Actions de Combat solo hace checkout de ese repositorio, así que no puede ejecutar esta prueba sin
+una reconfiguración de CI con checkout de dos repositorios — fuera de alcance de esta Task.
+
+**Qué es real:**
+
+- Combat: este mismo proceso, app Nest real, HTTP real sobre un puerto efímero.
+- Player-Inventory: proceso Node aparte, **su build real** (`dist/main.js`), migrado contra su
+  propio MongoDB real (Testcontainers).
+- Dos contenedores MongoDB reales, uno por servicio (nunca comparten esquema, ADR-001).
+- `PlayerInventoryBattleCommitmentHttpClient`: la clase real, sin doblar, firmando HMAC con el
+  secreto compartido real, contra las rutas internas reales de Player-Inventory.
+- Los endpoints públicos `GET`/`PUT` de equipamiento de Player-Inventory, contra su Mongo real.
+- El ciclo de vida real de la sala de Combat (`create` → `join` → `start` → vencimiento global vía
+  `ProcessBattleDeadlines` → `finish`), incluida la liberación real que dispara `BattleFinalizer`.
+
+**Qué está sustituido, declarado explícitamente, por ser ajeno a HU-29 e imprescindible solo para
+construir el fixture:**
+
+- `CatalogReadPort` de Player-Inventory: un servidor HTTP mínimo de la propia prueba sirve el
+  contrato canónico de Catalog v1 para un héroe y sus tres piezas equipables. Catalog es HU-27, no
+  HU-29; sin él, Player-Inventory no podría resolver ningún producto.
+- `ACCOUNT_BATTLE_PROFILE` y `PLAYER_INVENTORY_EQUIPPED_HERO` de Combat (HU-15/HU-16: perfil de
+  cuenta y elegibilidad precombate).
+- `TOKEN_VERIFIER` de Combat (JWT/Cognito no es parte de HU-29).
+- El reloj que firma el HMAC saliente de Combat se separa del reloj de juego (que sí se adelanta
+  6 minutos para simular el vencimiento de HU-21 sin esperar tiempo real): Player-Inventory
+  verifica la firma contra **su propio reloj de pared real**, con una ventana de 30 s, así que
+  firmar con un reloj de juego adelantado la rompería. La clase del cliente de compromiso sigue
+  siendo la real; solo cambia qué reloj le da el sello.
+
+**Escenarios y resultado** (los 13 ejercitados; E-00/E-02 comparten una sola prueba, igual que
+E-07/E-08):
+
+| Escenario | Qué verifica | Resultado |
+| --- | --- | --- |
+| E-00/E-02 | Stack real levantado; `PREPARING` no bloquea (`GET equipment` → `locked:false`) | ✅ REAL |
+| E-01 | Antes de batalla: equipar arma/armadura/ítem reales funciona, `locked:false` | ✅ REAL |
+| E-03 | Inicio real: `StartBattle` compromete de verdad contra Player-Inventory → `locked:true` | ✅ REAL |
+| E-04 | Arma bloqueada en batalla: `409 reason=battle_lock`, mensaje explicativo | ✅ REAL |
+| E-05 | Armadura bloqueada en batalla | ✅ REAL |
+| E-06 | Ítem bloqueado en batalla | ✅ REAL |
+| E-07/E-08 | Dos intentos seguidos no acumulan cambio; el servidor sigue siendo la autoridad | ✅ REAL |
+| E-09 | Fuera de batalla, un producto no propio sigue siendo 404 (no se etiqueta como `battle_lock`) | ✅ REAL |
+| E-12 | El loadout durante la batalla es idéntico, campo a campo, al de antes (salvo `locked`) | ✅ REAL |
+| E-10 | Fin real vía `ProcessBattleDeadlines` (vencimiento global HU-21) → libera → `locked:false` | ✅ REAL |
+| E-11 | El mismo cambio antes rechazado ahora lo acepta HU-28 | ✅ REAL |
+| E-13 | Reconciliar de nuevo (`ReconcileRewardWorkflows`) no da error ni cambia el estado ya liberado | ✅ REAL |
+| E-14 | Una llamada interna sin HMAC al compromiso de batalla se rechaza (401) | ✅ REAL |
+
+**Resultado:** 13/13, 4 ejecuciones consecutivas (~32-37 s cada una), sin inestabilidad observada.
+
+**Lo que esta prueba NO afirma:** no sustituye la exclusión cruzada entre propósitos (fuera de
+alcance, declarado arriba), no prueba MISSION+BATTLE simultáneos, no prueba TOURNAMENT ni AUCTION, y
+no corre en el CI de GitHub Actions de Combat (limitación estructural del checkout de un solo
+repositorio, declarada en el propio spec y en `jest.e2e-hu29.config.ts`).
+
+## Presentación en Web (Task #232, alcance de interfaz)
+
+**Dónde vive:** Web PR [#191](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/191), rama
+`feat/hu-29-finalize-battle-lock-feedback`. El PR anterior (#90) se cerró sin mergear; esta rama es
+nueva, auditada contra el `develop` actual de Web, sin cherry-pick de aquel trabajo.
+
+**Qué hace:** consume `locked: boolean` (ya presente en el contrato real de Player-Inventory) y el
+`409 { reason: 'battle_lock' }`, sin calcular ni derivar nada por su cuenta. Aviso accesible
+(`role="status"`) y controles de equipar deshabilitados mientras `locked === true` (arma, armadura e
+ítem por igual); el equipo existente se sigue mostrando. Cubre la carrera lectura/escritura: si Web
+leyó `locked:false` y el backend rechaza con `409 battle_lock` al intentar equipar, se reconoce
+correctamente, sin optimistic update (se invalida la consulta y se vuelve a pedir el estado real).
+Un `409` que no sea `battle_lock` conserva su tratamiento previo (ninguna regresión de HU-28).
+
+**Validación:** `format:check`, `lint`, `typecheck` ✅; `test` → 240 archivos / 2924 pruebas ✅
+(incluye HU-07, HU-28, Jugar Online, completitud i18n); `test:coverage` → 90,23 % sentencias / 83,81 %
+ramas / 86,24 % funciones / 90,41 % líneas (umbral del repo: 80 % en las cuatro); `build` ✅.
+
+**Backend sigue siendo la autoridad:** esto es solo UX. El servidor rechaza igual aunque Web crea que
+`locked:false`.
+
+## Matriz P1/P2/P3 y registro (Task #233, parte unitaria — vigente, mergeada)
+
+`Nexus-Battle-Player-Inventory/test/unit/hu-29-3-matriz-bloqueo.spec.ts` (PR #59, mergeado en #26).
+
+| # | Caso del enunciado | Qué afirma |
+| --- | --- | --- |
+| **P1** | fuera de batalla → `ok true` (o delega) | la mutación pasa, la lectura publica `locked: false`, y un producto que no es del jugador sigue siendo 404 |
+| **P2** | en batalla → `ok false battle_lock`, equipo igual | DTO completo idéntico antes y después, versión del loadout intacta, héroe llegando a la batalla ya equipado |
+| **P3** | fin batalla → lock liberado | el mismo cambio rechazado ahora pasa; un compromiso vencido deja de bloquear sin liberación explícita |
+| **Log** | «Test + log» | `equipment_change_rejected` (`warn`, con `reason`) y `equipment_change_applied` (`info`); un rechazo que no es el bloqueo no se registra como bloqueo |
+
+El estado de batalla no se simula con un doble: empezar una batalla es comprometer al héroe y
+terminarla es liberarlo, por el mismo camino que usa Combat por la ruta interna.
 
 ## Trabajo previo: qué se rescató y qué no
 
 | Dónde | Estado al 2026-09-09 | Qué se hizo |
 | --- | --- | --- |
-| [Player-Inventory #26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26) | `open`, borrador, 1 commit, **22 commits por detrás** de `develop` | **Rescatado**: era la capa de dominio correcta de la regla, pero **no podía funcionar** —le faltaba la fuente del estado de batalla y no compilaba sobre `develop`—. Su rama se puso al día y se completó (rutas internas, `locked`, compromiso `BATTLE`, registro y las pruebas que faltaban) |
-| Web `feat/hu-29-battle-lock-feedback` | rama publicada, **sin PR**; el PR [#90](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/90) está `closed` | **No rescatado**: la pantalla es otra HU. La rama sigue parada y **no se ha modificado** |
+| Player-Inventory #26 | `open`, borrador, 22 commits por detrás de `develop` | **Rescatado**: era la capa de dominio correcta, pero le faltaba la fuente del estado de batalla y no compilaba sobre `develop`. Se completó y se mergeó |
+| Web `feat/hu-29-battle-lock-feedback` | rama publicada sin PR; el PR #90 cerrado | **No rescatado**: Web se reconstruyó desde cero (PR #191) contra el `develop` actual, sin cherry-pick |
 
-El modelo de estado de batalla del PR original era una **consulta** —Player/Inventory preguntaba si el
-héroe estaba en batalla, con un registro en memoria (`InMemoryBattleStateRegistry`)—, mientras que
-`ADR-019` decidió un **compromiso publicado** por Combat. Se resolvió hacia el compromiso: el registro
-en memoria se eliminó y el estado de batalla se lee **siempre** del compromiso, también con
-`PERSISTENCE_DRIVER=memory`.
-
-### Estado medido, no heredado
-
-Las afirmaciones anteriores de este documento —«dos Pull Requests **en borrador y con conflicto**
-desde el 10 de septiembre» y «10 y 34 commits por detrás»— eran ciertas al escribirse y **ya no lo
-son**: el PR de Web está cerrado, su trabajo vive en una rama sin PR, el de Player/Inventory ya no va
-por detrás y las distancias a `develop` son otras. Se corrigen aquí, en el SAD y en la limitación del
-§14, porque un dato de estado que nadie vuelve a medir es una afirmación falsa con formato de dato.
+El modelo de estado de batalla del PR original de Player-Inventory era una **consulta** —preguntaba a
+Combat si el héroe estaba en batalla—, mientras que `ADR-019` decidió un **compromiso publicado** por
+Combat. Se resolvió hacia el compromiso: no hay consulta de Player-Inventory a Combat en el camino
+crítico del equipamiento.
 
 ## Relación con HU-07
 
@@ -201,59 +257,52 @@ HU-07 dejó su propio `CA-09` fuera de alcance con esta nota textual de su Task:
 > pertenece a HU-29 y actualmente existe una inconsistencia documental que debe ser resuelta
 > antes de automatizar dicho comportamiento como requisito definitivo.»
 
-**Qué se resuelve aquí y qué no.** La **inconsistencia documental** está resuelta: el body de la
-Task `#231` reescribió el molde y convirtió lo que estaba implícito en **seis decisiones
-declaradas** en lugar de dejarlas a la interpretación. Lo que **sigue abierto** es la **decisión
-funcional**. Por eso este diseño **no automatiza** ningún comportamiento de equipamiento y **no
-toca HU-07**: la única puerta de escritura del loadout sigue siendo la de HU-28.
+La inconsistencia documental está resuelta (Task #231 la reescribió en seis decisiones declaradas) y
+la decisión funcional también: HU-29 está implementada, sin tocar HU-07 ni su única puerta de
+escritura del loadout (HU-28).
 
 ## Criterios de aceptación
 
 | CA | Enunciado | Estado |
 | --- | --- | --- |
-| **CA-01** | Intento en batalla activa → rechazo con mensaje, equipo sin modificaciones | **Diseñado e implementado en rama** (PR #26); escenarios 1, 2 y 3 |
-| **CA-02** | No se permiten cambios de **armas** | **Diseñado e implementado en rama**; escenario 1 |
-| **CA-03** | No se permiten cambios de **piezas de armadura** | **Diseñado e implementado en rama**; escenario 2 |
-| **CA-04** | Ante un intento en batalla activa, se **rechaza** | **Diseñado e implementado en rama**; escenarios 1, 2 y 3 |
-| **CA-05** | El jugador recibe un **mensaje explicativo** | **Implementado en rama**; el copy sigue pendiente del PO |
-| **CA-06** | El equipamiento **permanece sin modificaciones** | **Diseñado e implementado en rama**; escenario 5 |
-| **CA-07** | Al finalizar, las restricciones **pueden liberarse** | **Diseñado e implementado en rama**: la liberación la dispara Combat al terminar (PR #55), con reintento y caducidad |
-| **CA-08** | Un criterio obligatorio fallido impide aceptar la HU | Condición de aceptación, **no cumplida**: falta mergear, verificar los 10 escenarios y la decisión del PO |
+| **CA-01** | Intento en batalla activa → rechazo con mensaje, equipo sin modificaciones | ✅ Backend mergeado y verificado (unitario + E2E real, E-04/E-05/E-06/E-12) |
+| **CA-02** | No se permiten cambios de **armas** | ✅ Verificado en E2E real (E-04) y en la matriz unitaria |
+| **CA-03** | No se permiten cambios de **piezas de armadura** | ✅ Verificado en E2E real (E-05) |
+| **CA-04** | Ante un intento en batalla activa, se **rechaza** | ✅ Verificado, incluidos dos intentos seguidos (E-07/E-08) |
+| **CA-05** | El jugador recibe un **mensaje explicativo** | ✅ Backend publica un mensaje que explica el motivo (`EquipmentCombatLockPolicy`); Web lo presenta localizado (PR #191, sin mergear) |
+| **CA-06** | El equipamiento **permanece sin modificaciones** | ✅ Verificado campo a campo en E2E real (E-12) |
+| **CA-07** | Al finalizar, las restricciones **pueden liberarse** | ✅ Verificado con el fin real de la batalla (E-10) y la vuelta a HU-28 (E-11) |
+| **CA-08** | Un criterio obligatorio fallido impide aceptar la HU | Todos los CA obligatorios (01-07) están verificados contra código real; la aceptación formal de la HU sigue pendiente de que se mergeen Web #191 y Combat #62 |
 
-**Ningún criterio está cubierto todavía en el sentido de `CA-08`.** Que exista código en una rama, con
-sus pruebas, **no** es la verificación de aceptación: eso es la Task `#233`, y no se adelanta aquí.
+La evidencia separa tres capas: **backend** (requisito impuesto por Player-Inventory, mergeado),
+**E2E** (Combat realmente provoca el estado del backend, verificado en #62, sin mergear) y **Web**
+(feedback visible, en #191, sin mergear).
 
 ## Lo que falta para cerrar HU-29
 
-1. **Decisión del PO** sobre el texto del mensaje (y confirmación de la lectura literal de «batalla
-   activa» como `IN_BATTLE`, que es la que la implementación aplica).
-2. **Decisión de arquitectura** sobre si la épica entra en el bloqueo —hoy **no**, por lo que dice la
-   HU— y sobre la exclusión cruzada entre propósitos, que **no** se ha implementado.
-3. **Mergear y verificar**: los tres PR (contrato #165, Player/Inventory #26, Combat #55) están
-   abiertos y **ninguno está en `develop`**. El CI del de Combat está en verde; el único hallazgo abierto
-   es la fuga de temporizador de `IntervalRewardWorkflowScheduler` (HU-22), ajena a esta HU.
-4. **Task `#233`**: automatizar y verificar los 10 escenarios, incluido el extremo a extremo con los
-   dos servicios reales, que hoy **no existe**.
-5. **Corregir la trazabilidad del Project**: HU-29 y sus tres Tasks figuran `Done`. **Recomendación,
-   no acción de este entregable.**
-6. **Revisión por pares** y aceptación del PO.
+1. **Mergear** Web [#191](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/191) y Combat
+   [#62](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/62). El backend (Player-Inventory
+   #26/#59, Combat #55, contrato Infrastructure #165/#148) ya está en `develop`.
+2. **Mergear** esta revisión de Infrastructure (evidencia, SAD, README).
+3. **Revisión por pares** de los PR abiertos y aceptación del PO.
+4. **Cerrar** las Tasks #231/#232/#233 y la HU #76 en Management, en ese orden, una vez lo anterior
+   esté integrado — no antes.
+
+Límites declarados que **no** bloquean el cierre, porque no son condición de aceptación de esta HU:
+la exclusión cruzada entre propósitos (`MISSION`/`BATTLE`), el copy fijo del mensaje, y la épica fuera
+del bloqueo.
 
 ## Archivos de este entregable
 
-- `Nexus-Battle-Player-Inventory/docs/hu-29-bloqueo-equipamiento-combate.md` — el diseño (PR
-  [Player-Inventory #45](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/45), mergeado)
-- `docs/contracts/hu-29-battle-commitment-v1.md` — el contrato de las dos rutas internas
-  (Infrastructure PR [#165](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/165))
-- Implementación: Player/Inventory PR [#26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26)
-  y Combat PR [#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/55)
+- `Nexus-Battle-Player-Inventory/docs/hu-29-bloqueo-equipamiento-combate.md` — el diseño (mergeado)
+- `docs/contracts/hu-29-battle-commitment-v1.md` — el contrato de las dos rutas internas (actualizado
+  en esta revisión)
+- Implementación: Player-Inventory PR #26/#59 y Combat PR #55 (mergeados)
+- Verificación de extremo a extremo: Combat PR #62 (abierto)
+- Presentación: Web PR #191 (abierto)
 - `docs/diagrams/hu-29-use-case.puml`, `hu-29-activity.puml`, `hu-29-sequence.puml`,
-  `hu-29-domain.puml` — las cuatro fuentes editables
-- `docs/architecture/SAD.md` — §4 (la subsección de HU-29 y sus diagramas) y §14 (limitación 11)
+  `hu-29-domain.puml` — las cuatro fuentes editables (sin cambios)
+- `docs/architecture/SAD.md` — §4 (la subsección de HU-29) y §14 (limitación 11, actualizada en esta
+  revisión)
+- `README.md` — fila de la tabla de contratos (actualizada en esta revisión)
 - este documento
-
-**Sobre las dos copias de los diagramas.** El diseño de Player/Inventory lleva los cuatro
-diagramas como Mermaid, para que se lean dentro de la narrativa; estos `.puml` son la **fuente
-editable de registro** en Infrastructure, que es donde el repositorio guarda los diagramas y
-donde la plantilla de PR exige que abran sin error. Se acepta la duplicación a cambio de tener
-fuente editable, y se acota: el diseño está congelado y cualquier cambio mueve las dos copias en
-el mismo PR.

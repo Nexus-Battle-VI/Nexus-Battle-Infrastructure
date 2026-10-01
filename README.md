@@ -95,7 +95,7 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
 | [hu-10-mission-completion-reward-v1.md](docs/contracts/hu-10-mission-completion-reward-v1.md) | Contrato de liquidación de recompensas de finalización de misión (HU-10): XP con origen propio, créditos de misión en Wallet, productos por `inventory/grants`, snapshot e idempotencia. **Implementado y verificado técnicamente; aceptación pendiente** |
 | [hu-09-experience-reward-v1.md](docs/contracts/hu-09-experience-reward-v1.md) | Contrato de la recompensa de experiencia por derrota de un rival (HU-09). **Implementado en Combat, Player-Inventory y Missions; `P-2` cerrada** |
-| [hu-29-battle-commitment-v1.md](docs/contracts/hu-29-battle-commitment-v1.md) | Compromiso de batalla del héroe (HU-29): las dos rutas internas de Combat → Player/Inventory y el bloqueo del loadout. **Diseño — sin implementación** |
+| [hu-29-battle-commitment-v1.md](docs/contracts/hu-29-battle-commitment-v1.md) | Compromiso de batalla del héroe (HU-29): las dos rutas internas de Combat → Player/Inventory y el bloqueo del loadout. **Implementado en Player-Inventory y Combat, verificado de extremo a extremo entre los dos servicios reales; presentación en Web en PR abierto** |
 
 ### Gobierno
 
