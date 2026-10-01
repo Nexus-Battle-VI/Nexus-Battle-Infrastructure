@@ -96,6 +96,7 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | [hu-10-mission-completion-reward-v1.md](docs/contracts/hu-10-mission-completion-reward-v1.md) | Contrato de liquidación de recompensas de finalización de misión (HU-10): XP con origen propio, créditos de misión en Wallet, productos por `inventory/grants`, snapshot e idempotencia. **Implementado y verificado técnicamente; aceptación pendiente** |
 | [hu-09-experience-reward-v1.md](docs/contracts/hu-09-experience-reward-v1.md) | Contrato de la recompensa de experiencia por derrota de un rival (HU-09). **Implementado en Combat, Player-Inventory y Missions; `P-2` cerrada** |
 | [hu-29-battle-commitment-v1.md](docs/contracts/hu-29-battle-commitment-v1.md) | Compromiso de batalla del héroe (HU-29): las dos rutas internas de Combat → Player/Inventory y el bloqueo del loadout. **Implementado en Player-Inventory y Combat, verificado de extremo a extremo entre los dos servicios reales; presentación en Web en PR abierto** |
+| [hu-30-versus-drop-v1.md](docs/contracts/hu-30-versus-drop-v1.md) | Drop de piezas equipadas por derrota individual en Versus (HU-30): resolución con el RNG central de Combat, liquidación diferida tras `FINISHED` y transferencia atómica idempotente en Player/Inventory. **Implementado en Combat, Player-Inventory, Notifications y Catalog, verificado de extremo a extremo entre los servicios reales; presentación en Web en PR abierto** |
 
 ### Gobierno
 
