@@ -111,12 +111,12 @@ reimplementa con paridad y con un control que fallaría si no la cumpliera:
 
 | Garantía del arquetipo (NestJS) | Equivalente en Chatbot | Control |
 | --- | --- | --- |
-| Clean + Hexagonal con `no-restricted-imports` en CI | `app/{domain,application,adapters,infrastructure}` con **import-linter** (contratos de capas) en CI | Una importación prohibida rompe `lint-imports` |
+| Clean + Hexagonal con `no-restricted-imports` en CI | `src/chatbot/{domain,application,adapters,infrastructure}` con **import-linter** (contratos de capas) en CI | Una importación prohibida rompe `lint-imports` |
 | Casos de uso sin decoradores, fábricas explícitas | Casos de uso como clases planas; composición en `infrastructure/bootstrap` | Ningún módulo de `application` importa FastAPI |
 | `CognitoTokenVerifier` + `JwtAuthGuard` | PyJWT con el JWKS del pool; exige `token_use=access`, `client_id` e `iss`; roles solo de `cognito:groups` conocidos; jerarquía de `SUPER_ADMINISTRATOR` en el guard | Firma ajena → 401; grupo desconocido no concede rol; `ADMINISTRATOR` no satisface `SUPER_ADMINISTRATOR` |
 | Toda ruta nace protegida; `@Public()` para abrir | Dependencia global de identidad; apertura explícita por ruta | Una ruta nueva sin marcar responde 401 sin token |
 | `@InternalOnly()` HMAC-SHA256 | Mismo esquema (`x-internal-service`, `x-internal-timestamp`, `x-internal-signature`, JSON canónico, ventana de 30 s) | Vectores de las pruebas de Wallet pasan; un byte alterado → 403 |
-| No arranca en producción con `AUTH_MODE=disabled` ni persistencia en memoria | Misma validación al arrancar | La CI arranca la imagen así y exige que muera |
+| No arranca en producción con `AUTH_MODE=disabled` ni persistencia en memoria | Misma validación al arrancar; `APP_ENV` cumple el papel de `NODE_ENV` | La CI arranca la imagen así y exige que muera |
 | Sondas `/api/health/live`, `/api/health/ready`, `/api/version` | Idénticas | Ready 200 con base; **503 con la base parada y el proceso vivo** |
 | Pool de `pg` con oyente de `error` | `psycopg_pool` con verificación de conexión | Misma prueba de CI que destapó el defecto de Sprint 2 |
 | Migraciones propias numeradas, contenedor `<svc>-migrate` | SQL numerado (`001-...sql`), tabla `_migrations`, `chatbot-migrate` | Numeración secuencial, nunca por fecha |
@@ -225,8 +225,10 @@ La topología T2 de [ADR-011](ADR-011-deployment-topology.md) **no cambia** y
 | **Con Tournament (160 MiB) y Chatbot (384 MiB)** | 2 288 MiB | 3 830 MiB |
 
 El límite de Chatbot (384 MiB) es una estimación: numpy, scipy y scikit-learn
-cargados ocupan bastante más que un servicio NestJS en reposo. Se mide con
-`docker stats` tras desplegar y se corrige en este ADR. El nodo `data` solo gana
+cargados ocupan bastante más que un servicio NestJS en reposo. El andamiaje, que
+todavía no los importa, midió **51 MiB** en reposo (imagen de 253 MB, prueba local
+del 2026-09-30). Se vuelve a medir con `docker stats` en el nodo cuando el motor
+exista, y se corrige aquí. El nodo `data` solo gana
 dos bases lógicas en un PostgreSQL que usa 103 de 288 MiB.
 
 **Coste añadido: 0 USD.** Este ADR **no introduce ningún servicio de AWS nuevo**:
@@ -235,9 +237,13 @@ ningún LLM gestionado (Bedrock), ninguna base de conocimiento gestionada
 techo de 100 USD), ninguna caché gestionada y ninguna cola.
 
 **Riesgo declarado:** `user_data` del nodo `app` viaja comprimido con un límite
-de 16 KB (`infra/modules/compute/main.tf`). Hoy `compose/nodes/app.yml` comprime
-a ~8,6 KB y el Caddyfile a ~3,5 KB. Dos servicios más caben, pero el `plan` debe
-comprobarlo antes del `apply`.
+de 16 384 bytes (`infra/modules/compute/main.tf`). Una estimación con la
+plantilla, `app.yml` y el Caddyfile da ~15 200 bytes antes de este cambio y
+~15 800 después: cabe, con poco margen. Como el nodo se destruye antes de crearse
+el nuevo, este despliegue **no** usa `apply`: sigue el procedimiento por SSM de
+[`desplegar-contextos-sprint-3.md`](../runbooks/desplegar-contextos-sprint-3.md).
+Antes de cualquier `apply` futuro que reemplace el nodo hay que medir el valor
+exacto.
 
 ## Consecuencias
 
@@ -310,6 +316,6 @@ comprobarlo antes del `apply`.
 | Estado | Vigente desde |
 | --- | --- |
 | **Accepted** | 2026-09-30 |
-| Repositorios creados con CI verde, imagen publicada y `main`/`develop` protegidas | Pendiente |
+| Repositorios creados con CI verde, imagen publicada y `main`/`develop` protegidas | 2026-09-30 |
 | Bases y usuarios creados en el nodo `data` | Pendiente |
 | Nodo `app` con los dos servicios | Pendiente |
