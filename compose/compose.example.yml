@@ -311,13 +311,20 @@ services:
       PLAYER_INVENTORY_BASE_URL: http://inventory:3002
       COMBAT_SIMULATION_DRIVER: http
       COMBAT_BASE_URL: http://combat:3006
+      # HU-10 (Task HU-10.5): liquidacion de recompensas de finalizacion.
+      # WALLET_BASE_URL es la unica URL nueva -- Player/Inventory y el secreto
+      # interno ya existentes se reutilizan para la XP y el producto.
+      MISSION_COMPLETION_REWARDS_DRIVER: http
+      WALLET_BASE_URL: http://wallet:3009
       # Apagados por defecto en el servicio. El planificador simula y cierra
       # cada mision al vencer su duracion (HU-72); el barrido acredita la
       # experiencia de cada derrota (HU-09); el reconciliador libera al heroe
-      # de una matricula PENDING que Player/Inventory no confirmo.
+      # de una matricula PENDING que Player/Inventory no confirmo; el barrido
+      # de HU-10 reintenta las entregas de finalizacion no terminales.
       MISSION_EXECUTION_ENABLED: 'true'
       EXPERIENCE_REWARD_ENABLED: 'true'
       ENROLLMENT_RECONCILER_ENABLED: 'true'
+      MISSION_COMPLETION_REWARD_ENABLED: 'true'
     depends_on:
       missions-migrate:
         condition: service_completed_successfully

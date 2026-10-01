@@ -1,5 +1,5 @@
 @startuml hu-10-state-mission-reward
-title HU-10 — Estados de una línea de recompensa de finalización y de su liquidación (diseño HU-10.1)
+title HU-10 — Estados de una línea de recompensa de finalización y de su liquidación
 
 [*] --> PENDING : cierre COMPLETED o FAILED\n(derecho congelado, elegible)
 

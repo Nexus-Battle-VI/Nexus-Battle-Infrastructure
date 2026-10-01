@@ -20,7 +20,7 @@ La prueba de punta a punta sobre `develop` (2026-09-24) mostró un módulo que f
 | Combat solo aceptaba mejoras propias de Ataque o Daño: 10 de 24 habilidades de producción servían. | La estrategia casi no cambia nada. |
 | El Templo en Normal (12 h) terminó con 6 de daño sobre 40 de vida; en Heroico o más, las derrotas eran por tiempo agotado. | Perder era imposible o arbitrario. |
 | No había panel de misiones en curso ni forma de ver la misión mientras ocurre. | Se matricula y se espera 12 horas a ciegas. |
-| Créditos, cofres y títulos se mostraban, pero HU-10 no los entrega. | Promesas vacías. |
+| Créditos, cofres y títulos se mostraban sin una política de entrega aprobada. | HU-10 ya tiene capacidad contractual para créditos y productos configurados; cofres y títulos no se crean automáticamente. |
 | El catálogo de logros está vacío. | Una sección sin nada. |
 | La interfaz mostraba `APPEARED_DEFEATED`, `sombra-del-olvido`, `msn_…` y «Sombras Corrompidas × 43» (eran 43 XP). | Textos técnicos. |
 
@@ -52,7 +52,7 @@ La prueba de punta a punta sobre `develop` (2026-09-24) mostró un módulo que f
 - Detalle: `rewards` pasa a `{ experience: true, guaranteed: [], potential, objectiveBonuses: [], firstTime: [] }`. `potential` solo trae los botines con producto enlazado.
 - Un candidato a Máster cuya épica no tiene producto se muestra con `epic: null`.
 - Tarjeta del tablón: `highlightedRewards` = experiencia, épicas posibles y los dos botines más probables.
-- Créditos, cofres y títulos siguen en el contenido para cuando HU-10 los entregue, pero no se muestran.
+- Créditos y productos configurados se liquidan por HU-10 desde el snapshot; cofres y títulos siguen sin crearse automáticamente y no se muestran como promesas.
 
 ### P-J3 — Una épica por Máster y el álbum
 
@@ -190,7 +190,7 @@ El PO respondió las preguntas abiertas de los diseños de HU-70 a HU-76. Estas 
 | Probabilidad de los Máster | 15 % por misión. Se consulta al profesor. | Aplicada en el contenido v2, el detalle y la estimación. La dificultad ya no la sube (P-J3, P-J8). |
 | Épicas de los Máster | Las 8 oficiales de la Tabla 20. | Aplicada (P-J3). «Velo de Sombras», que no es un producto, queda reemplazada por «Toma y lleva». |
 | Épica repetida | Se acumula. | Ya es así: Player/Inventory suma la cantidad y el álbum la cuenta una vez. |
-| Créditos, cofres y títulos | HU-10 (#19) la hace Beta. | Siguen ocultos hasta que HU-10 los entregue (P-J2). Los créditos necesitan una ruta nueva en Wallet (Gama): **`POST /api/internal/v1/wallet/credits/mission-reward`, diseñada en el [contrato de HU-10](../contracts/hu-10-mission-completion-reward-v1.md)** (no se reutiliza `battle-reward`, que es JcJ). Cofres y títulos **no** se crean automáticamente. |
+| Créditos, cofres y títulos | HU-10 (#19) liquida créditos y productos configurados. | Wallet expone **`POST /api/internal/v1/wallet/credits/mission-reward`** y no reutiliza `battle-reward` de JcJ; HU-10.7 verificó la capacidad con fixtures. Cofres y títulos **no** se crean automáticamente. |
 | Nombres de la dificultad | Normal, Heroico, Legendario y Mítico, también en el filtro del tablón. Mítico se queda en ×2,5. | Los niveles ya usan esos nombres y el ×2,5. El tablón aún no tiene filtro por dificultad (pregunta 10 del diseño de HU-70): está fuera de este alcance. |
 | Tiempo agotado sin el objetivo principal | Misión fallida. | Ya es así: `FAILED` con `TIME_LIMIT`. |
 | Botín | Pasa al inventario al terminar y también se vende en la tienda. Solo las épicas son exclusivas de las misiones y no se venden. | El botín ya se entrega (P-J1) y sus productos quedan a la venta. Por indicación del PO, no se revisa ni se cambia la venta de las épicas en producción. |
