@@ -96,6 +96,23 @@ da la misma salida. **Control de aislamiento:** `tournament` no puede conectarse
 4. **El Caddyfile se escribe sobre el MISMO fichero** (`cat /tmp/Caddyfile > /opt/nexus/Caddyfile`),
    no con `mv`. Es un montaje de un solo fichero, y un fichero nuevo (otro inodo) no lo vería
    el contenedor.
+
+   **Esto solo funciona si el contenedor ve AHORA el mismo inodo que el host, y eso no está
+   garantizado.** Ocurrió en este despliegue (2026-10-01): un despliegue anterior había
+   sustituido el fichero, y el proxy llevaba desde el 2026-09-27 sirviendo una versión antigua.
+   `caddy reload` recargó esa versión y respondió «recargado» sin errores. **Lo detectó el
+   control de internet del paso 4**: las rutas nuevas devolvían `200 text/html`. Comprobar
+   antes de recargar:
+
+   ```bash
+   sha256sum /opt/nexus/Caddyfile
+   docker exec nexus-battles-vi-proxy-1 sha256sum /etc/caddy/Caddyfile
+   ```
+
+   Si los hashes difieren, `caddy reload` no basta. Hay que volver a montar el fichero con
+   `docker restart nexus-battles-vi-proxy-1`: el proxy volvió en ~1,4 s y conservó los
+   certificados, que viven en su volumen. Antes, diferenciar lo servido frente a lo nuevo con
+   `docker exec <proxy> cat /etc/caddy/Caddyfile`, para saber qué más entra con el reinicio.
 5. **Composición**: `install -m 0644 /tmp/app.yml /opt/nexus/compose.yml`.
 
 ## 3. Levantar solo lo nuevo

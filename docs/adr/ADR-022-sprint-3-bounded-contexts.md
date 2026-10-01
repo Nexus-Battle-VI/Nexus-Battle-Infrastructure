@@ -226,8 +226,9 @@ La topología T2 de [ADR-011](ADR-011-deployment-topology.md) **no cambia** y
 
 El límite de Chatbot (384 MiB) es una estimación: numpy, scipy y scikit-learn
 cargados ocupan bastante más que un servicio NestJS en reposo. El andamiaje, que
-todavía no los importa, midió **51 MiB** en reposo (imagen de 253 MB, prueba local
-del 2026-09-30). Se vuelve a medir con `docker stats` en el nodo cuando el motor
+todavía no los importa, midió **51 MiB** en reposo en local y **48 MiB** en el
+nodo `app` (Tournament: 40 MiB) el 2026-10-01, con 1 949 MiB disponibles tras
+desplegar. Se vuelve a medir con `docker stats` en el nodo cuando el motor
 exista, y se corrige aquí. El nodo `data` solo gana
 dos bases lógicas en un PostgreSQL que usa 103 de 288 MiB.
 
@@ -317,5 +318,5 @@ exacto.
 | --- | --- |
 | **Accepted** | 2026-09-30 |
 | Repositorios creados con CI verde, imagen publicada y `main`/`develop` protegidas | 2026-09-30 |
-| Bases y usuarios creados en el nodo `data` | Pendiente |
-| Nodo `app` con los dos servicios | Pendiente |
+| Bases y usuarios creados en el nodo `data`, con idempotencia y aislamiento comprobados | 2026-10-01 |
+| Nodo `app` con los dos servicios, sin `apply` (SSM a SHA fijo `53ed5c2`, ver el runbook); digest igual al publicado; rutas públicas comprobadas | 2026-10-01 |
