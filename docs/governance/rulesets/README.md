@@ -37,7 +37,19 @@ Obtenidos de ejecuciones reales de CI:
 | `Nexus-Battle-Commerce` | `Calidad y pruebas`, `Imagen del servicio` |
 | `Nexus-Battle-Notifications` | `Calidad y pruebas`, `Imagen del worker` |
 | `Nexus-Battle-Web` | `Calidad y pruebas`, `Imagen estatica` |
+| `Nexus-Battle-Combat` | `Calidad y pruebas`, `Imagen del servicio` (+ `develop antes que main` en `main`) |
+| `Nexus-Battle-Missions` | `Calidad y pruebas`, `Imagen del servicio` (+ `develop antes que main` en `main`) |
+| `Nexus-Battle-Auction` | `Calidad y pruebas`, `Imagen del servicio` (+ `develop antes que main` en `main`) |
+| `Nexus-Battle-Wallet` | `Calidad y pruebas`, `Imagen del servicio` (+ `develop antes que main` en `main`) |
 | `Nexus-Battle-Infrastructure` | `Validacion de documentacion` |
+
+Tournament y Chatbot ([ADR-022](../../adr/ADR-022-sprint-3-bounded-contexts.md)) usarán los mismos tres nombres. Sus rulesets se crean **después** de la primera ejecución de CI, siguiendo el orden de aplicación de abajo.
+
+### `develop` también está protegida
+
+Los repositorios de código tienen dos rulesets: `main-protection` (solo *merge*, para la promoción) y `develop-protection` (solo *squash*). Comprobado el 2026-09-30 en Combat, Missions, Auction y Wallet con `gh api repos/Nexus-Battle-VI/<REPO>/rulesets`.
+
+**Divergencia comprobada el 2026-09-30:** en esos cuatro repositorios, `main-protection` y `develop-protection` declaran `bypass_actors` (`OrganizationAdmin` y un usuario). Eso contradice el párrafo de arriba sobre `bypass_actors` vacío. Hay que decidir cuál de los dos es la política y alinear el otro; los rulesets de los repositorios nuevos seguirán la que se decida.
 
 ## Orden de aplicación
 
