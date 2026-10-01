@@ -111,6 +111,17 @@
 		reverse_proxy wallet:3009
 	}
 
+	# Contextos de Sprint 3 (ADR-022). Sus rutas de administracion viven bajo su
+	# propio prefijo (`/api/v1/tournaments/admin`, `/api/v1/chatbot/admin`), asi
+	# que no necesitan rutas sueltas como la del editor de Missions.
+	handle /api/v1/tournaments* {
+		reverse_proxy tournament:3010
+	}
+
+	handle /api/v1/chatbot* {
+		reverse_proxy chatbot:3011
+	}
+
 	handle /api/v1/admin/banners* {
 		reverse_proxy notifications:3004
 	}

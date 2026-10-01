@@ -49,7 +49,7 @@ Tournament y Chatbot ([ADR-022](../../adr/ADR-022-sprint-3-bounded-contexts.md))
 
 Los repositorios de código tienen dos rulesets: `main-protection` (solo *merge*, para la promoción) y `develop-protection` (solo *squash*). Comprobado el 2026-09-30 en Combat, Missions, Auction y Wallet con `gh api repos/Nexus-Battle-VI/<REPO>/rulesets`.
 
-**Divergencia comprobada el 2026-09-30:** en esos cuatro repositorios, `main-protection` y `develop-protection` declaran `bypass_actors` (`OrganizationAdmin` y un usuario). Eso contradice el párrafo de arriba sobre `bypass_actors` vacío. Hay que decidir cuál de los dos es la política y alinear el otro; los rulesets de los repositorios nuevos seguirán la que se decida.
+**Divergencia comprobada el 2026-09-30:** en **todos** los repositorios de la organización (los doce de código e Infrastructure), `main-protection` y `develop-protection` declaran `bypass_actors`: `OrganizationAdmin` (o el rol de repositorio de administración) y un usuario. Eso contradice el párrafo de arriba sobre `bypass_actors` vacío. Como es la práctica vigente y uniforme, los repositorios de [ADR-022](../../adr/ADR-022-sprint-3-bounded-contexts.md) la replican tal cual; si se decide volver a la política sin excepciones, se cambia en todos a la vez.
 
 ## Orden de aplicación
 
