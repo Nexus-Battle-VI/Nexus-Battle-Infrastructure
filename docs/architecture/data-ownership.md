@@ -20,8 +20,12 @@ Cada servicio posee su almacén **en exclusiva**. Ningún otro accede a él, ni 
 | Missions | PostgreSQL | Misiones, matrículas, rotaciones, progreso de dificultad, reportes, logros | `PlayerId` (Account), `HeroId` (Player/Inventory) |
 | Auction | PostgreSQL | Subastas, pujas, seguimiento, liquidaciones, pendientes de reclamo | `PlayerId` (Account), `ProductId` (Catalog) |
 | Wallet | PostgreSQL | Saldos, reservas y libro de movimientos de créditos | `PlayerId` (Account) |
+| Tournament | PostgreSQL | Torneos, equipos inscritos y miembros, inscripciones y pagos de cupo, bracket, justas, resultados confirmados, entrega de premios | `PlayerId` (Account), `HeroId` (Player/Inventory), `RoomId` (Combat) |
+| Chatbot | PostgreSQL | Base de conocimiento, conversaciones, valoraciones, tickets de escalamiento, versiones del modelo y sus métricas, métricas de uso | `PlayerId` (Account) |
 
 Las cuatro últimas filas son la propuesta de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md): el saldo de créditos tiene un único dueño (Wallet) y la disponibilidad del héroe también (Player/Inventory, mediante compromisos).
+
+Tournament y Chatbot son la propuesta de [ADR-022](../adr/ADR-022-sprint-3-bounded-contexts.md). **Chatbot no lee ningún almacén ajeno**: los datos del jugador (HU-48) los obtiene de las rutas públicas `/me` de cada dueño, con el testimonio del propio usuario, y no los persiste más allá de la conversación. Los modelos entrenados se guardan en su propia base como `bytea` versionado, no en S3.
 
 **Combat: propiedad prevista frente a persistencia implementada.** Combat es dueño del estado de batalla, de la aleatoriedad y de su resolución; Player/Inventory, del héroe y su equipamiento (incluidos los `activeEffects`); Missions, del progreso de misión. Hoy Combat persiste **salas** en MongoDB. Las **batallas, semillas y simulaciones** de la fila de Combat son propiedad **prevista**: la persistencia runtime de la semilla y la política de semilla por batalla o simulación están **pendientes de implementación**. La tabla de probabilidades de HU-25 **no se persiste**: es una estructura de dominio en memoria ([ADR-021](../adr/ADR-021-combat-randomness-and-effect-table.md)). La semilla 3.000.000 validada por HU-26 no es un dato almacenado.
 

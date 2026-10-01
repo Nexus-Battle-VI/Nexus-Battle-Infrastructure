@@ -17,8 +17,12 @@ Diagrama en [microservices-component.puml](../diagrams/microservices-component.p
 | `Nexus-Battle-Missions` | 3007 | API NestJS | Beta | `node:24-alpine` |
 | `Nexus-Battle-Auction` | 3008 | API NestJS | Gama | `node:24-alpine` |
 | `Nexus-Battle-Wallet` | 3009 | API NestJS | Gama | `node:24-alpine` |
+| `Nexus-Battle-Tournament` | 3010 | API NestJS | Beta + Gama | `node:24-alpine` |
+| `Nexus-Battle-Chatbot` | 3011 | API FastAPI (Python) | Alfa | `python:3.13-slim` |
 
 Los cuatro últimos son los contextos de Sprint 2 de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md). Se desplegaron el 2026-09-16 como **andamiaje**: arrancan, verifican identidad y exponen sondas. **Combat ya no es solo andamiaje** (ver su sección más abajo); Missions, Auction y Wallet siguen sin rutas de negocio en este documento.
+
+Tournament y Chatbot son los contextos de Sprint 3 de [ADR-022](../adr/ADR-022-sprint-3-bounded-contexts.md) (`Accepted`). Sus repositorios existen desde el 2026-09-30 con el andamiaje, sin rutas de negocio. Chatbot es la **única** excepción al arquetipo NestJS: Python 3.13 con FastAPI y scikit-learn, para entrenar un modelo propio; ADR-022 enumera las garantías del arquetipo que reimplementa con paridad y el control de cada una.
 
 El puerto 3001 de Notifications expone **únicamente** las sondas de salud: el worker no tiene API de negocio, su entrada es la cola de mensajes.
 

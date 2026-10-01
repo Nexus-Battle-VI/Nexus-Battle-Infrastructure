@@ -399,6 +399,55 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
 
+  # Contextos de Sprint 3 (ADR-022). Sin `depends_on` desde el proxy, como los
+  # de Sprint 2: si una migracion de estos falla, cae su servicio y nada mas.
+  tournament:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-tournament:latest
+    mem_limit: 160m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      PORT: 3010
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://tournament:${DB_PASSWORD:-cambiar}@postgres:5432/tournament
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Sin `:?`: sin secreto, las rutas internas responden 503 y el resto
+      # sigue funcionando. Hoy no declara consumidores internos (ADR-022).
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+    depends_on:
+      tournament-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Python con FastAPI (ADR-022, unica excepcion a ADR-002). `APP_ENV` cumple
+  # el papel de `NODE_ENV`, y aqui vale `production` a proposito: el servicio
+  # se NIEGA a arrancar sin `AUTH_MODE=jwt` y sin PostgreSQL, en vez de
+  # degradarse en silencio. 384 MiB porque el motor cargara numpy, scipy y
+  # scikit-learn; el andamiaje en reposo mide ~51 MiB.
+  chatbot:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-chatbot:latest
+    mem_limit: 384m
+    pids_limit: 128
+    environment:
+      APP_ENV: production
+      PORT: 3011
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://chatbot:${DB_PASSWORD:-cambiar}@postgres:5432/chatbot
+      AUTH_MODE: ${AUTH_MODE:-disabled}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
+      # Chatbot no ofrece rutas internas (ADR-022); el secreto solo hace que una
+      # futura ruta interna nazca con su contrato en vez de responder 503.
+      INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+    depends_on:
+      chatbot-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
   notifications:
     image: ghcr.io/nexus-battle-vi/nexus-battle-notifications:latest
     mem_limit: 128m
@@ -651,6 +700,36 @@ services:
         condition: service_healthy
     restart: 'no'
 
+  tournament-migrate:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-tournament:latest
+    command: ['node', 'dist/infrastructure/persistence/migrate.js']
+    mem_limit: 128m
+    pids_limit: 64
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://tournament:${DB_PASSWORD:-cambiar}@postgres:5432/tournament
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  chatbot-migrate:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-chatbot:latest
+    command: ['python', '-m', 'chatbot.infrastructure.persistence.migrate']
+    mem_limit: 128m
+    pids_limit: 64
+    environment:
+      APP_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: postgres://chatbot:${DB_PASSWORD:-cambiar}@postgres:5432/chatbot
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
   # ---------------------------------------------------------------------
   # Persistencia
   #
@@ -675,6 +754,8 @@ services:
       # Bases de Sprint 2 (ADR-019), en fichero aparte para no tocar el
       # `user_data` del nodo `data`. Idempotente: el orden entre ambos da igual.
       - ./init-postgres-sprint-2.sh:/docker-entrypoint-initdb.d/init-sprint-2.sh:ro
+      # Bases de Sprint 3 (ADR-022), con el mismo criterio.
+      - ./init-postgres-sprint-3.sh:/docker-entrypoint-initdb.d/init-sprint-3.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U nexus']
       interval: 10s
