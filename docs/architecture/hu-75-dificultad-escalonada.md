@@ -67,7 +67,7 @@ Se usan para diseñar. No se presentan como CA de la HU:
 | P-D4 | Vocabulario persistido: `NORMAL`, `HEROIC`, `LEGENDARY`, `MYTHIC`. No se usa Fácil/Difícil/Extremo. | Implementado; contrastar §7.8 del documento del curso |
 | P-D5 | Heroico envía a Combat `enemyStatMultiplier = 1.5`. Legendario `2.0`. Mítico **sin número inventado**: se envía `MYTHIC` con multiplicador `null`. | Solicitud construida en la rama de HU-72; falta motor y decisión del PO para Mítico |
 | P-D6 | El multiplicador aplica a estadísticas **enemigas** (propuesta: vida, ataque y defensa). No escala al héroe. Redondeo: pendiente. | PO |
-| P-D7 | Missions publica un descriptor `rewardTier` (`STANDARD`, `IMPROVED`, `PREMIUM`, `EXCLUSIVE`) al consultar los niveles; la matrícula actual solo persiste `difficulty`. Montos, ítems y rareza los define [HU-10](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/19): el [contrato de HU-10](../contracts/hu-10-mission-completion-reward-v1.md) fija la **forma** (los valores salen del contenido congelado por dificultad, sin tabla global) y congela `difficulty` y `rewardTier` como evidencia de la liquidación. | Liquidación en HU-10.5 |
+| P-D7 | Missions publica un descriptor `rewardTier` (`STANDARD`, `IMPROVED`, `PREMIUM`, `EXCLUSIVE`) al consultar los niveles; la matrícula actual solo persiste `difficulty`. Montos, ítems y rareza los define [HU-10](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/19): el [contrato de HU-10](../contracts/hu-10-mission-completion-reward-v1.md) fija la **forma** (los valores salen del contenido congelado por dificultad, sin tabla global). | Capacidad liquidada y verificada técnicamente por HU-10.7 |
 
 ## Caso de uso textual
 
@@ -231,7 +231,7 @@ Los fixtures de respuesta para cada estado están en el [contrato](../contracts/
 | Missions | Política y tabla de clears en `develop`; `difficulty` en matrícula y cierre con clear en PR #15 | Parcial |
 | Web | Selector en PR #122 y montaje en matrícula en PR #140 | Borradores |
 | Combat | Recibir la solicitud en PR #44; aplicar multiplicador / tabla Mítico sigue pendiente | Parcial |
-| Player/Inventory y Wallet | Entrega de las recompensas de finalización según el contenido congelado por dificultad (el `rewardTier` es evidencia, no una tabla de montos) | Diseño en [contrato de HU-10](../contracts/hu-10-mission-completion-reward-v1.md); implementación pendiente (HU-10.2 a HU-10.5) |
+| Player/Inventory y Wallet | Entrega de las recompensas de finalización según el contenido congelado por dificultad (el `rewardTier` es evidencia, no una tabla de montos) | Implementada y verificada técnicamente en [HU-10.7](../evidence/HU-10-recompensas-finalizacion-mision.md) |
 | Infrastructure | Este diseño y el contrato conceptual | **Este documento** |
 | Account | Ninguno | — |
 
