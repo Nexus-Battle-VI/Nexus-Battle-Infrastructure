@@ -1,6 +1,6 @@
 # HU-74 — Diseño del reporte y el historial de misiones
 
-**Estado:** diseño. **No implementado.** Missions no tiene rutas de negocio en `develop`. Nada de este documento autoriza a marcar rutas como disponibles en [service-catalog.md](../contracts/service-catalog.md).
+**Estado:** implementado en Missions. El reporte y sus rutas de lectura existen en `develop`; HU-10 actualiza únicamente las líneas de recompensa, no la foto inmutable. La verificación HU-10.7 del endpoint y de la transición `PENDING → CREDITED` está en la [evidencia](../evidence/HU-10-recompensas-finalizacion-mision.md). Esto no equivale a aceptación funcional de las HUs relacionadas.
 
 ## Trazabilidad
 
@@ -142,7 +142,7 @@ La inmutabilidad de `mission_reports` se impone en la aplicación (sin rutas de 
 | `combatStats` | Resumen de Combat | Que Combat acepte la propuesta de HU-72 |
 | `enemies`, `bossDefeated` | Resumen de Combat | Ídem |
 | `master` | Evidencia de HU-73 | Que Combat acepte el fragmento de HU-73 |
-| Recompensas `CREDITS`, `PRODUCT` y `EXPERIENCE` (finalización) | HU-10 | Diseño en el [contrato de HU-10](../contracts/hu-10-mission-completion-reward-v1.md); implementación pendiente (HU-10.5) |
+| Recompensas `CREDITS`, `PRODUCT` y `EXPERIENCE` (finalización) | HU-10 | Implementadas con snapshot, estado por línea y progresión opcional; ver [contrato](../contracts/hu-10-mission-completion-reward-v1.md) y [HU-10.7](../evidence/HU-10-recompensas-finalizacion-mision.md) |
 | Recompensa `EPIC` | HU-73 con Player/Inventory | Que Catalog tenga la épica como producto |
 
 ## Matriz CA → escenario → salida esperada
@@ -166,7 +166,7 @@ Escenarios con datos en los [fixtures](../contracts/hu-74-mission-report-fixture
 | --- | --- | --- |
 | Missions | `mission_reports`, `mission_report_rewards`, `ReportBuilder` dentro del cierre y rutas de reporte e historial | Team Beta (HU-74.2) |
 | Web | Reporte e historial en `src/features/missions/` | Team Beta (HU-74.3) |
-| HU-10 | Calcular y acreditar recompensas y actualizar el estado de sus líneas | Contrato de liquidación diseñado ([contrato de HU-10](../contracts/hu-10-mission-completion-reward-v1.md)); Tasks HU-10.2 a HU-10.7 pendientes |
+| HU-10 | Calcular y acreditar recompensas y actualizar el estado de sus líneas | Implementado y verificado técnicamente por HU-10.7; aceptación de HU-10 pendiente |
 
 ## Decisiones pendientes (visibles, no resueltas)
 

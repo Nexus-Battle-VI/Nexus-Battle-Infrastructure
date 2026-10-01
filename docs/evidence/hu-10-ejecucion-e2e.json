@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "kind": "hu-10-settlement-e2e",
+  "startedAt": "2026-10-01T05:55:36.272Z",
+  "finishedAt": "2026-10-01T05:56:12.497Z",
+  "repositories": [
+    {
+      "repo": "Nexus-Battle-Missions",
+      "sha": "56bb6481498fc2834e1cd2d9e55266d4eb88e2bd",
+      "dirty": false
+    },
+    {
+      "repo": "Nexus-Battle-Player-Inventory",
+      "sha": "809ba1609d5157eef15724bfcb0cab7f5d9e8c2f",
+      "dirty": false
+    },
+    {
+      "repo": "Nexus-Battle-Wallet",
+      "sha": "c8d8f4357a14d605239e6abddc54bb8120b21d5a",
+      "dirty": false
+    },
+    {
+      "repo": "Nexus-Battle-Combat",
+      "sha": "2c568394dc77362ddcd5016592339680a264a526",
+      "dirty": true
+    }
+  ],
+  "services": [
+    {
+      "name": "Missions",
+      "mode": "REAL",
+      "persistence": "PostgreSQL 17 (Testcontainers)"
+    },
+    {
+      "name": "Player-Inventory",
+      "mode": "REAL",
+      "persistence": "MongoDB 8 replica (Testcontainers)"
+    },
+    {
+      "name": "Wallet",
+      "mode": "REAL",
+      "persistence": "PostgreSQL 17 (Testcontainers)"
+    },
+    {
+      "name": "HMAC interno Missions→Player-Inventory",
+      "mode": "REAL",
+      "persistence": "sin estado"
+    },
+    {
+      "name": "HMAC interno Missions→Wallet",
+      "mode": "REAL",
+      "persistence": "sin estado"
+    },
+    {
+      "name": "Combat XP rolls (HU-09)",
+      "mode": "REAL",
+      "persistence": "MongoDB 8 replica (Testcontainers)"
+    },
+    {
+      "name": "Resultado de simulación Combat",
+      "mode": "SUBSTITUTED",
+      "persistence": "doble declarado para desenlaces HU-10"
+    },
+    {
+      "name": "Catalog read",
+      "mode": "SUBSTITUTED",
+      "persistence": "respondedor 404 de prueba, solo para producto no-HEROE"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "T-00",
+      "title": "Sanidad del stack real",
+      "status": "PASS",
+      "assertions": [
+        "Missions, Player-Inventory y Wallet responden y migran con sus motores reales."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-01",
+      "title": "COMPLETED acredita XP",
+      "status": "PASS",
+      "assertions": [
+        "XP 10→31",
+        "ledger MISSION_COMPLETION único",
+        "progresión devuelta por Player-Inventory."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-02",
+      "title": "COMPLETED acredita créditos",
+      "status": "PASS",
+      "assertions": [
+        "saldo 0→7",
+        "un ledger Wallet."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-03",
+      "title": "COMPLETED acredita producto",
+      "status": "PASS",
+      "assertions": [
+        "inventario 0→2",
+        "operación UUID v5 entregada por la ruta real."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-04",
+      "title": "COMPLETED combinado",
+      "status": "PASS",
+      "assertions": [
+        "tres deliveries independientes CREDITED."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-05",
+      "title": "FAILED acredita XP de finalización",
+      "status": "PASS",
+      "assertions": [
+        "delivery XP CREDITED con resultado FAILED."
+      ],
+      "notes": [
+        "Desenlace Combat sustituido y declarado."
+      ]
+    },
+    {
+      "id": "T-06",
+      "title": "FAILED excluye entries no configuradas",
+      "status": "PASS",
+      "assertions": [
+        "no hay créditos ni producto con grantOn=[COMPLETED]."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-07",
+      "title": "IN_PROGRESS no liquida",
+      "status": "PASS",
+      "assertions": [
+        "matrícula abierta sin deliveries ni efectos externos."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-08",
+      "title": "VOIDED no liquida",
+      "status": "PASS",
+      "assertions": [
+        "no se crean deliveries ni autoridades externas reciben entrega."
+      ],
+      "notes": [
+        "Rechazo Combat sustituido y declarado."
+      ]
+    },
+    {
+      "id": "T-09",
+      "title": "Snapshot A→B",
+      "status": "PASS",
+      "assertions": [
+        "liquida XP 21, créditos 7 y producto 2 de A, no los valores B."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-10",
+      "title": "Replay completo",
+      "status": "PASS",
+      "assertions": [
+        "no duplica XP, ledger Wallet, inventario ni deliveries."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-11",
+      "title": "Wallet caída temporal y recovery",
+      "status": "PASS",
+      "assertions": [
+        "XP/producto CREDITED mientras crédito queda PENDING y luego CREDITED."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-12",
+      "title": "Player-Inventory caída temporal y recovery",
+      "status": "PASS",
+      "assertions": [
+        "crédito CREDITED mientras XP/producto quedan PENDING y luego CREDITED."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-13",
+      "title": "Convivencia HU-09",
+      "status": "PASS",
+      "assertions": [
+        "dos operationIds y líneas con fuentes HU-09/HU-10 separadas."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-14",
+      "title": "Convivencia HU-72 loot",
+      "status": "SKIPPED",
+      "assertions": [],
+      "notes": [
+        "Requiere la cadena Combat+perfil Catalog real; no se suplanta con combatLog fabricado."
+      ]
+    },
+    {
+      "id": "T-15",
+      "title": "Convivencia HU-73 epic",
+      "status": "SKIPPED",
+      "assertions": [],
+      "notes": [
+        "Requiere una aparición épica real y determinista de Combat; no se usa un doble oculto."
+      ]
+    },
+    {
+      "id": "T-16",
+      "title": "Integridad de identidad",
+      "status": "PASS",
+      "assertions": [
+        "solo player A recibe XP, créditos y producto."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-17",
+      "title": "Dificultad efectiva",
+      "status": "PASS",
+      "assertions": [
+        "matrícula HEROIC usa XP 34 del snapshot."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-18",
+      "title": "Reporte PENDING→CREDITED",
+      "status": "PASS",
+      "assertions": [
+        "endpoint real muestra pendiente antes del ciclo y credited después."
+      ],
+      "notes": []
+    },
+    {
+      "id": "T-19",
+      "title": "Créditos no alteran HU-22",
+      "status": "PASS",
+      "assertions": [
+        "victory_progress y weekly_chest_count permanecen 0."
+      ],
+      "notes": []
+    }
+  ],
+  "summary": {
+    "passed": 18,
+    "failed": 0,
+    "skipped": 2
+  },
+  "limitations": [
+    "Combat no se declara integrado en esta cadena: el perfil real de Player-Inventory consulta Catalog, que no forma parte del runner HU-10. El desenlace se controla con el doble de desarrollo de Combat y los escenarios T-14/T-15 quedan SKIPPED, no PASS.",
+    "El respondedor Catalog de prueba devuelve 404 solamente para que Player-Inventory ejecute su adaptador HTTP real y entregue un producto sintético no-HEROE. No representa un Catalog real ni contenido económico aprobado.",
+    "El testimonio del jugador se sustituye por un verificador Nest de prueba. Las fronteras internas sí usan HMAC real con un secreto sintético.",
+    "Los importes 21/34 XP, 7/9 créditos y 2/3 productos son fixtures técnicos distintivos; no son valores de juego aprobados."
+  ]
+}

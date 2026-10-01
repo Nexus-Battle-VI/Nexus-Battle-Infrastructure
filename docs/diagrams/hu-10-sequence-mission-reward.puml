@@ -1,5 +1,5 @@
 @startuml hu-10-sequence-mission-reward
-title HU-10 — Secuencia: liquidación de recompensas de finalización de misión (diseño HU-10.1)
+title HU-10 — Secuencia: liquidación de recompensas de finalización de misión
 
 actor Jugador
 participant "Web" as Web

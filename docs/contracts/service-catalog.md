@@ -258,9 +258,9 @@ Todas las rutas de Missions están integradas en `develop` (Tasks #366, #370, #3
 
 En el despliegue (`compose/nodes/app.yml`), Missions usa los drivers `http`, el planificador de HU-72, el barrido de experiencia de HU-09 y el reconciliador de matrículas `PENDING`. **Esa configuración solo debe llegar a producción cuando las imágenes de Missions, Combat y Player/Inventory publicadas desde `main` ya incluyan estas rutas**: si no, cada matrícula queda en `PENDING` hasta que el reconciliador la expire.
 
-#### Diseño HU-10.1 — liquidación de recompensas de misión (**NO implementado**)
+#### HU-10 — liquidación de recompensas de misión (implementada; evidencia técnica)
 
-[hu-10-mission-completion-reward-v1](hu-10-mission-completion-reward-v1.md) **propone** tres cambios internos aditivos, **ninguno vigente todavía**, que este catálogo no lista como capacidad hasta que se integren HU-10.2, HU-10.3 y HU-10.5: (1) un origen `MISSION_COMPLETION` en `POST /api/internal/v1/players/:playerId/heroes/:heroId/experience` (Player-Inventory, `missions`); (2) `POST /api/internal/v1/wallet/credits/mission-reward` (Wallet, solo `missions`; **no** reutiliza `battle-reward`, que es de HU-22/JcJ); (3) `rewards[].progression` opcional en el reporte de Missions. Los productos reutilizan `POST /api/internal/v1/inventory/grants` sin cambios.
+[hu-10-mission-completion-reward-v1](hu-10-mission-completion-reward-v1.md) ya se aplica: (1) la ruta de experiencia acepta el origen `MISSION_COMPLETION` para `missions`; (2) Wallet expone `POST /api/internal/v1/wallet/credits/mission-reward`, también solo para `missions`, sin reutilizar el `battle-reward` de HU-22; (3) el reporte de Missions publica `rewards[].progression` opcional para la XP acreditada. Los productos reutilizan `POST /api/internal/v1/inventory/grants` con su `operationId` UUID v5. La cadena HU-10.7 verificó las fronteras reales y sus recuperaciones; consultar la [evidencia](../evidence/HU-10-recompensas-finalizacion-mision.md). La aceptación funcional de HU-10 sigue pendiente.
 
 ### Notifications
 
