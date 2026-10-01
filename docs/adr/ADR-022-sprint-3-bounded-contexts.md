@@ -1,6 +1,6 @@
 # ADR-022 — Contextos acotados de Sprint 3: Tournament y Chatbot
 
-- **Estado:** Proposed
+- **Estado:** **Accepted** el 2026-09-30 — validado por Product Owners y Scrum Masters (nombres, alcance y Teams)
 - **Fecha:** 2026-09-30
 - **Decide:** Arquitectura, con validación obligatoria de Product Owners y Scrum Masters (nombre, alcance y Team de cada repositorio, conforme a [ADR-001](ADR-001-repository-strategy.md))
 - **Relacionado:** [ADR-001](ADR-001-repository-strategy.md), [ADR-002](ADR-002-backend-stack.md), [ADR-005](ADR-005-data-strategy.md), [ADR-006](ADR-006-messaging.md), [ADR-007](ADR-007-aws-cost-optimized-platform.md), [ADR-011](ADR-011-deployment-topology.md), [ADR-019](ADR-019-sprint-2-bounded-contexts.md), [ADR-020](ADR-020-realtime-combat.md), [EPIC-04 #4](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/4), [EPIC-09 #9](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/9), [EN-012 #198](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/198), [EN-025 #204](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/204), [EN-032 #461](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/461)
@@ -56,8 +56,8 @@ Seis hechos verificados condicionan la decisión:
 
 | Contexto | Repositorio | Datos que posee en exclusiva | Motor | Puerto | Ruta pública | Team |
 | --- | --- | --- | --- | ---: | --- | --- |
-| Tournament | `Nexus-Battle-Tournament` | Torneos y su calendario, equipos inscritos y sus miembros, inscripciones y pagos de cupo, bracket, justas y su vínculo con la sala de Combat, resultados confirmados, entrega de premios | PostgreSQL | 3010 | `/api/v1/tournaments*` | Team Beta |
-| Chatbot | `Nexus-Battle-Chatbot` | Base de conocimiento (entradas, variaciones, intenciones, prioridades), conversaciones e historial, valoraciones, tickets de escalamiento, versiones del modelo con sus métricas, métricas de uso | PostgreSQL | 3011 | `/api/v1/chatbot*` | **Pendiente de PO/SM** (propuesta: Team Alfa, por los responsables de HU-47 a HU-54) |
+| Tournament | `Nexus-Battle-Tournament` | Torneos y su calendario, equipos inscritos y sus miembros, inscripciones y pagos de cupo, bracket, justas y su vínculo con la sala de Combat, resultados confirmados, entrega de premios | PostgreSQL | 3010 | `/api/v1/tournaments*` | Team Beta y Team Gama |
+| Chatbot | `Nexus-Battle-Chatbot` | Base de conocimiento (entradas, variaciones, intenciones, prioridades), conversaciones e historial, valoraciones, tickets de escalamiento, versiones del modelo con sus métricas, métricas de uso | PostgreSQL | 3011 | `/api/v1/chatbot*` | Team Alfa |
 
 Las rutas de administración de cada contexto viven **bajo su propio prefijo**
 (`/api/v1/tournaments/admin/...`, `/api/v1/chatbot/admin/...`), para que Caddy no
@@ -296,9 +296,20 @@ comprobarlo antes del `apply`.
   - Retención del historial del chatbot (la política de privacidad ya prevé su
     borrado).
   - La HU de JcE para Jugar Online.
-- No asigna el Team del Chatbot: lo validan Product Owners y Scrum Masters.
 
 ## Evidencia de aceptación
 
-Pendiente. Se registrará aquí la validación de Product Owners y Scrum Masters
-(nombres, alcance y Team de los dos repositorios), como en ADR-019.
+- Validado por Product Owners y Scrum Masters el 2026-09-30: nombres, alcance y
+  existencia de los dos repositorios, la excepción de Python para Chatbot y el
+  plan de creación y despliegue.
+- Team propietario asignado el 2026-09-30: **Chatbot → Team Alfa**;
+  **Tournament → Team Beta y Team Gama** (propiedad compartida en `CODEOWNERS`).
+
+## Estado de despliegue
+
+| Estado | Vigente desde |
+| --- | --- |
+| **Accepted** | 2026-09-30 |
+| Repositorios creados con CI verde, imagen publicada y `main`/`develop` protegidas | Pendiente |
+| Bases y usuarios creados en el nodo `data` | Pendiente |
+| Nodo `app` con los dos servicios | Pendiente |

@@ -15,12 +15,12 @@
 | Missions | [Nexus-Battle-Missions](https://github.com/Nexus-Battle-VI/Nexus-Battle-Missions) | 3007 | Beta | `/api/docs` | PostgreSQL |
 | Auction | [Nexus-Battle-Auction](https://github.com/Nexus-Battle-VI/Nexus-Battle-Auction) | 3008 | Gama | `/api/docs` | PostgreSQL |
 | Wallet | [Nexus-Battle-Wallet](https://github.com/Nexus-Battle-VI/Nexus-Battle-Wallet) | 3009 | Gama | `/api/docs` | PostgreSQL |
-| Tournament | `Nexus-Battle-Tournament` (previsto) | 3010 | Beta | `/api/docs` | PostgreSQL |
-| Chatbot | `Nexus-Battle-Chatbot` (previsto) | 3011 | Pendiente de PO/SM | `/api/docs` (FastAPI) | PostgreSQL |
+| Tournament | `Nexus-Battle-Tournament` (previsto) | 3010 | Beta + Gama | `/api/docs` | PostgreSQL |
+| Chatbot | `Nexus-Battle-Chatbot` (previsto) | 3011 | Alfa | `/api/docs` (FastAPI) | PostgreSQL |
 
 Combat, Missions, Auction y Wallet salen de [ADR-019](../adr/ADR-019-sprint-2-bounded-contexts.md) (`Accepted`). Missions ya expone en `develop` el tablón, la matrícula, la estrategia, el reporte, la dificultad, los logros y la administración del contenido (HU-70 a HU-76). **Combat ya expone rutas de salas y un canal WebSocket** (ver su sección). Caddy reserva `/api/v1/combat*`, `/api/v1/missions*`, `/api/v1/auctions*` y `/api/v1/wallet*`. Los contratos de los demás se añadirán aquí cuando cada Historia de Usuario los defina.
 
-Tournament y Chatbot salen de [ADR-022](../adr/ADR-022-sprint-3-bounded-contexts.md) (`Proposed`): todavía **no existen** como repositorio ni como despliegue. Reservarán `/api/v1/tournaments*` y `/api/v1/chatbot*`, con sus rutas de administración bajo el mismo prefijo. Chatbot es la única excepción a ADR-002 (Python con FastAPI): su OpenAPI lo genera FastAPI, no `@nestjs/swagger`, y obedece la misma regla de no publicarse en producción.
+Tournament y Chatbot salen de [ADR-022](../adr/ADR-022-sprint-3-bounded-contexts.md) (`Accepted`): todavía **no existen** como repositorio ni como despliegue. Reservarán `/api/v1/tournaments*` y `/api/v1/chatbot*`, con sus rutas de administración bajo el mismo prefijo. Chatbot es la única excepción a ADR-002 (Python con FastAPI): su OpenAPI lo genera FastAPI, no `@nestjs/swagger`, y obedece la misma regla de no publicarse en producción.
 
 La especificación OpenAPI **se genera desde el código** con `@nestjs/swagger`, por lo que no puede quedar desincronizada de la implementación. Está deshabilitada en producción salvo decisión explícita.
 
