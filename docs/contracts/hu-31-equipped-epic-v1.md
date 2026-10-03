@@ -81,6 +81,7 @@ Ruta sin cambios: `GET /api/internal/v1/players/{playerId}/equipped-hero` ([cont
     "epicProductId": "3f1e...",          // productId canonico de Catalog
     "epicReference": "golpe-de-defensa", // alias/sku si Catalog lo publica
     "name": "Golpe de defensa",
+    "imageUrl": "https://.../golpe-de-defensa.png", // solo presentacion (Web); Combat la ignora (lista blanca de su parser)
     "compatibleHeroSubtype": "GUERRERO_TANQUE",
     "baseEffect": { "...": "..." } ,     // objeto de efecto, o null si "No aplica" (Chaman/Medico)
     "specificEffect": { "...": "..." },  // objeto de efecto, siempre presente en la definicion
