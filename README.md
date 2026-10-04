@@ -66,6 +66,8 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [019](docs/adr/ADR-019-sprint-2-bounded-contexts.md) | Contextos acotados de Sprint 2: Combat, Missions, Auction y Wallet | Accepted |
 | [020](docs/adr/ADR-020-realtime-combat.md) | Tiempo real para Jugar Online | Accepted |
 | [021](docs/adr/ADR-021-combat-randomness-and-effect-table.md) | Aleatoriedad de Combat y mapeo uniforme a la tabla de efectos | Accepted |
+| [022](docs/adr/ADR-022-sprint-3-bounded-contexts.md) | Contextos acotados de Sprint 3: Tournament y Chatbot | Accepted |
+| [023](docs/adr/ADR-023-combat-ai-architecture.md) | Arquitectura de inteligencia artificial de combate | Proposed |
 
 El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 `Accepted` con evidencia de aprobación registrada.
