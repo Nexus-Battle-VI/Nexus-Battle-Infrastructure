@@ -16,12 +16,23 @@ participantes `AI` no tienen perfil y su turno se cierra sin acción» y que
 «JcE de Jugar Online queda dentro de Combat» cuando exista la HU — esa HU ya
 existe (`HU-93 #553`).
 
-El único comportamiento de decisión automática que existe hoy es
-`chooseAction()`, una función cerrada dentro de
-`src/application/services/MissionSimulation.ts` (línea 268) que evalúa las tres
-rotaciones priorizadas de HU-71 y cae a ataque básico sin Poder si ninguna es
-viable (CA-03 de HU-71). Está **acoplada** a la simulación de Misiones: no es
-una clase independiente, no implementa ninguna interfaz reusable y no la
+El comportamiento de decisión automática que existe hoy **no es uno solo**.
+Dentro de `src/application/services/MissionSimulation.ts` conviven dos
+mecanismos distintos, ninguno extraído a una interfaz reusable:
+
+- `chooseAction()` (línea 268), que decide la acción del **héroe** del
+  jugador evaluando las tres rotaciones priorizadas de HU-71 y cayendo a
+  ataque básico sin Poder si ninguna es viable (CA-03 de HU-71).
+- Reglas simples del **enemigo**, condicionadas por su campo `ai`
+  (`AGGRESSIVE`/`GUARDED`/`BOSS`): un `GUARDED` se defiende cada tercer turno
+  (`if (base.ai === 'GUARDED' && turns % 3 === 0) { guard = 4; ... }`) y un
+  `BOSS` cambia a modo enfurecido según su salud restante
+  (`base.ai === 'BOSS' && enemyHealth * 100 <= enemy.maxHealth * (base.enrageBelowPercent ?? 50)`),
+  mientras que `AGGRESSIVE`/el comportamiento por defecto ataca sin condición
+  especial.
+
+Ambos mecanismos están **acoplados** a `MissionSimulation.ts`: ninguno es una
+clase independiente, ninguno implementa todavía `AiDecisionPort` y ninguno lo
 consume JcE porque JcE todavía no tiene IA. El motor de aleatoriedad
 autoritativo ya existe y está separado
 (`Mt19937BoxMullerRandomSequenceFactory`, `RandomIndex`, `RandomSeed`,
@@ -44,17 +55,21 @@ Enablers `#555`/`#556` tengan una base común antes de escribir código.
 | `BattleDecisionState`, `LegalAction`, `ActionIntent`, `AiDecisionPort` | No existen en `src/` |
 | `RandomPolicy`, `RuleBasedPolicy`, `MctsPolicy`, `NeuralPolicy` | No existen en `src/` |
 | `CombatDecisionEvent` | No existe en `src/` |
-| `chooseAction()` | Existe, acoplado a `MissionSimulation.ts`, no extraído |
-| Participante `AI` | Modelado estructuralmente (`ParticipantKind.Ai`); sin turno autónomo |
+| `chooseAction()` (héroe) | Existe, acoplado a `MissionSimulation.ts`, no extraído |
+| Reglas de enemigo `AGGRESSIVE`/`GUARDED`/`BOSS` | Existen, acopladas a `MissionSimulation.ts`, no extraídas |
+| Participante `AI` (JcE) | Modelado estructuralmente (`ParticipantKind.Ai`); sin turno autónomo |
 | RNG autoritativo | Existe y está centralizado (`Mt19937BoxMullerRandomSequenceFactory`) |
 
 ## Fuerzas / restricciones
 
 - `RNF-12` (microservicios) y [ADR-019](ADR-019-sprint-2-bounded-contexts.md)/[ADR-022](ADR-022-sprint-3-bounded-contexts.md): un bounded context se crea por propiedad de datos, no por capacidad técnica.
 - [ADR-007](ADR-007-aws-cost-optimized-platform.md): techo de **USD 100/mes**, sin RDS/DocumentDB/ECS/Fargate/EKS nuevos, S3 ya cerrado salvo la excepción de [ADR-016](ADR-016-product-asset-storage.md).
-- [ADR-021](ADR-021-combat-randomness-and-effect-table.md): el RNG autoritativo de Combat es único; ninguna política de decisión puede introducir una fuente paralela ni observar el valor futuro real.
+- [ADR-021](ADR-021-combat-randomness-and-effect-table.md): el RNG autoritativo de Combat es único; ninguna política de decisión puede introducir una fuente paralela ni observar el valor futuro real (semántica de stream vivo vs. stream de simulación detallada en «Políticas»).
 - `HU-93 #553`: alcance productivo actual es **Humano vs IA 1v1**, sin tocar `Nexus-Battle-Tournament`.
 - `EN-025 #204`: toda tecnología no impuesta por un requisito explícito debe pasar por comparación de alternativas antes de aprobarse como línea base.
+- `RF-14 / §7.6` (citado textualmente en `HU-93 #553`): «Jugar Online con participante controlado por IA y estrategias aprendidas a partir de partidas almacenadas» — el requisito de aprender de partidas, no solo de ejecutar reglas fijas, es funcional y no una preferencia técnica.
+- `EN-036 #555`: «El documento exige aprendizaje profundo» — el Enabler registra la exigencia de Deep Learning como motivación explícita para `MctsPolicy`/`NeuralPolicy`; no se localizó en los documentos de Infrastructure auditados un número de sección específico del curso para esa frase, así que aquí se cita la fuente verificada (el Enabler), no un `§` inventado.
+- `docs/architecture/hu-72-simulacion-mision.md` (fuente funcional: documento del curso §7.8.1/§7.8.5/§7.8.6/§7.8.8/§7.8.12, CA-03 de HU-72): «se aplican las mismas mecánicas de combate y el mismo motor de aleatoriedad que en las batallas en línea» — ya reflejado en «Combat manda» y en el RNG único de este ADR.
 
 ## Decisión
 
@@ -78,25 +93,53 @@ desarrolla.
                             |
                      AiDecisionPort
                             |
-          +-----------------+-------------------+
-          |                 |                   |
-     RandomPolicy      RuleBasedPolicy       MctsPolicy
-                                                |
-                                          teacher/offline
-                            |
-                       NeuralPolicy
-                            |
-                    ONNX Runtime Node
+      +----------------+----------------+----------------+
+      |                |                |                |
+ RandomPolicy    RuleBasedPolicy    MctsPolicy       NeuralPolicy
+      |                |                |                |
+      +----------------+----------------+----------------+
                             |
                        ActionIntent
                             |
-                     Combat Engine
+                     Combat valida de nuevo
                             |
-                 validación autoritativa
+                        Combat ejecuta
                             |
                            RNG
                             |
                        transición
+```
+
+Las cuatro políticas son implementaciones **hermanas** de `AiDecisionPort`: en
+runtime productivo, `NeuralPolicy` nunca invoca a `MctsPolicy` turno a turno
+— cada política resuelve `BattleDecisionState + legalActions → ActionIntent`
+de forma independiente, y Combat vuelve a validar el resultado sin importar
+cuál la produjo. `MctsPolicy` participa en runtime como una política más
+intercambiable (p. ej. para evaluación comparativa de `EN-036.5 #569`), no
+como un paso obligatorio antes de `NeuralPolicy`.
+
+La relación entre MCTS y la red neuronal es **offline, de entrenamiento**, no
+de ejecución en el turno: MCTS actúa como teacher que genera las etiquetas
+que luego entrena la MLP en PyTorch, que se exporta a ONNX para convertirse
+en `NeuralPolicy`:
+
+```text
+BattleDecisionState
+        |
+        v
+    MctsPolicy (teacher, offline)
+        |
+        v
+  etiquetas/distribuciones
+        |
+        v
+    entrenamiento PyTorch
+        |
+        v
+    exportación ONNX
+        |
+        v
+      NeuralPolicy (runtime productivo)
 ```
 
 **Combat manda.** La IA decide únicamente qué acción intentar entre acciones
@@ -142,10 +185,23 @@ ejecutarlo. Ninguna política puede mutar el agregado directamente.
 
 ### Políticas
 
+**Semántica única del RNG, antes de describir cada política:** Combat sigue
+siendo dueño de **toda** la aleatoriedad ([ADR-021](ADR-021-combat-randomness-and-effect-table.md)).
+Eso no significa que exista un solo stream físico para todo: el **stream
+vivo** de resolución (crítico, daño, efectos de la batalla productiva,
+`RandomIndex`/`RandomSeed` avanzando turno a turno) es distinto de cualquier
+**stream de simulación** que una búsqueda, un rollout o `RandomPolicy`
+necesiten consumir para explorar alternativas. Un stream de simulación nace
+de una semilla propia, aislada y explícita (nunca comparte cursor con la
+batalla real), y consumirlo jamás adelanta ni observa el próximo valor real
+que Combat vaya a usar para resolver la batalla en curso. Ambos stream siguen
+siendo responsabilidad de Combat — ninguna política implementa su propio
+generador paralelo; lo que cambia es cuál semilla/cursor consume cada uno.
+
 **`RandomPolicy`** — piso experimental. Elige exclusivamente entre
-`legalActions` usando la fuente de aleatoriedad aprobada del escenario de
-prueba/simulación. No debe confundirse con el RNG de resolución de las reglas
-de combate (crítico, daño, efectos), que sigue siendo exclusivo de
+`legalActions` usando un stream de simulación aislado del escenario de
+prueba/simulación, nunca el stream vivo de resolución de las reglas de
+combate (crítico, daño, efectos), que sigue siendo exclusivo de
 [ADR-021](ADR-021-combat-randomness-and-effect-table.md).
 
 **`RuleBasedPolicy`** — preserva el comportamiento determinista existente de
@@ -156,9 +212,9 @@ decide para `EN-035.3 #563`.
 
 **`MctsPolicy`** — teacher offline para generación/evaluación de decisiones,
 no la política productiva principal inicial. Debe operar sobre el motor/
-simulador real de Combat; no debe conocer el próximo RNG real, la semilla
-futura ni el cursor de RNG productivo — solo puede muestrear futuros
-simulados.
+simulador real de Combat, muestreando futuros mediante su propio stream de
+simulación aislado; no debe conocer el próximo RNG real, la semilla futura
+ni el cursor del stream vivo de resolución de la batalla productiva.
 
 **`NeuralPolicy`** — inferencia rápida en runtime, implementación de
 `AiDecisionPort`. Recibe `BattleDecisionState + CandidateAction` y produce un
