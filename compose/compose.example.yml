@@ -458,6 +458,7 @@ services:
       # Chatbot no ofrece rutas internas (ADR-022); el secreto solo hace que una
       # futura ruta interna nazca con su contrato en vez de responder 503.
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      CONVERSATION_CIPHER_KEY: ${CONVERSATION_CIPHER_KEY:-}
     depends_on:
       chatbot-migrate:
         condition: service_completed_successfully
