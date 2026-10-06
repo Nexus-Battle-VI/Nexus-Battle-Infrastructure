@@ -76,4 +76,4 @@ La task HU-47.3 los aplica. Este contrato fija la forma, la misma del resto de s
 
 ## 6. Lo que este contrato no hace
 
-No entrena ni promueve versiones (HU-54). No abre el widget (HU-47.4). No escala a un ticket (HU-49). No ejecuta acciones (HU-50).
+No entrena ni promueve versiones. Ese ciclo es [hu-54-model-versions-v1](hu-54-model-versions-v1.md): cada respuesta guardada queda ligada a la versión que la produjo. No abre el widget (HU-47.4). No escala a un ticket (HU-49). No ejecuta acciones (HU-50).
