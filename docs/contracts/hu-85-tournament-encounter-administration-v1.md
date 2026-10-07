@@ -9,7 +9,7 @@ Fuente vigente: [HU-85 #470](https://github.com/Nexus-Battle-VI/Nexus-Battle-Man
 
 Un administrador autorizado **prepara** y **inicia** cada justa del bracket de forma independiente. Preparar pide a Combat una sala y conserva su identificador; iniciar le pide arrancar esa misma sala. Cada acción deja un recibo con actor, justa, acción y fecha. No hay dependencia de la transmisión ni de un único operador: E1 y E2 (o cualquier par de justas con equipos resueltos) se preparan e inician sin esperarse.
 
-Fuera de alcance: avance del bracket por resultados (HU-80), cálculo de ganadores, premios, calendario, ausencias, reprogramación y cancelación (ver «Decisiones pendientes»).
+Fuera de alcance: avance del bracket por resultados (HU-80), cálculo de ganadores de un combate, premios, reprogramación y cancelación (ver «Decisiones pendientes»). La ventana de aceptación y el avance por ausencia sí están en este contrato (ver «Ventana de aceptación y avance por ausencia»).
 
 ## Vocabulario
 
@@ -119,7 +119,14 @@ Errores `{code,message}` (más `blockers` solo en `COMBAT_REJECTED_PARTICIPANTS`
 | C10 Combat caído al preparar, luego recupera | CA-01/CA-04 | 503; el reintento llega a la misma sala, sin duplicados |
 | C11 Mismo `operationId` en otra justa | CA-03 | 409 `OPERATION_CONFLICT` |
 | C12 Iniciar sin preparar | CA-03 | 409 `ENCOUNTER_NOT_PREPARED` |
-| C13 Paso del tiempo sin iniciar | CA-03 | sin derrota, ganador ni cierre automáticos; nada pasa a `FINISHED` por ausencia |
+| C13 Iniciar mucho después de la hora | CA-03 | iniciar fuera de hora no fija resultado, ganador ni cierre |
+| C14 Aceptar antes, dentro y después de la ventana | Decisión de Carlos | `ACCEPTANCE_NOT_OPEN`, 200, `ACCEPTANCE_CLOSED` |
+| C15 Equipo listo = todos sus integrantes | Decisión de Carlos | listo solo si aceptan todos; aceptar es idempotente; ajenos 403 |
+| C16 Solo un equipo listo | Decisión de Carlos | avanza ese equipo; `reason ABSENCE`, sin sala |
+| C17 Ninguno completo | Decisión de Carlos | avanza el de más jugadores listos; empate, sorteo registrado |
+| C18 Ambos listos o sala ya preparada | Decisión de Carlos | sin avance por ausencia |
+| C19 Barrido repetido, dos instancias, caída a medias | Decisión de Carlos | una sola resolución con el mismo ganador |
+| C20 Rondas posteriores | Decisión de Carlos | sin horario: no abren ventana ni se resuelven |
 
 Ejemplos de solicitud y respuesta de error en [hu-85-tournament-encounter-administration-v1.json](hu-85-tournament-encounter-administration-v1.json).
 
@@ -137,19 +144,50 @@ La exclusión es **por justa** (serialización por `torneo|justa` en el servicio
 
 El archivo JSON de ejemplos contiene exclusivamente datos de prueba (`t-1`, `account-admin-1`, `room-e1`). No son valores de producción ni identificadores reales. Los adaptadores de Combat en memoria y los datos locales de Web son dobles de prueba, deben identificarse como tales y no sustituyen la verificación contra Combat real (HU-85.4).
 
-## Regla firme de la HU: sin derrotas automáticas
+## Ventana de aceptación y avance por ausencia
 
-La HU #470 prohíbe asignar derrotas automáticas por ausencia sin una regla aprobada. Por eso Preparar, Iniciar y los rechazos **nunca** escriben resultado, ganador, cierre ni estado `FINISHED`: el único origen de un resultado es el registro autoritativo de Combat (HU-83). El paso del tiempo, una justa sin iniciar o una fecha vencida no cambian ninguna justa. Caso de prueba **C13** (CA-03): un año después de la fecha del torneo ninguna justa tiene resultado ni cierre, un rechazo no cambia nada y el administrador aún puede iniciar sin que eso concluya la justa.
+**Origen:** decisión de Carlos (compañero de equipo) comunicada por chat. **Pendiente de reflejarse en la HU #470 y de aprobación del Product Owner.** Sustituye a la regla anterior «sin derrotas automáticas por ausencia»: ahora el avance por ausencia existe, con las condiciones de abajo. Ninguna otra decisión de la HU cambia.
+
+Reglas:
+
+1. **Hora programada.** Cada justa tiene una hora programada que se define al crear el torneo. Hoy esa hora es el inicio del torneo (`startsAt`) para las justas de la primera ronda. Las rondas posteriores **no tienen horario definido**: no abren ventana ni se resuelven por ausencia hasta que se defina.
+2. **Ventana de aceptación.** Desde la hora programada los equipos disponen de **2 minutos** para aceptar el combate (por ejemplo, torneo a las 19:00, ventana de 19:00 a 19:02).
+3. **Equipo listo.** Un equipo está listo solo cuando aceptan **todos** sus integrantes. En 1v1 es el jugador; en 2v2 y 3v3, todo el equipo.
+4. **Al cerrar la ventana:**
+   - Ambos equipos listos: no hay avance por ausencia; se juega el combate (lo prepara e inicia el administrador, como hasta ahora).
+   - Solo un equipo listo: avanza ese equipo.
+   - Ninguno listo: avanza el equipo con **más jugadores listos**; si empatan (incluido 0 a 0) se **sortea** con probabilidad igual y se registra que fue un sorteo.
+5. **Cómo se registra.** El avance cuenta como **victoria normal**, pero se distingue de un combate: la justa queda `FINISHED`, `result.reason = ABSENCE`, `result.outcome = WIN`, `result.winnerTeamLabel` = `teamId` del equipo que avanza, sin sala ni eventos de Combat. La resolución guarda además el tipo (`ONE_TEAM_READY`, `MORE_PLAYERS_READY` o `DRAW`) y cuántos jugadores listos tenía cada equipo.
+6. **Una sola vez.** Hay a lo sumo una resolución por justa, aunque haya varias instancias del servicio o reintentos. Si el proceso cae después de guardarla y antes de cerrar la justa, el siguiente barrido la completa con el mismo ganador.
+7. **Sala ya preparada.** Una justa que el administrador ya preparó (tiene sala de Combat) no se resuelve por ausencia: la administra el administrador.
+
+Rutas (cualquier sesión autenticada, bajo `/api/v1/tournaments`):
+
+| Ruta | Cuerpo | Resultado |
+| --- | --- | --- |
+| `POST /:tournamentId/matches/:matchId/ready` | ninguno; el jugador sale del JWT | 200 `ReadinessView` |
+| `GET /:tournamentId/matches/:matchId/readiness` | — | 200 `ReadinessView` |
+
+`ReadinessView`: `scheduledAt`, `acceptanceDeadline`, `windowOpen`, `teams[{teamId, ready, members[{playerId, accepted}]}]` y `resolution` (`null` o `{winnerTeamId, kind, readyCounts, resolvedAt}`).
+
+Errores: 403 `NOT_A_PARTICIPANT` (no integra ninguno de los dos equipos); 404 `TOURNAMENT_NOT_FOUND` / `ENCOUNTER_NOT_FOUND`; 409 `BRACKET_NOT_PUBLISHED`, `PARTICIPANTS_UNRESOLVED`, `NOT_SCHEDULED`, `ACCEPTANCE_NOT_OPEN`, `ACCEPTANCE_CLOSED`, `ENCOUNTER_FINISHED`.
+
+Casos de prueba: **C14** ventana (antes, dentro, después); **C15** equipo listo = todos, idempotencia y no integrantes; **C16** un solo equipo listo; **C17** más jugadores listos y sorteo, en 1v1, 2v2 y 3v3; **C18** ambos listos o sala ya preparada; **C19** barrido repetido, dos instancias y caída a medias; **C20** rondas posteriores sin horario.
+
+Persistencia: migración `005-tournament-absences`, solo de adición: `tournament_encounter_readiness` (único `(torneo, justa, jugador)`) y `tournament_encounter_absences` (único `(torneo, justa)`).
+
+Fuera de esta decisión, sin cambios: Preparar e Iniciar nunca escriben resultado, ganador ni cierre; el único otro origen de un resultado es el registro autoritativo de Combat (HU-83). Iniciar fuera de hora (caso C13) no concluye la justa.
 
 ## Decisiones pendientes — NO APROBADAS
 
 Estas decisiones **no** se implementan como reglas; la propuesta solo indica el comportamiento seguro por omisión.
 
-1. **Ausencias, calendario, reprogramación y cancelación.** No existe regla aprobada, así que HU-85 no implementa reprogramar ni cancelar justas ni reaccionar a una fecha vencida. Lo único firme viene de la HU y se cumple: **no se asignan derrotas ni ganadores automáticos por ausencia** (ver «Regla firme de la HU»).
-2. **Tamaño de equipo.** El contrato de torneo usa equipos de dos; Combat hoy fija dos equipos × dos humanos. La discusión de «hasta 6 por batalla» no está aprobada y esta propuesta no la soporta.
+1. **Reprogramación y cancelación.** Carlos pidió no permitir reprogramar ni cancelar por justa en este alcance, sin más detalle (quién, en qué condiciones, qué pasa con las dependencias del bracket). HU-85 no implementa esas acciones.
+2. **Tamaño de equipo.** Carlos indicó que el torneo admitirá 1v1, 2v2 y 3v3 (8 jugadores, 16 o 24), elegido al crear el torneo e igual para todas sus justas. Hoy el registro, el bracket y Combat solo soportan equipos de dos (Combat fija dos equipos × dos humanos), así que 1v1 y 3v3 requieren cambios en registro, bracket y Combat que no son de HU-85. La regla de ausencia de este contrato ya funciona para equipos de 1, 2 o 3 integrantes.
+5. **Horario de las rondas posteriores y avance del ganador.** Las rondas siguientes a la primera no tienen horario definido, y pasar al ganador a la siguiente ronda es de HU-80.
 3. **Registro de intentos rechazados.** La propuesta registra solo acciones aceptadas (CA-01 pide actor/justa/acción/fecha de lo ejecutado). Si el negocio quiere auditar intentos rechazados, es una decisión pendiente.
 4. **Iniciar sin transmisión.** La propuesta no exige ni consulta la transmisión (CA-02). Si algún día se exige coordinación con ella, requiere contrato nuevo.
 
 ## Validación pendiente
 
-Pruebas reales de los casos C1–C13 contra PostgreSQL y contra el servidor HTTP de Tournament; verificación contra Combat real documentando qué dependencias (Account, Inventory) son reales y cuáles dobles; revisión de este documento por los responsables de Tournament y Combat. Hasta entonces el contrato queda como propuesta.
+Pruebas reales de los casos C1–C20 contra PostgreSQL y contra el servidor HTTP de Tournament; verificación contra Combat real documentando qué dependencias (Account, Inventory) son reales y cuáles dobles; revisión de este documento por los responsables de Tournament y Combat. Hasta entonces el contrato queda como propuesta.

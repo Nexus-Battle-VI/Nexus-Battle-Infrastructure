@@ -4,18 +4,24 @@
   "status": "PROPUESTA_PENDIENTE_DE_REVISION",
   "testDataOnly": true,
   "pendingDecisionsNotApproved": [
-    "ausencias-calendario-reprogramacion-cancelacion-sin-derrotas-automaticas",
-    "tamano-de-equipo-2-vs-hasta-6",
-    "registro-de-intentos-rechazados"
+    "reprogramacion-y-cancelacion",
+    "horario-de-rondas-posteriores",
+    "tamano-de-equipo-1v1-y-3v3-en-registro-bracket-y-combat",
+    "registro-de-intentos-rechazados",
+    "avance-del-ganador-a-la-siguiente-ronda-HU-80"
   ],
   "examples": [
     {
       "case": "C1",
-      "criteria": ["CA-01"],
+      "criteria": [
+        "CA-01"
+      ],
       "request": {
         "method": "POST",
         "path": "/api/v1/tournaments/admin/t-1/matches/t-1:E1/prepare",
-        "body": { "operationId": "prep-e1-001" }
+        "body": {
+          "operationId": "prep-e1-001"
+        }
       },
       "response": {
         "status": 200,
@@ -36,11 +42,15 @@
     },
     {
       "case": "C7",
-      "criteria": ["CA-04"],
+      "criteria": [
+        "CA-04"
+      ],
       "request": {
         "method": "POST",
         "path": "/api/v1/tournaments/admin/t-1/matches/t-1:E1/start",
-        "body": { "operationId": "start-e1-001" }
+        "body": {
+          "operationId": "start-e1-001"
+        }
       },
       "retry": "misma solicitud repetida",
       "response": {
@@ -62,11 +72,15 @@
     },
     {
       "case": "C4",
-      "criteria": ["CA-03"],
+      "criteria": [
+        "CA-03"
+      ],
       "request": {
         "method": "POST",
         "path": "/api/v1/tournaments/admin/t-1/matches/t-1:E5/prepare",
-        "body": { "operationId": "prep-e5-001" }
+        "body": {
+          "operationId": "prep-e5-001"
+        }
       },
       "response": {
         "status": 409,
@@ -78,37 +92,158 @@
     },
     {
       "case": "C6",
-      "criteria": ["CA-03"],
+      "criteria": [
+        "CA-03"
+      ],
       "request": {
         "method": "POST",
         "path": "/api/v1/tournaments/admin/t-1/matches/t-1:E2/prepare",
-        "body": { "operationId": "prep-e2-001" }
+        "body": {
+          "operationId": "prep-e2-001"
+        }
       },
       "response": {
         "status": 422,
         "body": {
           "code": "COMBAT_REJECTED_PARTICIPANTS",
           "message": "Combat rechazó a un participante.",
-          "blockers": [{ "playerId": "player-3", "reason": "NO_EQUIPPED_HERO" }]
+          "blockers": [
+            {
+              "playerId": "player-3",
+              "reason": "NO_EQUIPPED_HERO"
+            }
+          ]
         }
       }
     },
     {
       "case": "C10",
-      "criteria": ["CA-01", "CA-04"],
+      "criteria": [
+        "CA-01",
+        "CA-04"
+      ],
       "request": {
         "method": "POST",
         "path": "/api/v1/tournaments/admin/t-1/matches/t-1:E3/prepare",
-        "body": { "operationId": "prep-e3-001" }
+        "body": {
+          "operationId": "prep-e3-001"
+        }
       },
       "responses": [
         {
           "attempt": 1,
           "status": 503,
-          "body": { "code": "SERVICE_UNAVAILABLE", "message": "Combat no está disponible." }
+          "body": {
+            "code": "SERVICE_UNAVAILABLE",
+            "message": "Combat no está disponible."
+          }
         },
-        { "attempt": 2, "status": 200, "note": "misma sala, sin duplicados" }
+        {
+          "attempt": 2,
+          "status": 200,
+          "note": "misma sala, sin duplicados"
+        }
       ]
+    },
+    {
+      "case": "C14",
+      "criteria": [
+        "Decisión de Carlos"
+      ],
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tournaments/t-1/matches/t-1:E1/ready"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "tournamentId": "t-1",
+          "encounterId": "t-1:E1",
+          "scheduledAt": "2026-10-12T19:00:00.000Z",
+          "acceptanceDeadline": "2026-10-12T19:02:00.000Z",
+          "windowOpen": true,
+          "teams": [
+            {
+              "teamId": "team-a",
+              "ready": false,
+              "members": [
+                {
+                  "playerId": "p0",
+                  "accepted": true
+                },
+                {
+                  "playerId": "q0",
+                  "accepted": false
+                }
+              ]
+            },
+            {
+              "teamId": "team-b",
+              "ready": false,
+              "members": [
+                {
+                  "playerId": "p1",
+                  "accepted": false
+                },
+                {
+                  "playerId": "q1",
+                  "accepted": false
+                }
+              ]
+            }
+          ],
+          "resolution": null
+        }
+      }
+    },
+    {
+      "case": "C14",
+      "criteria": [
+        "Decisión de Carlos"
+      ],
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tournaments/t-1/matches/t-1:E1/ready"
+      },
+      "note": "a las 19:02:01",
+      "response": {
+        "status": 409,
+        "body": {
+          "code": "ACCEPTANCE_CLOSED",
+          "message": "La ventana de dos minutos para aceptar el combate ya cerró."
+        }
+      }
+    },
+    {
+      "case": "C17",
+      "criteria": [
+        "Decisión de Carlos"
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/tournaments/t-1/matches/t-1:E2/readiness"
+      },
+      "note": "ningún equipo completo y empate 0 a 0: sorteo",
+      "response": {
+        "status": 200,
+        "body": {
+          "resolution": {
+            "winnerTeamId": "team-d",
+            "kind": "DRAW",
+            "readyCounts": [
+              0,
+              0
+            ],
+            "resolvedAt": "2026-10-12T19:02:05.000Z"
+          }
+        }
+      }
     }
+  ],
+  "decisionsFromCarlosPendingReflectInHu470": [
+    "ventana-de-aceptacion-de-2-minutos",
+    "equipo-listo-cuando-aceptan-todos",
+    "avance-por-ausencia-como-victoria-normal-registrada-aparte",
+    "sorteo-en-empate"
   ]
 }
