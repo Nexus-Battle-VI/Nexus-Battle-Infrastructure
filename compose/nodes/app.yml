@@ -317,6 +317,14 @@ services:
       # toda apuesta responde 503 y las recompensas quedan PENDING_CREDIT, y
       # con `NODE_ENV: development` el guard de arranque no lo advierte.
       WALLET_SERVICE_BASE_URL: http://wallet:3009
+      # HU-30: Combat captura la instantanea de drop y transfiere cada
+      # derecho contra Player/Inventory (misma URL de arriba) y notifica al
+      # ganador y al derrotado contra este servidor interno de Notifications
+      # -el mismo que ya atiende a Auction (AUCTION_OUTBID_HTTP_PORT), no uno
+      # nuevo-. Sin esta URL el cliente queda "no configurado": la liquidacion
+      # sigue transfiriendo la pieza, pero la notificacion de cada jugador
+      # queda pendiente hasta que se defina.
+      NOTIFICATIONS_SERVICE_BASE_URL: http://notifications:3005
     depends_on:
       combat-migrate:
         condition: service_completed_successfully
