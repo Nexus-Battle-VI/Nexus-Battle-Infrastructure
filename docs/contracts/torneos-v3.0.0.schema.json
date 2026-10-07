@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "urn:nexus-battle:torneos:3.0.0",
-  "title": "Torneos torneos-v3.0.0, revisión documental 3",
+  "title": "Torneos torneos-v3.0.0, revisión documental 4",
   "description": "Formas normativas nuevas. Relaciones con torneo/actor, reglas temporales, importe/política y conteos requieren validación autoritativa además del schema.",
   "definitions": {
     "EntryPolicy": {

@@ -1,6 +1,6 @@
 {
   "contractVersion": "torneos-v3.0.0",
-  "documentRevision": 3,
+  "documentRevision": 4,
   "dataScope": "DATOS_DE_PRUEBA; no cuentas, salas ni combates reales",
   "modeMapping": {
     "SOLO": {

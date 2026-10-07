@@ -2,7 +2,19 @@
 
 Estado: **contrato disponible; integración pendiente de entregas certificadas**. Refs Nexus-Battle-VI/Nexus-Battle-Management#470.
 
-## Último corte de entregas B/C — controles finales y límites
+## Último corte r4 — aceptación corregida, CI verde y upgrade condicionado
+
+Tournament [PR #12](https://github.com/Nexus-Battle-VI/Nexus-Battle-Tournament/pull/12), borrador, base 2679af4 y head/testedSHA **98628f73aa605cc239e1093fcfeb198821e281fd**. A leyó el reporte final del dueño: lint/format/typecheck/build, 323 unitarias/HTTP y 52 PostgreSQL reales, cero omitidas. No repitió esas suites. [CI 37660619651](https://github.com/Nexus-Battle-VI/Nexus-Battle-Tournament/actions/runs/37660619651) de calidad e imagen SUCCESS; GHCR omitido en PR, no despliegue. La entrega conserva fc7a95e/be54b0a/968738d como ancestros con dos correcciones normales; cuatro commits siguen siendo un solo PR, no la separación A5 solicitada.
+
+A verificó nueve escenarios dirigidos sobre fuentes limpias de 98628f7 (31 hashes, sin cambios durante la ejecución), con casos de uso reales y reloj/puertos en memoria. Siete revisan recuperación/3–3/3–0/primera aceptación: ya no existe el umbral de 10 s que cambiaba el cierre incompleto. Otro reproduce el intento a deadline−1 ms y el cierre antes del recibo: espera CLOSED/RESOLUTION_PENDING/ACCEPTANCE_PENDING; el 409 normal limpia intento/motivo, y el siguiente worker resuelve 0–0 con FAIR_COIN una sola vez, conservada tras retry. **B-RECOVERY-01C y B-ATTEMPT-RACE-01 quedan corregidos en componente.** No se inyectó caída SQL ni indisponibilidad en esa carrera. El noveno caso informa una incompatibilidad de forma histórica simulada, no un upgrade PostgreSQL real. Evidencia exacta en `evidencia/intentos-aceptacion-A-r2.json`; `intentos-aceptacion-A.json` conserva la carrera fallida de 968738d.
+
+**B-ACCEPTANCE-UPGRADE-01, condicional por entorno:** 007 cambia entre be54b0a (blob 0b78b20e626e02510447fb06dfab3cc67680b06e) y 98628f7 (9c517ad7647d3159c5c6d63bd823cb8dfd7fc038). No hay 008 en esa entrega. El código nuevo requiere pendingAcceptances; la forma anterior sin ese array produce TypeError en la reproducción en memoria. Las variantes con intentos pero sin failedAt también requieren normalización antes de aplicar validadores nuevos. B acredita upgrade **desde 001–004 publicadas**, no desde 007 preliminar; declara que su chat no fusionó/desplegó esas variantes. No se afirma que haya una base productiva afectada ni que se haya probado su upgrade. Consultar historial y JSON de cada entorno conservado: si 007 preliminar está aplicada, crear forward posterior al último nombre, normalizar arrays/marcas y sustituir función SQL sin alterar recibos/rosters/operaciones/decisiones/sorteos/salas. Reservar 008 solo si libre; de lo contrario el siguiente ordinal. Si no hay tal entorno conservado, documentar la comprobación y no exigir un puente sin destino. El servicio de pruebas B está detenido con datos retenidos; su existencia no certifica qué historial contiene.
+
+Combat [PR #86](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/86), 00764585d24cc973fdd24768e8d2503b4cc04b90: A reconsultó [CI 37655450014](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/actions/runs/37655450014), completado SUCCESS en calidad, Python e imagen, GHCR omitido. Se mantienen las pruebas ya leídas de C: 3526 generales, 68 Mongo seleccionadas locales y 248 Mongo CI. No se repiten ni se suman a B como un mismo recorrido.
+
+R4 documenta el intento privado y los motivos temporales/operativos compatibles con code:string; mantiene la versión pública torneos-v3.0.0, cuerpos, marcador numérico interno 3, rutas v1 y v2. Quedan pendientes telemetría previa al primer registro, recuperación de incidencias agotadas, Web/cuentas/premios reales y QA integrado. El typecheck de Web posterior a bde49b8 pasó; sigue sin testedSHA final de aceptación/navegador. Ningún test ni CI equivale a aceptación PO.
+
+## Corte anterior B/C be54b0a — controles finales y límites (histórico)
 
 B entregó [Tournament #12](https://github.com/Nexus-Battle-VI/Nexus-Battle-Tournament/pull/12) en borrador, develop 2679af4, head/testedSHA be54b0a108e676ec79dadbfb593dff9c0ceb435c. Su estado y `evidencia/chat-B-verificacion-final.json` informan lint/format/typecheck/build, 318 unitarias/HTTP y 50 PostgreSQL (cero omitidas), cobertura ramas 88.66%/85.52%. A revisó ese reporte y verificó el SHA/base/head del PR; no reejecutó sus suites. CI 37656818640 sigue en curso al corte consultado. Los resultados generales anteriores 316/fixtures dirigidos quedan sustituidos por esta entrega final.
 
@@ -34,7 +46,7 @@ Nuevo bloqueo **PRIZE-RECIPIENT-01**: reconsultada la ruta Inventory `GET /api/i
 
 [Contrato normativo](../../contracts/torneos-v3.0.0.md), [corte machine-readable](corte.json), [matriz completa](matriz.json), [borrador de tareas HU-85](../../tasks/hu-85-ampliacion-20261007.md).
 
-## Corrección B be54b0a — núcleo corregido, criterio incompleto pendiente
+## Corrección B be54b0a — núcleo corregido, criterio entonces pendiente (histórico)
 
 B sustituyó el commit 7910079 por `be54b0a108e676ec79dadbfb593dff9c0ceb435c`. A verificó checkout B limpio, fuentes src/test/support sin diferencias frente a ese commit y siete escenarios dirigidos (`evidencia/verificar-recuperacion-ventana-r2.cjs`): 3–3 produce intención COMBAT tras pausa de 10 s y tras pausa larga; primera aceptación a +42 s pasa pese a falta de ticks; GET muestra CLOSED/RESOLUTION_PENDING al deadline, sin mutar la decisión. Los recibos y el deadline se conservan. Estos dos defectos del corte anterior quedan **corregidos en componente**, no se mantiene su dictamen como si describiera be54b0a. A no inicia Combat ni accede a bases en este chequeo.
 
@@ -78,8 +90,9 @@ El checkout aislado de A se creó con git worktree porque el chat está asociado
 | 001–003 | archivo/registro/bracket publicados | hashes idénticos entre develop y checkout B |
 | 004-tournament-admin-actions | administración HU-85 publicada | hash idéntico; conservar |
 | 005-tournament-external-links | adaptación selectiva de enlaces si se recupera | reservado, no obligatorio |
-| 006-tournament-mode-members-progression | modalidad/miembros/proyección recuperada | archivo B observado; no commit entregado |
-| 007-tournament-round-acceptance-resolution | calendario/aceptaciones/resoluciones | reservado a B; implementación pendiente |
+| 006-tournament-mode-members-progression | modalidad/miembros/proyección recuperada | entregada en fc7a95e, PR12 borrador |
+| 007-tournament-round-acceptance-resolution | calendario/aceptaciones/resoluciones e intentos | entregada en 98628f7; upgrade desde 001–004 declarado por B |
+| 008 o siguiente ordinal libre | puente para 007 preliminar, si aplicada en entorno conservado | reserva condicional; historial/JSON/upgrade específico sin certificar |
 
 También existen 006-tournament-results-prizes y 007-tournament-broadcast **locales** en c9446f8. Esos nombres no se portan como sustitutos de 006/007 de esta base. Si la DDL local de enlaces/prizes/broadcast ya fue aplicada en un entorno reutilizado, se requiere puente incremental adaptado a su historial, no borrar/renombrar entradas de kysely_migration ni ejecutar CREATE repetido.
 
@@ -105,10 +118,10 @@ No se enviaron mensajes a chats externos: la coordinación se publica en archivo
 
 ## Evidencia, dictamen y próxima condición comprobable
 
-La matriz contiene los 23 recorridos requeridos con evidencia integrada **NO_EJECUTADO_POR_A**. A valida formas/schema/fixtures, calendario UTC, grafo y enlaces documentales; eso no acredita que el código ya aplique las reglas.
+La matriz contiene los 23 recorridos requeridos; distingue evidencia de componente dirigida por A, suites/DB del dueño y recorrido integrado **NO_EJECUTADO_POR_A**. A valida formas/schema/fixtures, calendario UTC, grafo y enlaces documentales; eso no acredita por sí solo que el código ya aplique las reglas.
 
 Los tres objetivos siguen pendientes de integración: 3v3 exige motor y seis humanos reales, árboles requieren QA desktop/móvil, HU-85 ampliada requiere worker/aceptación/ausencias durable y su avance. Las pruebas con dobles del dueño quedan separadas de pruebas de servicios reales y de aceptación humana.
 
-Condición de siguiente corte: commits B/C/D con contrato compatible y comandos/evidencia exactos; entonces ejecutar matriz y clean/upgrade en PostgreSQL/Mongo aislados. Para Wallet histórico, las versiones actuales fueron reconsultadas; WALLET-PRECISION-01/02 no se reabren ni se declaran corregidos sin reproducción sobre el SHA actual.
+Condición de siguiente corte: B98628f7/C0076458 entregados, falta SHA final D con contrato compatible y QA navegador sobre ese estado. Completar matriz integrada y comprobación de historial por entorno antes de reutilizar bases; las pruebas limpias/upgrade desde 001–004 declaradas por B no certifican 007 preliminar. Para Wallet histórico, las versiones actuales fueron reconsultadas; WALLET-PRECISION-01/02 no se reabren ni se declaran corregidos sin reproducción sobre el SHA actual.
 
 [PR documental preparado](PR-CONTRATO.md). No hay PR de implementación creado por A ni merge/despliegue. PixelLab, OBS/YouTube y plan 7 permanecen fuera de este paquete.

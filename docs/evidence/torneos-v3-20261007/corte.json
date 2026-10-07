@@ -195,13 +195,13 @@
     "commit": "c9446f8e3ccabd8eda14ff7fd3fde107d3361cf8",
     "verification": "git bundle verify: complete history, is okay"
   },
-  "documentRevision": 3,
-  "revisionObservedAtUtc": "2026-10-07T16:47:16Z",
+  "documentRevision": 4,
+  "revisionObservedAtUtc": "2026-10-07T17:47:31Z",
   "receivedTournamentCommit": {
     "sha": "fc7a95ebc1af4779755a1cfc037c560d470cdd56",
     "scope": "registro/modalidades/avance",
-    "hu85Commit": null,
-    "hu85Status": "working tree en adaptación; PG 5 tests declarados por B"
+    "hu85Commit": "98628f73aa605cc239e1093fcfeb198821e281fd",
+    "hu85Status": "PR12 borrador; 323/52 reportadas, CI calidad/imagen SUCCESS, A8 componentes conformes+1 diagnósticoJSON; no aceptación integrada"
   },
   "prizeRecipientDependency": {
     "inventoryDevelop": "7c76dda41b03b6bb5934b86ce00430fb8cfdbfd2",
@@ -215,5 +215,29 @@
     "TournamentAllowed": false,
     "pendingCode": "PRIZE_RECIPIENT_CONTRACT_REQUIRED",
     "responsible": "PRIZE_OPERATIONS"
+  },
+  "latestDeliveries": {
+    "observedAtUtc": "2026-10-07T17:47:31Z",
+    "TournamentSHA": "98628f73aa605cc239e1093fcfeb198821e281fd",
+    "CombatSHA": "00764585d24cc973fdd24768e8d2503b4cc04b90",
+    "TournamentPR": 12,
+    "CombatPR": 86,
+    "TournamentCI": "37660619651 SUCCESS calidad/imagen",
+    "CombatCI": "37655450014 SUCCESS calidad/Python/imagen",
+    "evidence": "evidencia/entregas-B-C-A-r4.json",
+    "initialCheckoutsPreservedAsHistoricalCut": true
+  },
+  "preliminary007Upgrade": {
+    "id": "B-ACCEPTANCE-UPGRADE-01",
+    "appliesIf": "Un entorno conservado ya aplicó 007 preliminar de be54b0a/968738d.",
+    "severityIfApplicable": "P1: código/SQL/JSON deben actualizarse conjuntamente antes de reutilizar ese entorno.",
+    "publishedUpgradeProvenByOwner": "001–004/develop2679af4; 007 preliminar NO_CERTIFICADA.",
+    "prior007Blob": "0b78b20e626e02510447fb06dfab3cc67680b06e",
+    "current007Blob": "9c517ad7647d3159c5c6d63bd823cb8dfd7fc038",
+    "forward008PresentInDelivery": false,
+    "actualRetainedEnvironmentWithPrior007Confirmed": false,
+    "AProofScope": "Solo forma JSON histórica simulada en memoria; TypeError sin pendingAcceptances. No prueba upgrade PostgreSQL ni existencia de un entorno afectado.",
+    "required": "Auditar historial y JSON por entorno conservado. Si 007 preliminar aplicada: forward después del último nombre, array faltante=>[], failedAt faltante=>null, función SQL actualizada; conservar rosters/recibos/operaciones/decisiones/sorteos/salas. Si no existe destino conservado, documentar comprobación.",
+    "conditionalReservation": "008 si sigue libre al consultar historial; de lo contrario siguiente ordinal libre posterior. No reescribir historial aplicado."
   }
 }

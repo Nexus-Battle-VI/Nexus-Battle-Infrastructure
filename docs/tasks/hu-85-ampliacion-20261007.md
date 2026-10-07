@@ -21,6 +21,7 @@ Contrato: [torneos-v3.0.0](../contracts/torneos-v3.0.0.md). No se atribuyen los 
 | HU85-DEP01 | Wallet/Inventory, dueño pendiente | Consumidor de premios basado en fuente/resolutionId | final ABSENCE sin sala ficticia, política/importes vigentes, una entrega por derecho |
 | HU85-DEP02 | Inventory, dueño pendiente | Fuente de héroe receptor autorizada para Tournament | caller propio autorizado; PENDING/PRIZE_RECIPIENT_CONTRACT_REQUIRED hasta disponer de fuente; sin impersonar Combat |
 | HU85-QA01 | A con cada dueño | Matriz integrada, instalación limpia y upgrade | SHAs finales, PostgreSQL/Mongo reales, auth y dobles explicitados |
+| HU85-QA02 | B con A | Auditar bases conservadas con 007 preliminar | Si aplicada: forward posterior y prueba de JSON/función SQL, sin alterar historial ni recibos/salas/sorteos; si no hay destino conservado, documentarlo |
 | HU85-UAT01 | usuario/PO | Recorrido con cuentas/héroes reales | resultado del usuario acreditado; tests/capturas solos no lo sustituyen |
 
 No se solicita permiso al antiguo responsable para asumir HU-85; la instrucción del usuario ya decide esa responsabilidad. La asignación de GitHub xocamacho se conserva hasta una acción de gobierno expresamente autorizada.
