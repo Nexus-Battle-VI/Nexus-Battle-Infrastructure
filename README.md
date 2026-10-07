@@ -83,6 +83,8 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 
 ### Costes y contratos
 
+Ampliación en curso de torneos SOLO/DUO/TRIO y HU-85: [contrato común torneos-v3.0.0](docs/contracts/torneos-v3.0.0.md), [registro de ejecución y reservas DDL](docs/evidence/torneos-v3-20261007/registro.md) y [tareas de ampliación preparadas](docs/tasks/hu-85-ampliacion-20261007.md). Las formas v3 están disponibles; la implementación integrada y la aceptación con cuentas reales siguen pendientes. Los consumidores v2 y la HU-85 anterior se conservan.
+
 | Documento | Contenido |
 | --- | --- |
 | [assumptions.md](docs/costs/assumptions.md) | Supuestos de la estimación. **Leer antes que las cifras** |

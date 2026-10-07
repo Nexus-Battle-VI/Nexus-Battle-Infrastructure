@@ -1,0 +1,902 @@
+{
+  "contractVersion": "torneos-v3.0.0",
+  "documentRevision": 5,
+  "dataScope": "DATOS_DE_PRUEBA; no cuentas, salas ni combates reales",
+  "modeMapping": {
+    "SOLO": {
+      "teamSize": 1,
+      "bracketSlots": 8,
+      "totalPeople": 8
+    },
+    "DUO": {
+      "teamSize": 2,
+      "bracketSlots": 8,
+      "totalPeople": 16
+    },
+    "TRIO": {
+      "teamSize": 3,
+      "bracketSlots": 8,
+      "totalPeople": 24
+    }
+  },
+  "startsAt": "2026-10-08T00:00:00.000Z",
+  "roundSchedule": [
+    {
+      "round": 1,
+      "acceptanceOpensAt": "2026-10-08T00:00:00.000Z",
+      "acceptanceClosesAt": "2026-10-08T00:02:00.000Z",
+      "scheduledStartAt": "2026-10-08T00:02:00.000Z"
+    },
+    {
+      "round": 2,
+      "acceptanceOpensAt": "2026-10-08T00:10:00.000Z",
+      "acceptanceClosesAt": "2026-10-08T00:12:00.000Z",
+      "scheduledStartAt": "2026-10-08T00:12:00.000Z"
+    },
+    {
+      "round": 3,
+      "acceptanceOpensAt": "2026-10-08T00:20:00.000Z",
+      "acceptanceClosesAt": "2026-10-08T00:22:00.000Z",
+      "scheduledStartAt": "2026-10-08T00:22:00.000Z"
+    },
+    {
+      "round": 4,
+      "acceptanceOpensAt": "2026-10-08T00:30:00.000Z",
+      "acceptanceClosesAt": "2026-10-08T00:32:00.000Z",
+      "scheduledStartAt": "2026-10-08T00:32:00.000Z"
+    },
+    {
+      "round": 5,
+      "acceptanceOpensAt": "2026-10-08T00:40:00.000Z",
+      "acceptanceClosesAt": "2026-10-08T00:42:00.000Z",
+      "scheduledStartAt": "2026-10-08T00:42:00.000Z"
+    },
+    {
+      "round": 6,
+      "acceptanceOpensAt": "2026-10-08T00:50:00.000Z",
+      "acceptanceClosesAt": "2026-10-08T00:52:00.000Z",
+      "scheduledStartAt": "2026-10-08T00:52:00.000Z"
+    }
+  ],
+  "graph": [
+    {
+      "id": "E1",
+      "track": "MAIN",
+      "round": 1,
+      "sources": [
+        {
+          "kind": "SEED",
+          "position": 1
+        },
+        {
+          "kind": "SEED",
+          "position": 2
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "E5",
+          "side": 0
+        },
+        "loser": {
+          "matchId": "E7",
+          "side": 0
+        }
+      }
+    },
+    {
+      "id": "E2",
+      "track": "MAIN",
+      "round": 1,
+      "sources": [
+        {
+          "kind": "SEED",
+          "position": 3
+        },
+        {
+          "kind": "SEED",
+          "position": 4
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "E5",
+          "side": 1
+        },
+        "loser": {
+          "matchId": "E7",
+          "side": 1
+        }
+      }
+    },
+    {
+      "id": "E3",
+      "track": "MAIN",
+      "round": 1,
+      "sources": [
+        {
+          "kind": "SEED",
+          "position": 5
+        },
+        {
+          "kind": "SEED",
+          "position": 6
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "E6",
+          "side": 0
+        },
+        "loser": {
+          "matchId": "E8",
+          "side": 0
+        }
+      }
+    },
+    {
+      "id": "E4",
+      "track": "MAIN",
+      "round": 1,
+      "sources": [
+        {
+          "kind": "SEED",
+          "position": 7
+        },
+        {
+          "kind": "SEED",
+          "position": 8
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "E6",
+          "side": 1
+        },
+        "loser": {
+          "matchId": "E8",
+          "side": 1
+        }
+      }
+    },
+    {
+      "id": "E5",
+      "track": "MAIN",
+      "round": 2,
+      "sources": [
+        {
+          "kind": "WINNER",
+          "matchId": "E1"
+        },
+        {
+          "kind": "WINNER",
+          "matchId": "E2"
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "E11",
+          "side": 0
+        },
+        "loser": {
+          "matchId": "E10",
+          "side": 0
+        }
+      }
+    },
+    {
+      "id": "E6",
+      "track": "MAIN",
+      "round": 2,
+      "sources": [
+        {
+          "kind": "WINNER",
+          "matchId": "E3"
+        },
+        {
+          "kind": "WINNER",
+          "matchId": "E4"
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "E11",
+          "side": 1
+        },
+        "loser": {
+          "matchId": "E9",
+          "side": 0
+        }
+      }
+    },
+    {
+      "id": "E7",
+      "track": "SECONDARY",
+      "round": 2,
+      "sources": [
+        {
+          "kind": "LOSER",
+          "matchId": "E1"
+        },
+        {
+          "kind": "LOSER",
+          "matchId": "E2"
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "E9",
+          "side": 1
+        },
+        "loser": null
+      }
+    },
+    {
+      "id": "E8",
+      "track": "SECONDARY",
+      "round": 2,
+      "sources": [
+        {
+          "kind": "LOSER",
+          "matchId": "E3"
+        },
+        {
+          "kind": "LOSER",
+          "matchId": "E4"
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "E10",
+          "side": 1
+        },
+        "loser": null
+      }
+    },
+    {
+      "id": "E9",
+      "track": "SECONDARY",
+      "round": 3,
+      "sources": [
+        {
+          "kind": "LOSER",
+          "matchId": "E6"
+        },
+        {
+          "kind": "WINNER",
+          "matchId": "E7"
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "E12",
+          "side": 0
+        },
+        "loser": null
+      }
+    },
+    {
+      "id": "E10",
+      "track": "SECONDARY",
+      "round": 3,
+      "sources": [
+        {
+          "kind": "LOSER",
+          "matchId": "E5"
+        },
+        {
+          "kind": "WINNER",
+          "matchId": "E8"
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "E12",
+          "side": 1
+        },
+        "loser": null
+      }
+    },
+    {
+      "id": "E11",
+      "track": "MAIN",
+      "round": 3,
+      "sources": [
+        {
+          "kind": "WINNER",
+          "matchId": "E5"
+        },
+        {
+          "kind": "WINNER",
+          "matchId": "E6"
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "Final",
+          "side": 0
+        },
+        "loser": {
+          "matchId": "E13",
+          "side": 0
+        }
+      }
+    },
+    {
+      "id": "E12",
+      "track": "SECONDARY",
+      "round": 4,
+      "sources": [
+        {
+          "kind": "WINNER",
+          "matchId": "E9"
+        },
+        {
+          "kind": "WINNER",
+          "matchId": "E10"
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "E13",
+          "side": 1
+        },
+        "loser": null
+      }
+    },
+    {
+      "id": "E13",
+      "track": "SECONDARY",
+      "round": 5,
+      "sources": [
+        {
+          "kind": "LOSER",
+          "matchId": "E11"
+        },
+        {
+          "kind": "WINNER",
+          "matchId": "E12"
+        }
+      ],
+      "destinations": {
+        "winner": {
+          "matchId": "Final",
+          "side": 1
+        },
+        "loser": null
+      }
+    },
+    {
+      "id": "Final",
+      "track": "FINAL",
+      "round": 6,
+      "sources": [
+        {
+          "kind": "WINNER",
+          "matchId": "E11"
+        },
+        {
+          "kind": "WINNER",
+          "matchId": "E13"
+        }
+      ],
+      "destinations": {
+        "winner": null,
+        "loser": null
+      }
+    }
+  ],
+  "cases": [
+    {
+      "name": "TRIO create",
+      "definition": "CreateTournament",
+      "data": {
+        "operationId": "create-demo",
+        "name": "Torneo demo",
+        "tournamentMode": "TRIO",
+        "entryPolicy": {
+          "version": 1,
+          "free": true,
+          "methods": []
+        },
+        "opensAt": "2026-10-07T12:00:00Z",
+        "closesAt": "2026-10-07T23:55:00Z",
+        "startsAt": "2026-10-08T00:00:00.000Z"
+      },
+      "valid": true
+    },
+    {
+      "name": "Registro dos invitados",
+      "definition": "RegisterTeam",
+      "data": {
+        "operationId": "register-demo",
+        "name": "Equipo demo",
+        "avatar": {
+          "kind": "ACCOUNT_AVATAR",
+          "subject": "p1"
+        },
+        "invitedMemberIds": ["p2", "p3"]
+      },
+      "valid": true
+    },
+    {
+      "name": "Rechazo integrante invitado repetido",
+      "definition": "RegisterTeam",
+      "data": {
+        "operationId": "register-demo",
+        "name": "Equipo demo",
+        "avatar": {
+          "kind": "ACCOUNT_AVATAR",
+          "subject": "p1"
+        },
+        "invitedMemberIds": ["p2", "p2"]
+      },
+      "valid": false
+    },
+    {
+      "name": "Rechazo owner en cuerpo",
+      "definition": "RegisterTeam",
+      "data": {
+        "operationId": "register-demo",
+        "name": "Equipo demo",
+        "avatar": {
+          "kind": "ACCOUNT_AVATAR",
+          "subject": "p1"
+        },
+        "invitedMemberIds": ["p2", "p3"],
+        "ownerId": "someone-else"
+      },
+      "valid": false
+    },
+    {
+      "name": "Consentimiento individual",
+      "definition": "Consent",
+      "data": {
+        "operationId": "consent-demo",
+        "accept": true
+      },
+      "valid": true
+    },
+    {
+      "name": "Aceptación solo intención",
+      "definition": "Acceptance",
+      "data": {
+        "operationId": "accept-demo"
+      },
+      "valid": true
+    },
+    {
+      "name": "Rechazo identidad cliente en aceptación",
+      "definition": "Acceptance",
+      "data": {
+        "operationId": "accept-demo",
+        "subject": "p2"
+      },
+      "valid": false
+    },
+    {
+      "name": "Combat TRIO seis humanos",
+      "definition": "CombatCreate",
+      "data": {
+        "operationId": "tournament:opaque-e1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "opaque-e1",
+        "mode": "TRIO",
+        "teamSize": 3,
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": ["p1", "p2", "p3"]
+          },
+          {
+            "teamId": "b",
+            "memberIds": ["p4", "p5", "p6"]
+          }
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "Rechazo traducción tournamentMode",
+      "definition": "CombatCreate",
+      "data": {
+        "operationId": "tournament:opaque-e1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "opaque-e1",
+        "teamSize": 3,
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": ["p1", "p2", "p3"]
+          },
+          {
+            "teamId": "b",
+            "memberIds": ["p4", "p5", "p6"]
+          }
+        ],
+        "tournamentMode": "TRIO"
+      },
+      "valid": false
+    },
+    {
+      "name": "Rechazo tamaño inconsistente",
+      "definition": "CombatCreate",
+      "data": {
+        "operationId": "tournament:opaque-e1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "opaque-e1",
+        "mode": "TRIO",
+        "teamSize": 2,
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": ["p1", "p2", "p3"]
+          },
+          {
+            "teamId": "b",
+            "memberIds": ["p4", "p5", "p6"]
+          }
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "Rechazo TRIO parcial",
+      "definition": "CombatCreate",
+      "data": {
+        "operationId": "tournament:opaque-e1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "opaque-e1",
+        "mode": "TRIO",
+        "teamSize": 3,
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": ["p1", "p2", "p3"]
+          },
+          {
+            "teamId": "b",
+            "memberIds": ["p4", "p5"]
+          }
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "Rechazo miembro repetido en lado",
+      "definition": "CombatCreate",
+      "data": {
+        "operationId": "tournament:opaque-e1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "opaque-e1",
+        "mode": "TRIO",
+        "teamSize": 3,
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": ["p1", "p1", "p3"]
+          },
+          {
+            "teamId": "b",
+            "memberIds": ["p4", "p5", "p6"]
+          }
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "DUO histórico",
+      "definition": "CombatCreateLegacy",
+      "data": {
+        "operationId": "tournament:T1:E1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "T1:E1",
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": ["p1", "p2"]
+          },
+          {
+            "teamId": "b",
+            "memberIds": ["p3", "p4"]
+          }
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "DUO histórico rechaza seis",
+      "definition": "CombatCreateLegacy",
+      "data": {
+        "operationId": "tournament:T1:E1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "T1:E1",
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": ["p1", "p2", "p3"]
+          },
+          {
+            "teamId": "b",
+            "memberIds": ["p4", "p5", "p6"]
+          }
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "ABSENCE sin sala",
+      "definition": "TournamentResolution",
+      "data": {
+        "resultType": "ABSENCE",
+        "resolutionId": "absence-stable-demo",
+        "resolvedAt": "2026-10-08T00:02:00.000Z",
+        "teamIds": ["a", "b"],
+        "winnerTeamId": "a",
+        "loserTeamId": "b",
+        "acceptedCounts": [2, 1],
+        "teamSize": 3,
+        "ruleApplied": "HIGHER_ACCEPTANCE_COUNT",
+        "reason": "ACCEPTANCE_WINDOW_CLOSED",
+        "tieBreak": null
+      },
+      "valid": true
+    },
+    {
+      "name": "Rechazo sala inventada en ausencia",
+      "definition": "TournamentResolution",
+      "data": {
+        "resultType": "ABSENCE",
+        "resolutionId": "absence-stable-demo",
+        "resolvedAt": "2026-10-08T00:02:00.000Z",
+        "teamIds": ["a", "b"],
+        "winnerTeamId": "a",
+        "loserTeamId": "b",
+        "acceptedCounts": [2, 1],
+        "teamSize": 3,
+        "ruleApplied": "HIGHER_ACCEPTANCE_COUNT",
+        "reason": "ACCEPTANCE_WINDOW_CLOSED",
+        "tieBreak": null,
+        "combatRoomId": "fake-room"
+      },
+      "valid": false
+    },
+    {
+      "name": "Sorteo empatado persistido",
+      "definition": "TournamentResolution",
+      "data": {
+        "resultType": "ABSENCE",
+        "resolutionId": "absence-stable-demo",
+        "resolvedAt": "2026-10-08T00:02:00.000Z",
+        "teamIds": ["a", "b"],
+        "winnerTeamId": "a",
+        "loserTeamId": "b",
+        "acceptedCounts": [0, 0],
+        "teamSize": 3,
+        "ruleApplied": "TIED_ACCEPTANCE_COUNT",
+        "reason": "ACCEPTANCE_WINDOW_CLOSED",
+        "tieBreak": {
+          "kind": "UNBIASED_50_50",
+          "drawId": "draw-stable-demo",
+          "selectedSide": 0
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "Empate sin recibo sorteo",
+      "definition": "TournamentResolution",
+      "data": {
+        "resultType": "ABSENCE",
+        "resolutionId": "absence-stable-demo",
+        "resolvedAt": "2026-10-08T00:02:00.000Z",
+        "teamIds": ["a", "b"],
+        "winnerTeamId": "a",
+        "loserTeamId": "b",
+        "acceptedCounts": [0, 0],
+        "teamSize": 3,
+        "ruleApplied": "TIED_ACCEPTANCE_COUNT",
+        "reason": "ACCEPTANCE_WINDOW_CLOSED",
+        "tieBreak": null
+      },
+      "valid": false
+    },
+    {
+      "name": "PLAYED real-proyección ejemplo",
+      "definition": "TournamentResolution",
+      "data": {
+        "resultType": "PLAYED",
+        "resolutionId": "combat-demo",
+        "resolvedAt": "2026-10-08T00:07:00.000Z",
+        "teamIds": ["a", "b"],
+        "winnerTeamId": "a",
+        "loserTeamId": "b",
+        "combatRoomId": "actual-room-demo",
+        "combatResult": {
+          "winnerTeamLabel": "A",
+          "reason": "ELIMINATION",
+          "outcome": "WIN",
+          "finishedAt": "2026-10-08T00:07:00.000Z"
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "Combat TRIO con marcador interno 3 opcional",
+      "definition": "CombatCreate",
+      "data": {
+        "operationId": "tournament:opaque-e1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "opaque-e1",
+        "mode": "TRIO",
+        "teamSize": 3,
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": ["p1", "p2", "p3"]
+          },
+          {
+            "teamId": "b",
+            "memberIds": ["p4", "p5", "p6"]
+          }
+        ],
+        "contractVersion": 3
+      },
+      "valid": true
+    },
+    {
+      "name": "Marcador público string no se envía a Combat",
+      "definition": "CombatCreate",
+      "data": {
+        "operationId": "tournament:opaque-e1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "opaque-e1",
+        "mode": "TRIO",
+        "teamSize": 3,
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": ["p1", "p2", "p3"]
+          },
+          {
+            "teamId": "b",
+            "memberIds": ["p4", "p5", "p6"]
+          }
+        ],
+        "contractVersion": "torneos-v3.0.0"
+      },
+      "valid": false
+    },
+    {
+      "name": "Marcador numérico distinto rechazado",
+      "definition": "CombatCreate",
+      "data": {
+        "operationId": "tournament:opaque-e1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "opaque-e1",
+        "mode": "TRIO",
+        "teamSize": 3,
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": ["p1", "p2", "p3"]
+          },
+          {
+            "teamId": "b",
+            "memberIds": ["p4", "p5", "p6"]
+          }
+        ],
+        "contractVersion": 2
+      },
+      "valid": false
+    },
+    {
+      "name": "Metadatos de sala v3, distintos al modo PVP raíz",
+      "definition": "CombatMetadata",
+      "data": {
+        "contractVersion": 3,
+        "mode": "TRIO",
+        "teamSize": 3
+      },
+      "valid": true
+    },
+    {
+      "name": "Créditos final por ausencia",
+      "definition": "PrizeGrant",
+      "data": {
+        "operationId": "qa-prize:absence:0:CREDITS",
+        "tournamentId": "qa-tournament",
+        "championTeamId": "qa-champion",
+        "finalEncounterId": "qa-opaque-final",
+        "finalRoomId": null,
+        "playerId": "qa-player",
+        "heroId": "qa-owned-hero",
+        "kind": "CREDITS",
+        "amount": "501",
+        "productId": null
+      },
+      "valid": true
+    },
+    {
+      "name": "Épica final por ausencia",
+      "definition": "PrizeGrant",
+      "data": {
+        "operationId": "qa-prize:absence:0:EPIC",
+        "tournamentId": "qa-tournament",
+        "championTeamId": "qa-champion",
+        "finalEncounterId": "qa-opaque-final",
+        "finalRoomId": null,
+        "playerId": "qa-player",
+        "heroId": "qa-owned-hero",
+        "kind": "EPIC",
+        "amount": null,
+        "productId": "qa-epic"
+      },
+      "valid": true
+    },
+    {
+      "name": "Rechazo sala omitida",
+      "definition": "PrizeGrant",
+      "data": {
+        "operationId": "qa-prize:absence:0:CREDITS",
+        "tournamentId": "qa-tournament",
+        "championTeamId": "qa-champion",
+        "finalEncounterId": "qa-opaque-final",
+        "playerId": "qa-player",
+        "heroId": "qa-owned-hero",
+        "kind": "CREDITS",
+        "amount": "501",
+        "productId": null
+      },
+      "valid": false
+    },
+    {
+      "name": "Rechazo sala vacía",
+      "definition": "PrizeGrant",
+      "data": {
+        "operationId": "qa-prize:absence:0:CREDITS",
+        "tournamentId": "qa-tournament",
+        "championTeamId": "qa-champion",
+        "finalEncounterId": "qa-opaque-final",
+        "finalRoomId": "",
+        "playerId": "qa-player",
+        "heroId": "qa-owned-hero",
+        "kind": "CREDITS",
+        "amount": "501",
+        "productId": null
+      },
+      "valid": false
+    },
+    {
+      "name": "Rechazo crédito fraccionario",
+      "definition": "PrizeGrant",
+      "data": {
+        "operationId": "qa-prize:absence:0:CREDITS",
+        "tournamentId": "qa-tournament",
+        "championTeamId": "qa-champion",
+        "finalEncounterId": "qa-opaque-final",
+        "finalRoomId": null,
+        "playerId": "qa-player",
+        "heroId": "qa-owned-hero",
+        "kind": "CREDITS",
+        "amount": "1.5",
+        "productId": null
+      },
+      "valid": false
+    }
+  ],
+  "deadlineCases": [
+    {
+      "instant": "2026-10-08T00:01:59.999Z",
+      "firstAcceptanceAllowed": true
+    },
+    {
+      "instant": "2026-10-08T00:02:00.000Z",
+      "firstAcceptanceAllowed": false
+    },
+    {
+      "instant": "2026-10-08T00:02:00.001Z",
+      "firstAcceptanceAllowed": false
+    }
+  ]
+}

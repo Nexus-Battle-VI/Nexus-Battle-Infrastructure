@@ -1,0 +1,239 @@
+{
+  "capturedAtUtc": "2026-10-07T16:23:18.1240021Z",
+  "scope": "Ejecución actual A; inventario no implica backup de cambios sin commit",
+  "publishedDevelop": [
+    {
+      "repo": "Nexus-Battle-Infrastructure",
+      "sha": "4397e313050f5965539f00a8e49dbb4b8387d520",
+      "mergedPRs": [
+        {
+          "number": 200,
+          "sha": "ade236b7828243ffcf37eb0d77d584a91ffdb42c"
+        }
+      ]
+    },
+    {
+      "repo": "Nexus-Battle-Tournament",
+      "sha": "2679af41c47519578bbb21fbd82ebb4521b3869d",
+      "mergedPRs": [
+        {
+          "number": 9,
+          "sha": "d3d1d7bfaa9292e40d39ce955d2359d56a1e7dca"
+        },
+        {
+          "number": 10,
+          "sha": "2679af41c47519578bbb21fbd82ebb4521b3869d"
+        }
+      ]
+    },
+    {
+      "repo": "Nexus-Battle-Combat",
+      "sha": "dd67d471af403097333b15d84cb1a00d0a41e0ec",
+      "ownerDelivery": {
+        "sha": "317726d36e9aa7775c6920a2d7782fb713cc7a75",
+        "base": "dd67d471af403097333b15d84cb1a00d0a41e0ec",
+        "behindDevelopCommits": 0,
+        "previousTechnicalCommit": "5d247e06769a07867dd27b57c80c2d03556125fc",
+        "checkout": "tmp/torneos-modalidades-arboles-20261007/Nexus-Battle-Combat",
+        "workingTree": "LIMPIO_OBSERVADO",
+        "normativeWire": "mode/teamSize juntos; marcador contractVersion:3 opcional"
+      },
+      "mergedPRs": [
+        {
+          "number": 84,
+          "sha": "dd67d471af403097333b15d84cb1a00d0a41e0ec"
+        },
+        {
+          "number": 81,
+          "sha": "055d86f0ee693f515880f92943f92fba6883c275"
+        },
+        {
+          "number": 80,
+          "sha": "123e77439334fe9999f25ef00e02833881ce551c"
+        }
+      ],
+      "historicalOwnerDelivery": {
+        "sha": "7df51d81a249335c67f0a7ce0845a0f5747d2339",
+        "base": "d0a9cc49be3f2914a569f2cf7f2197af5154cf1e",
+        "behindDevelopCommits": 6
+      }
+    },
+    {
+      "repo": "Nexus-Battle-Web",
+      "sha": "59df33012bf5d6153d5075b0b96e4f9929c00f15",
+      "mergedPRs": [
+        {
+          "number": 219,
+          "sha": "2f07056cfe2897944ec0183fe31b79ccd199b2eb"
+        }
+      ]
+    }
+  ],
+  "consumers": [
+    {
+      "repo": "Nexus-Battle-Wallet",
+      "develop": "47f9799d147deda025c2a66b6aa22b745fd73bd1",
+      "prizeRoutes": "No presentes en tree inspeccionado; prototipo local separado"
+    },
+    {
+      "repo": "Nexus-Battle-Player-Inventory",
+      "develop": "7c76dda41b03b6bb5934b86ce00430fb8cfdbfd2",
+      "prizeRoutes": "No presentes en tree inspeccionado; prototipo local separado"
+    }
+  ],
+  "checkouts": [
+    {
+      "head": "0df09ddc954d51694cd99b4e6a86889472c02eae",
+      "branch": "codex/medinax-pr133",
+      "changedPaths": 8,
+      "origin": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure.git",
+      "path": "Nexus-Battle-Infrastructure"
+    },
+    {
+      "head": "df2c5441e31a872d8eafd67d1bdf09711a219883",
+      "branch": "feat/hu-77-84-inscripcion",
+      "changedPaths": 86,
+      "origin": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Tournament.git",
+      "path": "Nexus-Battle-Tournament"
+    },
+    {
+      "head": "a487eb2d2c7ad633cc81e0e3e336df2c945b656d",
+      "branch": "feat/tournament-local-initial",
+      "changedPaths": 391,
+      "origin": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Web.git",
+      "path": "Nexus-Battle-Web"
+    },
+    {
+      "head": "ef10577683048a445d0d479f10582cb4fc50a1fd",
+      "branch": "main",
+      "changedPaths": 0,
+      "origin": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat.git",
+      "path": "tmp/Nexus-Battle-Combat-review"
+    },
+    {
+      "head": "c9446f8e3ccabd8eda14ff7fd3fde107d3361cf8",
+      "branch": "feat/torneos-cierre-observacion-20261006",
+      "changedPaths": 0,
+      "origin": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Tournament.git",
+      "path": "tmp/torneos-publicacion-2026-10-06/Nexus-Battle-Tournament"
+    },
+    {
+      "head": "3294cacca9c4c8800b8dd41168871176613dcc10",
+      "branch": "feat/tournament-assets-20261007",
+      "changedPaths": 251,
+      "origin": "C:\\Users\\qfue1\\OneDrive\\Desktop\\Tareas\\P2\\tmp\\torneos-cierre-2026-10-05\\chat-05\\Nexus-Battle-Web",
+      "path": "tmp/validacion-interfaz-torneos-2026-10-06/Nexus-Battle-Web"
+    },
+    {
+      "head": "2679af41c47519578bbb21fbd82ebb4521b3869d",
+      "branch": "feat/tournament-modes-hu85-20261007",
+      "changedPaths": 37,
+      "origin": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Tournament.git",
+      "path": "tmp/tournament-modes-hu85-20261007"
+    },
+    {
+      "head": "7df51d81a249335c67f0a7ce0845a0f5747d2339",
+      "branch": "feat/tournament-room-cardinality",
+      "changedPaths": 0,
+      "origin": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat.git",
+      "path": "tmp/hu85-combat"
+    },
+    {
+      "head": "59df33012bf5d6153d5075b0b96e4f9929c00f15",
+      "branch": "feat/tournament-formats-tree-20261007",
+      "changedPaths": 43,
+      "origin": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Web.git",
+      "path": "tmp/torneos-modalidades-arboles-20261007/Nexus-Battle-Web"
+    }
+  ],
+  "migrations": [
+    {
+      "migration": "001-tournament-encounters",
+      "publishedBlob": "faeea1c2dcc2124fc5b5696df730d61836d49d59",
+      "workingBlob": "faeea1c2dcc2124fc5b5696df730d61836d49d59",
+      "identical": true
+    },
+    {
+      "migration": "002-tournament-registration",
+      "publishedBlob": "27bf61c4adea95b963b87f5268e4a21779263d59",
+      "workingBlob": "27bf61c4adea95b963b87f5268e4a21779263d59",
+      "identical": true
+    },
+    {
+      "migration": "003-tournament-bracket",
+      "publishedBlob": "06a07312dba92982ebc5400c70d8eed71bc7a25a",
+      "workingBlob": "06a07312dba92982ebc5400c70d8eed71bc7a25a",
+      "identical": true
+    },
+    {
+      "migration": "004-tournament-admin-actions",
+      "publishedBlob": "78aef3b05b05728f6cc35dcb3e94afd0c6cd518a",
+      "workingBlob": "78aef3b05b05728f6cc35dcb3e94afd0c6cd518a",
+      "identical": true
+    }
+  ],
+  "appliedDDLAudit": {
+    "database": "postgres",
+    "port": 25407,
+    "audit": "READ_ONLY",
+    "tables": [],
+    "appliedDDLStatus": "NO_PERSISTED_MIGRATION_HISTORY_VISIBLE",
+    "scope": "Instancia aislada de B; no acredita otros entornos"
+  },
+  "hu85": {
+    "state": "CLOSED",
+    "assignees": ["xocamacho"],
+    "clarificationCommentId": 6039231084,
+    "updatedAt": "2026-10-07T13:42:06Z",
+    "mutated": false
+  },
+  "recoverablePreparedBundle": {
+    "path": "Entregables/Plan-Torneos-3v3-Arboles-HU85-2026-10-07/evidencia/tournament-c9446f8.bundle",
+    "ref": "feat/torneos-cierre-observacion-20261006",
+    "commit": "c9446f8e3ccabd8eda14ff7fd3fde107d3361cf8",
+    "verification": "git bundle verify: complete history, is okay"
+  },
+  "documentRevision": 4,
+  "revisionObservedAtUtc": "2026-10-07T17:47:31Z",
+  "receivedTournamentCommit": {
+    "sha": "fc7a95ebc1af4779755a1cfc037c560d470cdd56",
+    "scope": "registro/modalidades/avance",
+    "hu85Commit": "98628f73aa605cc239e1093fcfeb198821e281fd",
+    "hu85Status": "PR12 borrador; 323/52 reportadas, CI calidad/imagen SUCCESS, A8 componentes conformes+1 diagnósticoJSON; no aceptación integrada"
+  },
+  "prizeRecipientDependency": {
+    "inventoryDevelop": "7c76dda41b03b6bb5934b86ce00430fb8cfdbfd2",
+    "controllerBlob": "9e3ccd938c4096ff14a1241f66cbd61fb90a7ce6",
+    "route": "GET /api/internal/v1/players/:playerId/equipped-hero",
+    "allowedCallers": ["commerce", "notifications", "combat"],
+    "TournamentAllowed": false,
+    "pendingCode": "PRIZE_RECIPIENT_CONTRACT_REQUIRED",
+    "responsible": "PRIZE_OPERATIONS"
+  },
+  "latestDeliveries": {
+    "observedAtUtc": "2026-10-07T17:47:31Z",
+    "TournamentSHA": "98628f73aa605cc239e1093fcfeb198821e281fd",
+    "CombatSHA": "00764585d24cc973fdd24768e8d2503b4cc04b90",
+    "TournamentPR": 12,
+    "CombatPR": 86,
+    "TournamentCI": "37660619651 SUCCESS calidad/imagen",
+    "CombatCI": "37655450014 SUCCESS calidad/Python/imagen",
+    "evidence": "evidencia/entregas-B-C-A-r4.json",
+    "initialCheckoutsPreservedAsHistoricalCut": true
+  },
+  "preliminary007Upgrade": {
+    "id": "B-ACCEPTANCE-UPGRADE-01",
+    "appliesIf": "Un entorno conservado ya aplicó 007 preliminar de be54b0a/968738d.",
+    "severityIfApplicable": "P1: código/SQL/JSON deben actualizarse conjuntamente antes de reutilizar ese entorno.",
+    "publishedUpgradeProvenByOwner": "001–004/develop2679af4; 007 preliminar NO_CERTIFICADA.",
+    "prior007Blob": "0b78b20e626e02510447fb06dfab3cc67680b06e",
+    "current007Blob": "9c517ad7647d3159c5c6d63bd823cb8dfd7fc038",
+    "forward008PresentInDelivery": false,
+    "actualRetainedEnvironmentWithPrior007Confirmed": false,
+    "AProofScope": "Solo forma JSON histórica simulada en memoria; TypeError sin pendingAcceptances. No prueba upgrade PostgreSQL ni existencia de un entorno afectado.",
+    "required": "Auditar historial y JSON por entorno conservado. Si 007 preliminar aplicada: forward después del último nombre, array faltante=>[], failedAt faltante=>null, función SQL actualizada; conservar rosters/recibos/operaciones/decisiones/sorteos/salas. Si no existe destino conservado, documentar comprobación.",
+    "conditionalReservation": "008 si sigue libre al consultar historial; de lo contrario siguiente ordinal libre posterior. No reescribir historial aplicado."
+  },
+  "historicalCut": "r4; ver publicacion-r5.json para el corte actualizado",
+  "currentEvidence": "publicacion-r5.json"
+}
