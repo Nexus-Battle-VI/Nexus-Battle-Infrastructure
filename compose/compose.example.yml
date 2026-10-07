@@ -258,7 +258,11 @@ services:
   # ---------------------------------------------------------------------
   combat:
     image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
-    mem_limit: 160m
+    # 256m (antes 160m): con 160m el kernel mato a Combat 19 veces el 2026-10-07 (cgroup
+    # OOM, pico medido 165,7 MB, 14 reinicios) sin dejar ningun log de la aplicacion.
+    # La memoria oscila (116-128 MiB anon), asi que es techo bajo y no fuga. La imagen
+    # de HU-85/EN-036.4 pasa a glibc (bookworm-slim), que usa mas RSS que Alpine.
+    mem_limit: 256m
     pids_limit: 128
     environment:
       NODE_ENV: development
