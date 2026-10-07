@@ -1,0 +1,74 @@
+{
+  "cut": "arena-retransmision-20261007",
+  "recordedAt": "2026-10-07T19:19:08Z",
+  "scope": "Reutilización de la arena de Jugar Online en la observación de justas SOLO/DUO/TRIO, con metadatos autoritativos y captura de solo lectura.",
+  "sources": {
+    "web": {
+      "testedSha": "04276096a3f09218554f75ad73789ff293ad56c3",
+      "pr": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/228"
+    },
+    "tournament": {
+      "testedSha": "ce3d71bdad3a4917a3c51be4cd45d7d5d900c5b3",
+      "pr": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Tournament/pull/12"
+    },
+    "combat": {
+      "sha": "00764585d24cc973fdd24768e8d2503b4cc04b90",
+      "pr": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/86"
+    }
+  },
+  "localValidation": {
+    "web": {
+      "testFilesPassed": 272,
+      "testsPassed": 3292,
+      "branchesPercent": 83.79,
+      "linesPercent": 90.06,
+      "targetedTestsPassed": 92,
+      "lint": "PASSED",
+      "format": "PASSED",
+      "typecheck": "PASSED",
+      "productionBuildAndAssetVerification": "PASSED"
+    },
+    "tournament": {
+      "unitAndHttpTestsPassed": 354,
+      "optionalCombatTestsSkippedInUnitRun": 10,
+      "unitBranchesPercent": 89.13,
+      "unitLinesPercent": 97.19,
+      "databaseSuitesPassed": 11,
+      "databaseTestsPassed": 61,
+      "databaseTestsSkipped": 0,
+      "databaseBranchesPercent": 88.79,
+      "databaseLinesPercent": 97.9,
+      "lint": "PASSED",
+      "format": "PASSED",
+      "typecheck": "PASSED",
+      "build": "PASSED",
+      "databaseEnvironment": "Tournament HTTP y PostgreSQL reales, motor Combat real con repositorio en memoria; Account/Inventory/JWT controlados."
+    },
+    "visual": {
+      "dataSource": "Fixtures explícitos de QA; sin torneo ni cuentas operativas.",
+      "viewport": { "width": 1360, "height": 768 },
+      "modes": ["SOLO", "DUO", "TRIO"],
+      "themes": ["light", "dark"],
+      "casesPassed": 6,
+      "combatantsPerMode": [2, 4, 6],
+      "allCombatantsInsideViewport": true,
+      "horizontalOverflow": false,
+      "verticalOverflow": false,
+      "obsPreview": "Arena TRIO de QA visible en fuente de navegador de OBS; emisión y grabación no iniciadas."
+    }
+  },
+  "contractChanges": [
+    "BroadcastSnapshot.startedAt conserva el inicio de Combat.",
+    "BroadcastCombatant.seat conserva el asiento de Combat.",
+    "BroadcastCombatant.heroSubtype conserva el subtipo público; wire histórico sin subtipo produce null.",
+    "Un ID de inventario opaco no se utiliza para inferir un modelo visual.",
+    "La vista espectadora comparte BattleScreen y no habilita acciones, apuestas ni premios personales."
+  ],
+  "integrationRequirement": "Integrar Web #227 antes de #228 y desplegar Tournament #12 con los metadatos antes de activar esta versión de Web. No se requieren migraciones adicionales por este incremento.",
+  "limits": [
+    "La observación sigue limitada al administrador transmisor designado; no acredita un espectador público general.",
+    "El snapshot y su último resumen no constituyen un replay de todas las animaciones/eventos WebSocket.",
+    "No acredita emisión recibida en YouTube, torneo completo con cuentas Cognito, aceptación PO, merge ni despliegue.",
+    "La evidencia de premios del corte publicacion-r5.json es histórica y no fue repetida para este incremento visual."
+  ]
+}

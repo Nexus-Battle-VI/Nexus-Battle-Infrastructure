@@ -2,6 +2,10 @@
 
 Estado: **contrato y ampliación preparados para PR; integración, despliegue y aceptación PO pendientes**. Refs Nexus-Battle-VI/Nexus-Battle-Management#470.
 
+## Arena compartida y retransmisión — incremento del 7 de octubre
+
+La [evidencia de arena](arena-retransmision.json) identifica Web `0427609` y Tournament `ce3d71b`. La observación deja las tarjetas independientes y reutiliza `BattleScreen` de Jugar Online, sin controles de jugador. Tournament conserva `startedAt`, `seat` y el subtipo visual público de Combat; un ID opaco de inventario no determina un modelo. Se comprobaron las tres modalidades en claro/oscuro a 1360×768, con 2/4/6 combatientes completos y sin desbordamientos. Pasaron 3292 pruebas Web, 354 unitarias/HTTP Tournament y 61 DB, estas últimas con PostgreSQL y motor Combat reales, dependencias Account/Inventory/JWT controladas y cero omitidas. La vista local se vio en OBS con fixtures explícitos; no se emitió ni grabó vídeo. Los pipelines remotos de estos nuevos commits se consultan en sus PR y no se heredan de un SHA anterior. Este corte no reemplaza la evidencia histórica de premios ni acredita cuentas operativas o aceptación PO.
+
 ## Corte de publicación r5
 
 El usuario autorizó corregir y publicar como PR. HU-77 identifica ahora SOLO/DUO/TRIO (1v1/2v2/3v3); se alinearon las menciones pendientes de HU-85/86 sin cerrar historias ni cambiar asignaciones. Este corte sustituye el dictamen pendiente de consumidores/observación de r4, conservado abajo como histórico.
