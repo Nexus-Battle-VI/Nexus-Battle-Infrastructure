@@ -474,6 +474,14 @@ services:
       # futura ruta interna nazca con su contrato en vez de responder 503.
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
       CONVERSATION_CIPHER_KEY: ${CONVERSATION_CIPHER_KEY:-}
+      # Datos vivos del jugador (HU-48). El chatbot reenvia el testimonio del
+      # propio usuario a los /me publicos de estos servicios. Las transacciones
+      # salen de Auction. El listado pendiente esta en el servidor de
+      # notificaciones de catalogo, puerto 3004.
+      INVENTORY_BASE_URL: http://inventory:3002
+      MISSIONS_BASE_URL: http://missions:3007
+      AUCTION_BASE_URL: http://auction:3008
+      NOTIFICATIONS_BASE_URL: http://notifications:3004
     depends_on:
       chatbot-migrate:
         condition: service_completed_successfully
