@@ -68,7 +68,10 @@ services:
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:?Define el secreto interno en .env}
       # `combat` se suma para HU-15: consume `/internal/accounts/:subject/battle-profile`
       # al resolver el ingreso a una sala de batalla.
-      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat,auction
+      # `tournament` consulta la elegibilidad y la identidad de equipo (HU-77) en
+      # las rutas `@InternalOnly('tournament')` de Account; sin el nombre en esta
+      # lista el guard responde 403 aunque la firma HMAC sea valida.
+      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat,auction,tournament
       PORT: 3000
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: postgres
@@ -274,6 +277,11 @@ services:
       # estos dos servicios internos antes de aceptar un ingreso a sala.
       ACCOUNT_SERVICE_BASE_URL: http://account:3000
       PLAYER_INVENTORY_SERVICE_BASE_URL: http://inventory:3002
+      # HU-93: Combat consulta el contrato gameplay de bots y las habilidades
+      # epicas en Catalog. Con NODE_ENV=development el servicio asume este mismo
+      # valor, pero en produccion es obligatorio: se declara para que cambiar el
+      # entorno no impida el arranque.
+      CATALOG_SERVICE_BASE_URL: http://catalog:3003
       # HU-22/HU-23: Combat acredita las recompensas y reserva, libera y
       # liquida las apuestas contra Wallet (HMAC, allow-list `combat` de
       # Wallet). Sin esta URL Combat instala clientes "no configurados":
@@ -432,6 +440,13 @@ services:
       # Sin `:?`: sin secreto, las rutas internas responden 503 y el resto
       # sigue funcionando. Hoy no declara consumidores internos (ADR-022).
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      # HU-77/HU-84/HU-78: elegibilidad de equipos (Account), cobro y compensacion
+      # de inscripciones (Wallet) y salas de torneo (Combat). Sin la URL de un
+      # servicio, su integracion responde 503: no inventa miembros, cobros ni
+      # resultados, pero el flujo correspondiente queda inerte.
+      ACCOUNT_BASE_URL: http://account:3000
+      WALLET_BASE_URL: http://wallet:3009
+      COMBAT_BASE_URL: http://combat:3006
     depends_on:
       tournament-migrate:
         condition: service_completed_successfully
