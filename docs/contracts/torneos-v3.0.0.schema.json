@@ -1,0 +1,967 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:nexus-battle:torneos:3.0.0",
+  "title": "Torneos torneos-v3.0.0, revisión documental 4",
+  "description": "Formas normativas nuevas. Relaciones con torneo/actor, reglas temporales, importe/política y conteos requieren validación autoritativa además del schema.",
+  "definitions": {
+    "EntryPolicy": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "version": {
+              "const": 1
+            },
+            "free": {
+              "const": true
+            },
+            "methods": {
+              "type": "array",
+              "maxItems": 0
+            }
+          },
+          "required": ["version", "free", "methods"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "version": {
+              "const": 1
+            },
+            "free": {
+              "const": false
+            },
+            "methods": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "method": {
+                        "const": "CREDITS"
+                      },
+                      "amount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": ["method", "amount"]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "method": {
+                        "const": "SIMULATED_MONEY"
+                      },
+                      "amountMinor": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "currency": {
+                        "type": "string",
+                        "pattern": "^[A-Z]{3}$"
+                      },
+                      "minorUnit": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      }
+                    },
+                    "required": [
+                      "method",
+                      "amountMinor",
+                      "currency",
+                      "minorUnit"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "required": ["version", "free", "methods"]
+        }
+      ]
+    },
+    "CreateTournament": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "\\S"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "tournamentMode": {
+          "enum": ["SOLO", "DUO", "TRIO"]
+        },
+        "entryPolicy": {
+          "$ref": "#/definitions/EntryPolicy"
+        },
+        "entryFee": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "opensAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "closesAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "startsAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "operationId",
+        "name",
+        "tournamentMode",
+        "opensAt",
+        "closesAt",
+        "startsAt"
+      ],
+      "oneOf": [
+        {
+          "required": ["entryPolicy"],
+          "not": {
+            "required": ["entryFee"]
+          }
+        },
+        {
+          "required": ["entryFee"],
+          "not": {
+            "required": ["entryPolicy"]
+          }
+        }
+      ]
+    },
+    "Avatar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "ACCOUNT_AVATAR"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        }
+      },
+      "required": ["kind", "subject"]
+    },
+    "RegisterTeam": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "\\S"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "avatar": {
+          "$ref": "#/definitions/Avatar"
+        },
+        "invitedMemberIds": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "required": ["operationId", "name", "avatar", "invitedMemberIds"]
+    },
+    "Consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "\\S"
+        },
+        "accept": {
+          "type": "boolean"
+        }
+      },
+      "required": ["operationId", "accept"]
+    },
+    "Acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "\\S"
+        }
+      },
+      "required": ["operationId"]
+    },
+    "AcceptanceReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "receiptId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "tournamentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "encounterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "\\S"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "teamId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "acceptedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "acceptanceOpensAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "acceptanceClosesAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "replayed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "receiptId",
+        "tournamentId",
+        "encounterId",
+        "operationId",
+        "subject",
+        "teamId",
+        "acceptedAt",
+        "acceptanceOpensAt",
+        "acceptanceClosesAt",
+        "replayed"
+      ]
+    },
+    "RoundSchedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "round": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "acceptanceOpensAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "acceptanceClosesAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "scheduledStartAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        }
+      },
+      "required": [
+        "round",
+        "acceptanceOpensAt",
+        "acceptanceClosesAt",
+        "scheduledStartAt"
+      ]
+    },
+    "Team": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "teamId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "\\S"
+        },
+        "memberIds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "required": ["teamId", "memberIds"]
+    },
+    "CombatCreate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "tournamentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "encounterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "mode": {
+          "enum": ["SOLO", "DUO", "TRIO"]
+        },
+        "teamSize": {
+          "enum": [1, 2, 3]
+        },
+        "teams": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/definitions/Team"
+          }
+        },
+        "contractVersion": {
+          "const": 3,
+          "description": "Marcador interno numérico opcional. mode/teamSize son obligatorios juntos; no sustituye el contractVersion público string."
+        }
+      },
+      "required": [
+        "operationId",
+        "tournamentId",
+        "encounterId",
+        "mode",
+        "teamSize",
+        "teams"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "SOLO"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "teamSize": {
+                "const": 1
+              },
+              "teams": {
+                "items": {
+                  "properties": {
+                    "memberIds": {
+                      "minItems": 1,
+                      "maxItems": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "DUO"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "teamSize": {
+                "const": 2
+              },
+              "teams": {
+                "items": {
+                  "properties": {
+                    "memberIds": {
+                      "minItems": 2,
+                      "maxItems": 2
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "TRIO"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "teamSize": {
+                "const": 3
+              },
+              "teams": {
+                "items": {
+                  "properties": {
+                    "memberIds": {
+                      "minItems": 3,
+                      "maxItems": 3
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "CombatCreateLegacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "tournamentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "encounterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "teams": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "teamId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "\\S"
+              },
+              "memberIds": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300,
+                  "pattern": "\\S"
+                }
+              }
+            },
+            "required": ["teamId", "memberIds"]
+          }
+        }
+      },
+      "required": ["operationId", "tournamentId", "encounterId", "teams"]
+    },
+    "CombatStart": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "tournamentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "encounterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        }
+      },
+      "required": ["operationId", "tournamentId", "encounterId"]
+    },
+    "HU83Result": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "winnerTeamLabel": {
+          "type": ["string", "null"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "enum": ["WIN", "NO_WINNER"]
+        },
+        "finishedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        }
+      },
+      "required": ["winnerTeamLabel", "reason", "outcome", "finishedAt"]
+    },
+    "PlayedResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resultType": {
+          "const": "PLAYED"
+        },
+        "resolutionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "teamIds": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        },
+        "winnerTeamId": {
+          "type": ["string", "null"]
+        },
+        "loserTeamId": {
+          "type": ["string", "null"]
+        },
+        "combatRoomId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "combatResult": {
+          "$ref": "#/definitions/HU83Result"
+        }
+      },
+      "required": [
+        "resultType",
+        "resolutionId",
+        "resolvedAt",
+        "teamIds",
+        "winnerTeamId",
+        "loserTeamId",
+        "combatRoomId",
+        "combatResult"
+      ]
+    },
+    "TieBreak": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "UNBIASED_50_50"
+        },
+        "drawId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "selectedSide": {
+          "enum": [0, 1]
+        }
+      },
+      "required": ["kind", "drawId", "selectedSide"]
+    },
+    "AbsenceResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resultType": {
+          "const": "ABSENCE"
+        },
+        "resolutionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "teamIds": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        },
+        "winnerTeamId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "loserTeamId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "\\S"
+        },
+        "acceptedCounts": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          }
+        },
+        "teamSize": {
+          "enum": [1, 2, 3]
+        },
+        "ruleApplied": {
+          "enum": [
+            "ONE_COMPLETE",
+            "HIGHER_ACCEPTANCE_COUNT",
+            "TIED_ACCEPTANCE_COUNT"
+          ]
+        },
+        "reason": {
+          "const": "ACCEPTANCE_WINDOW_CLOSED"
+        },
+        "tieBreak": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/TieBreak"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "resultType",
+        "resolutionId",
+        "resolvedAt",
+        "teamIds",
+        "winnerTeamId",
+        "loserTeamId",
+        "acceptedCounts",
+        "teamSize",
+        "ruleApplied",
+        "reason",
+        "tieBreak"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ruleApplied": {
+                "const": "TIED_ACCEPTANCE_COUNT"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "tieBreak": {
+                "$ref": "#/definitions/TieBreak"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "tieBreak": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "TournamentResolution": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/PlayedResolution"
+        },
+        {
+          "$ref": "#/definitions/AbsenceResolution"
+        }
+      ]
+    },
+    "CombatMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractVersion", "mode", "teamSize"],
+      "properties": {
+        "contractVersion": {
+          "const": 3
+        },
+        "mode": {
+          "enum": ["SOLO", "DUO", "TRIO"]
+        },
+        "teamSize": {
+          "enum": [1, 2, 3]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "SOLO"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "teamSize": {
+                "const": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "DUO"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "teamSize": {
+                "const": 2
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "TRIO"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "teamSize": {
+                "const": 3
+              }
+            }
+          }
+        }
+      ]
+    },
+    "PrizeGrant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operationId",
+        "tournamentId",
+        "championTeamId",
+        "finalEncounterId",
+        "finalRoomId",
+        "playerId",
+        "heroId",
+        "kind",
+        "amount",
+        "productId"
+      ],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "tournamentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "championTeamId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "finalEncounterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "finalRoomId": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "playerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "heroId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "kind": {
+          "enum": ["CREDITS", "EPIC"]
+        },
+        "amount": {
+          "type": ["string", "null"]
+        },
+        "productId": {
+          "type": ["string", "null"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "CREDITS"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "amount": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]{0,15}$"
+              },
+              "productId": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "amount": {
+                "type": "null"
+              },
+              "productId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^\\S(?:.*\\S)?$"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

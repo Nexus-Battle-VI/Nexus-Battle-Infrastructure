@@ -1,0 +1,99 @@
+{
+  "documentRevision": 5,
+  "recordedAt": "2026-10-07T18:22:39.339Z",
+  "commits": {
+    "tournament": "305cf81505b0407627e46d57f4c3591050efdb89",
+    "wallet": "dbbe01660277c28872dff8adf73439313fa8589a",
+    "inventory": "49ed41b545d0878946e392e67053b060dd872500",
+    "web": "2f9a496c1724bbda778ea7fc40b1f85ef42a86ad",
+    "combat": "00764585d24cc973fdd24768e8d2503b4cc04b90"
+  },
+  "stories": {
+    "hu77": "https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/467",
+    "updatedCardinality": [
+      "HU-77",
+      "HU-85 texto pendiente de modalidad",
+      "HU-86 reparto según tamaño"
+    ]
+  },
+  "verification": {
+    "tournament": {
+      "unitHttpPassed": 351,
+      "unitHttpOptionalRealCombatSkipped": 10,
+      "postgresFinal": {
+        "passed": 61,
+        "suites": 11,
+        "skipped": 0,
+        "branchesCoverage": "88.79%",
+        "includesRealCombat": true
+      },
+      "realCombatModesAndBroadcast": "3 passed: SOLO/DUO/TRIO E1/E2, motor memoria, Account/Inventory/JWT dobles"
+    },
+    "wallet": {
+      "unitHttpPassed": 436,
+      "postgresPassed": 141,
+      "branchesCoverage": "92.95% unit/HTTP; 92.57% DB"
+    },
+    "inventory": {
+      "unitHttpPassed": 1285,
+      "mongoPassed": 152,
+      "branchesCoverage": "81.24% unit/HTTP; 81.96% DB"
+    },
+    "web": {
+      "targetedRegressionPassed": 30,
+      "typecheck": true,
+      "lint": true,
+      "format": true,
+      "productionBuild": true,
+      "assets": {
+        "uniquePngCount": 60,
+        "previousAudit": "60 PNG existentes, versionados e incluidos en dist; mapping/assets sin cambios en 2f9a496",
+        "visualReview": "1360x768 y matriz de temas/modalidades del corte previo; no sustituye usuarios reales"
+      }
+    },
+    "contract": {
+      "fixturesPassed": 28,
+      "dateTimeFormatsChecked": true
+    }
+  },
+  "prizeBridge": {
+    "started": "2026-10-07T18:20:07.369Z",
+    "completed": "2026-10-07T18:20:15.126Z",
+    "passed": true,
+    "mode": "TRIO",
+    "source": "Final ABSENCE derivada de 14 resoluciones persistidas",
+    "real": [
+      "Tournament HTTP/PostgreSQL",
+      "Wallet HTTP/HMAC/PostgreSQL",
+      "Inventory HTTP/HMAC/MongoDB replica set",
+      "lookup de héroe por caller tournament"
+    ],
+    "doubles": [
+      "Account elegibilidad/nombres de inscripción",
+      "JWT verifier",
+      "Catalog HEROE/EPICA fixtures",
+      "reloj acelerado de seis rondas"
+    ],
+    "checks": {
+      "championMembers": 3,
+      "prizeLines": 4,
+      "walletCreditsRows": 3,
+      "epicGrants": 1,
+      "concurrentRequests": 2,
+      "stableReplayReceipts": true,
+      "finalRoomId": null
+    },
+    "limitations": [
+      "No cuentas Cognito reales ni política G2/catálogo operativo aprobados",
+      "No frontend en este recorrido",
+      "No emisión YouTube/OBS ni despliegue"
+    ]
+  },
+  "limitations": [
+    "Cuentas/Cognito y Catalog operativos no validados; catálogo de QA controlado",
+    "Emisión OBS/YouTube y archivo externo no ejecutados",
+    "Wallet conserva limitaciones heredadas de precisión descritas en docs/hu-86-tournament-prize.md; este incremento no certifica esas operaciones",
+    "Historial de 007 preliminar en entornos conservados requiere auditoría específica; upgrades verificados desde las migraciones publicadas",
+    "Sin merge, despliegue ni aceptación del PO"
+  ]
+}

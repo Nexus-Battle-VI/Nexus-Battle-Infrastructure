@@ -101,6 +101,9 @@ services:
       # las rutas `@InternalOnly('tournament')` de Account; sin el nombre en esta
       # lista el guard responde 403 aunque la firma HMAC sea valida.
       INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat,auction,tournament
+      PLAYER_INVENTORY_BASE_URL: http://inventory:3002
+      COMMUNITY_BASE_URL: http://community:3004
+      COMMERCE_BASE_URL: http://commerce:3005
     # El avatar es obligatorio en el registro (HU-01), asi que sin un lugar
     # donde escribirlo NINGUNA cuenta puede crearse: el caso de uso guarda el
     # avatar antes que nada y respondia 500. La imagen ya trae el directorio
@@ -287,7 +290,11 @@ services:
   # ---------------------------------------------------------------------
   combat:
     image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
-    mem_limit: 160m
+    # 256m (antes 160m): con 160m el kernel mato a Combat 19 veces el 2026-10-07 (cgroup
+    # OOM, pico medido 165,7 MB, 14 reinicios) sin dejar ningun log de la aplicacion.
+    # La memoria oscila (116-128 MiB anon), asi que es techo bajo y no fuga. La imagen
+    # de HU-85/EN-036.4 pasa a glibc (bookworm-slim), que usa mas RSS que Alpine.
+    mem_limit: 256m
     pids_limit: 128
     environment:
       NODE_ENV: development
