@@ -115,8 +115,42 @@ estado de batalla publicado -> RestriccionEquipamientoEnCombate -> procede | rec
 - **El estado de batalla lo publica Combat**, no Player/Inventory, y llega como un **compromiso** que Player/Inventory guarda y consulta localmente, no como una consulta al vecino en el camino crítico del equipamiento. El diseño no prescribía transporte; la implementación sí tuvo que fijarlo y lo hizo en [`hu-29-battle-commitment-v1`](../contracts/hu-29-battle-commitment-v1.md): `ADR-019` ya había decidido el **QUÉ** —Player/Inventory posee los **compromisos** del héroe (`BATTLE`, `MISSION`, `AUCTION`, `TOURNAMENT`) y Combat publica el compromiso **al iniciar** y lo **libera al terminar**, de forma síncrona y con `operationId`—, y el contrato solo fija el **CÓMO**.
 - **El loadout no se clona.** Como la mutación no se aplica, no hace falta un snapshot que demuestre «sin modificaciones»: una copia sería una segunda versión de la misma verdad.
 - **Sin lock permanente.** No hay nada que «desbloquear»: hay una condición que se cumple mientras dure la batalla.
-- **Estado:** **diseñada e implementada en ramas, sin mergear y sin aceptar.** El diseño es la Task [#231](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/231); la implementación es [#232](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/232), en Player/Inventory (PR [#26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26)) y Combat (PR [#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/55)), con el contrato [`hu-29-battle-commitment-v1`](../contracts/hu-29-battle-commitment-v1.md) (PR [#165](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/165)). La verificación de aceptación es [#233](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/233) y **no se ha hecho**: no hay prueba de extremo a extremo entre los dos servicios, falta la decisión del PO sobre el copy del mensaje y sigue sin implementarse la exclusión cruzada entre propósitos. La integración es la que `ADR-019` ya había decidido: **compromiso publicado por Combat al iniciar y liberado al terminar**, con `operationId` de idempotencia, y **no** una consulta de Player/Inventory a Combat en el camino crítico del equipamiento. Ver el [diseño](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-29-bloqueo-equipamiento-combate.md) y [la evidencia](../evidence/HU-29-bloqueo-equipamiento-en-combate.md).
+- **Estado:** **implementada en `develop` y verificada de extremo a extremo entre los dos servicios reales.** El diseño es la Task [#231](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/231); la implementación es [#232](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/232), mergeada en Player/Inventory ([#26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26), matriz de pruebas [#59](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/59)) y en Combat ([#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/55)), con el contrato [`hu-29-battle-commitment-v1`](../contracts/hu-29-battle-commitment-v1.md) ([#165](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/165)). La verificación de aceptación es [#233](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/233): la matriz P1/P2/P3 unitaria ya estaba mergeada, y la prueba de extremo a extremo entre los dos servicios reales (Combat real → HMAC real → Player/Inventory real → MongoDB real de cada uno) se añadió en Combat PR [#62](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/62) (13 escenarios, en verde, **abierto, sin mergear**). La presentación en Web es PR [#191](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/191) (**abierto, sin mergear**; el PR anterior, Web #90, se cerró sin mergear). «Batalla activa» es la lectura literal `IN_BATTLE` (decisión del PO ya tomada, ver evidencia); el texto del mensaje no tiene un copy oficial fijo porque la HU solo exige que explique el motivo, no una frase normativa. La exclusión cruzada entre propósitos (`MISSION` y `BATTLE` a la vez) sigue sin implementarse y queda declarada como límite fuera de este alcance. La integración es la que `ADR-019` ya había decidido: **compromiso publicado por Combat al iniciar y liberado al terminar**, con `operationId` de idempotencia, y **no** una consulta de Player/Inventory a Combat en el camino crítico del equipamiento. Ver el [diseño](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-29-bloqueo-equipamiento-combate.md) y [la evidencia](../evidence/HU-29-bloqueo-equipamiento-en-combate.md).
 - Diagramas: [caso de uso](../diagrams/hu-29-use-case.puml), [actividad](../diagrams/hu-29-activity.puml), [secuencia](../diagrams/hu-29-sequence.puml), [dominio](../diagrams/hu-29-domain.puml).
+
+### Drop de piezas equipadas por derrota en Versus (HU-30)
+
+La unidad de resolución es **una derrota válida de un jugador por otro jugador**, nunca el resultado
+final del equipo: `killerPlayerId`/`defeatedPlayerId` se derivan del evento letal real
+(`targetHealth.before > 0 → after === 0`) entre dos humanos de equipos rivales en PvP. Un killer
+conserva su derecho aunque después pierda su equipo o muera; puede acumular varios derechos en la
+misma partida, uno por cada derrota que produjo. Solo son candidatos los productos `ARMA`/`ARMADURA`/
+`ITEM` equipados **al iniciar** la batalla; cada uno se evalúa individualmente con el RNG central de
+Combat (HU-24) y, entre los elegibles, se selecciona el de mayor tasa canónica (Catalog). Un empate
+máximo queda `AWAITING_TIE_RULE` (`P-HU30-TIE`, sin regla de desempate fijada todavía por ninguna
+fuente vigente).
+
+```text
+DefeatEvent -> ResolveVersusDrop (RNG) -> PENDING (ownership intacto)
+Battle FINISHED -> reconciliador -> Player-Inventory transfiere la MISMA instancia
+                                  -> Notifications avisa a ambos -> Combat libera HU-29
+```
+
+- **Drop determinado != drop acreditado.** Ninguna operación de ownership ocurre durante la partida;
+  la transferencia solo es elegible cuando la sala persistida está `FINISHED`, sea cual sea su
+  resultado global.
+- **Identidad física por unidad.** Player/Inventory materializa (`battle-drop-units`) solo las piezas
+  efectivamente equipadas al congelar la instantánea, no todo el inventario histórico.
+- **Estado:** **implementado en Combat, Player-Inventory, Notifications y Catalog, y verificado de
+  extremo a extremo entre los servicios reales** (3 corridas consecutivas en verde). Catalog
+  [#69](https://github.com/Nexus-Battle-VI/Nexus-Battle-Catalog/pull/69), Combat
+  [#66](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/66) (incluye el E2E real),
+  Player-Inventory [#71](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/71),
+  Notifications [#44](https://github.com/Nexus-Battle-VI/Nexus-Battle-Notifications/pull/44) y Web
+  [#195](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/195) — **los cinco abiertos, sin
+  mergear**. Torneo queda `SKIPPED`: sin repositorio/servicio local ni integración de justas
+  verificada (`ADR-022` sigue `Proposed`). Ver el [contrato](../contracts/hu-30-versus-drop-v1.md) y
+  [la evidencia](../evidence/HU-30-drop-por-derrota-en-versus.md).
 
 ## 5. Arquitectura interna común
 
@@ -298,18 +332,15 @@ Se enumeran juntas porque quien lea este documento necesita conocerlas antes de 
     experiencia se acota con `@InternalCallers('missions')` **sin** ampliar la
     lista global: es una decisión de mínimo privilegio, no un pendiente. La cadena
     de HU-09 lo ejerce de verdad (`S-05`, `S-06`).
-11. **El bloqueo de equipamiento en combate (HU-29) está implementado en ramas, sin mergear ni
-    verificar, y su decisión funcional sigue parcialmente abierta.** El código existe en
-    Player/Inventory (PR [Player-Inventory #26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26),
-    ya al día con `develop`) y en Combat (PR [#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/55)),
-    con el contrato [`hu-29-battle-commitment-v1`](../contracts/hu-29-battle-commitment-v1.md), pero
-    **nada está en `develop`** y **no hay prueba de extremo a extremo entre los dos servicios**: eso
-    es la Task [#233](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/233). La
-    implementación aplica la lectura literal de «batalla activa» (`IN_BATTLE`; ampliarlo a
-    `PREPARING` rompería el lobby de preparación de HU-15.3) y el **texto del mensaje** sigue
-    pendiente del PO. La épica **no** entra en el bloqueo: la HU nombra arma, armadura e ítem, y HU-28
-    excluye `EPICA` de las categorías equipables. La exclusión cruzada entre propósitos (`MISSION` y
-    `BATTLE`) **no** se ha implementado y queda declarada como límite. Ver el
+11. **El bloqueo de equipamiento en combate (HU-29) no impide que un héroe esté comprometido a
+    `MISSION` y a `BATTLE` a la vez.** El backend (Player/Inventory [#26](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/26)/[#59](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/pull/59),
+    Combat [#55](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/55)) ya está mergeado y
+    verificado de extremo a extremo entre los dos servicios reales (Combat PR
+    [#62](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/62)); lo que sigue sin
+    implementarse, a propósito, es la exclusión cruzada entre los dos propósitos de compromiso
+    (`hu-29-battle-commitment-v1` §10). Es una regla de producto distinta, no una condición de
+    aceptación de esta HU, y queda declarada como límite. La épica **no** entra en el bloqueo: la HU
+    nombra arma, armadura e ítem, y HU-28 excluye `EPICA` de las categorías equipables. Ver el
     [diseño](https://github.com/Nexus-Battle-VI/Nexus-Battle-Player-Inventory/blob/develop/docs/hu-29-bloqueo-equipamiento-combate.md)
     y [la evidencia](../evidence/HU-29-bloqueo-equipamiento-en-combate.md).
 

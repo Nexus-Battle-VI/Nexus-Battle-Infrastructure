@@ -66,6 +66,8 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [019](docs/adr/ADR-019-sprint-2-bounded-contexts.md) | Contextos acotados de Sprint 2: Combat, Missions, Auction y Wallet | Accepted |
 | [020](docs/adr/ADR-020-realtime-combat.md) | Tiempo real para Jugar Online | Accepted |
 | [021](docs/adr/ADR-021-combat-randomness-and-effect-table.md) | Aleatoriedad de Combat y mapeo uniforme a la tabla de efectos | Accepted |
+| [022](docs/adr/ADR-022-sprint-3-bounded-contexts.md) | Contextos acotados de Sprint 3: Tournament y Chatbot | Accepted |
+| [023](docs/adr/ADR-023-combat-ai-architecture.md) | Arquitectura de inteligencia artificial de combate | Proposed |
 
 El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 `Accepted` con evidencia de aprobación registrada.
@@ -95,7 +97,8 @@ distingue explícitamente lo implementado, lo propuesto y lo bloqueado.
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
 | [hu-10-mission-completion-reward-v1.md](docs/contracts/hu-10-mission-completion-reward-v1.md) | Contrato de liquidación de recompensas de finalización de misión (HU-10): XP con origen propio, créditos de misión en Wallet, productos por `inventory/grants`, snapshot e idempotencia. **Implementado y verificado técnicamente; aceptación pendiente** |
 | [hu-09-experience-reward-v1.md](docs/contracts/hu-09-experience-reward-v1.md) | Contrato de la recompensa de experiencia por derrota de un rival (HU-09). **Implementado en Combat, Player-Inventory y Missions; `P-2` cerrada** |
-| [hu-29-battle-commitment-v1.md](docs/contracts/hu-29-battle-commitment-v1.md) | Compromiso de batalla del héroe (HU-29): las dos rutas internas de Combat → Player/Inventory y el bloqueo del loadout. **Diseño — sin implementación** |
+| [hu-29-battle-commitment-v1.md](docs/contracts/hu-29-battle-commitment-v1.md) | Compromiso de batalla del héroe (HU-29): las dos rutas internas de Combat → Player/Inventory y el bloqueo del loadout. **Implementado en Player-Inventory y Combat, verificado de extremo a extremo entre los dos servicios reales; presentación en Web en PR abierto** |
+| [hu-30-versus-drop-v1.md](docs/contracts/hu-30-versus-drop-v1.md) | Drop de piezas equipadas por derrota individual en Versus (HU-30): resolución con el RNG central de Combat, liquidación diferida tras `FINISHED` y transferencia atómica idempotente en Player/Inventory. **Implementado en Combat, Player-Inventory, Notifications y Catalog, verificado de extremo a extremo entre los servicios reales; presentación en Web en PR abierto** |
 
 ### Gobierno
 

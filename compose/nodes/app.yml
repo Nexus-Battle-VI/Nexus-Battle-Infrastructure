@@ -97,7 +97,10 @@ services:
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
       # `combat` se suma para HU-15: consume `/internal/accounts/:subject/battle-profile`
       # al resolver el ingreso a una sala de batalla.
-      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat,auction
+      # `tournament` consulta la elegibilidad y la identidad de equipo (HU-77) en
+      # las rutas `@InternalOnly('tournament')` de Account; sin el nombre en esta
+      # lista el guard responde 403 aunque la firma HMAC sea valida.
+      INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat,auction,tournament
     # El avatar es obligatorio en el registro (HU-01), asi que sin un lugar
     # donde escribirlo NINGUNA cuenta puede crearse: el caso de uso guarda el
     # avatar antes que nada y respondia 500. La imagen ya trae el directorio
@@ -303,12 +306,25 @@ services:
       # estos dos servicios internos antes de aceptar un ingreso a sala.
       ACCOUNT_SERVICE_BASE_URL: http://account:3000
       PLAYER_INVENTORY_SERVICE_BASE_URL: http://inventory:3002
+      # HU-93: Combat consulta el contrato gameplay de bots y las habilidades
+      # epicas en Catalog. Con NODE_ENV=development el servicio asume este mismo
+      # valor, pero en produccion es obligatorio: se declara para que cambiar el
+      # entorno no impida el arranque.
+      CATALOG_SERVICE_BASE_URL: http://catalog:3003
       # HU-22/HU-23: Combat acredita las recompensas y reserva, libera y
       # liquida las apuestas contra Wallet (HMAC, allow-list `combat` de
       # Wallet). Sin esta URL Combat instala clientes "no configurados":
       # toda apuesta responde 503 y las recompensas quedan PENDING_CREDIT, y
       # con `NODE_ENV: development` el guard de arranque no lo advierte.
       WALLET_SERVICE_BASE_URL: http://wallet:3009
+      # HU-30: Combat captura la instantanea de drop y transfiere cada
+      # derecho contra Player/Inventory (misma URL de arriba) y notifica al
+      # ganador y al derrotado contra este servidor interno de Notifications
+      # -el mismo que ya atiende a Auction (AUCTION_OUTBID_HTTP_PORT), no uno
+      # nuevo-. Sin esta URL el cliente queda "no configurado": la liquidacion
+      # sigue transfiriendo la pieza, pero la notificacion de cada jugador
+      # queda pendiente hasta que se defina.
+      NOTIFICATIONS_SERVICE_BASE_URL: http://notifications:3005
     depends_on:
       combat-migrate:
         condition: service_completed_successfully
@@ -407,6 +423,13 @@ services:
       AUCTION_PENDING_CLAIM_EXPIRATION_SCHEDULER_ENABLED: 'true'
       AUCTION_PENDING_CLAIM_EXPIRATION_POLL_INTERVAL_MS: 60000
       AUCTION_PENDING_CLAIM_EXPIRATION_BATCH_SIZE: 100
+      # Reconciler de cancelaciones (HU-90). Exige PERSISTENCE_DRIVER=postgres,
+      # WALLET_BASE_URL, INVENTORY_BASE_URL e INTERNAL_SERVICE_AUTH_SECRET: si
+      # falta alguna, Auction no arranca.
+      AUCTION_CANCELLATION_RECONCILER_SCHEDULER_ENABLED: 'true'
+      AUCTION_CANCELLATION_RECONCILER_POLL_INTERVAL_MS: 30000
+      AUCTION_CANCELLATION_RECONCILER_BATCH_SIZE: 50
+      AUCTION_CANCELLATION_RECONCILER_LEASE_MS: 60000
       AUCTION_SETTLEMENT_QUEUE_URL: ${AUCTION_SETTLEMENT_QUEUE_URL:-}
       AUCTION_SETTLEMENT_EVENT_DISPATCH_ENABLED: 'true'
     depends_on:
@@ -454,6 +477,13 @@ services:
       # Sin `:?`: sin secreto, las rutas internas responden 503 y el resto
       # sigue funcionando. Hoy no declara consumidores internos (ADR-022).
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      # HU-77/HU-84/HU-78: elegibilidad de equipos (Account), cobro y compensacion
+      # de inscripciones (Wallet) y salas de torneo (Combat). Sin la URL de un
+      # servicio, su integracion responde 503: no inventa miembros, cobros ni
+      # resultados, pero el flujo correspondiente queda inerte.
+      ACCOUNT_BASE_URL: http://account:3000
+      WALLET_BASE_URL: http://wallet:3009
+      COMBAT_BASE_URL: http://combat:3006
     depends_on:
       tournament-migrate:
         condition: service_completed_successfully
@@ -480,6 +510,9 @@ services:
       # Chatbot no ofrece rutas internas (ADR-022); el secreto solo hace que una
       # futura ruta interna nazca con su contrato en vez de responder 503.
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      # Clave Fernet. Sin ella el proceso de produccion no arranca: el historial
+      # cifrado tiene que poder leerse despues de reiniciar.
+      CONVERSATION_CIPHER_KEY: ${CONVERSATION_CIPHER_KEY:-}
     depends_on:
       chatbot-migrate:
         condition: service_completed_successfully
