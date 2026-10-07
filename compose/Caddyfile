@@ -107,6 +107,15 @@
 		reverse_proxy auction:3008
 	}
 
+	# Subastas oficiales del Maestro de Juego (HU-66). El controlador de Auction
+	# vive en `/api/v1/official-auctions`, un prefijo HERMANO de `/api/v1/auctions`
+	# y no una subruta suya, asi que el comodin de arriba no lo cubre. Sin esta
+	# entrada la peticion caia en la Web: un GET devolvia su `index.html` con 200
+	# y un POST, un 405, mientras que Auction directo respondia 401.
+	handle /api/v1/official-auctions* {
+		reverse_proxy auction:3008
+	}
+
 	handle /api/v1/wallet* {
 		reverse_proxy wallet:3009
 	}
