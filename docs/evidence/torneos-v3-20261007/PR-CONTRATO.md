@@ -10,7 +10,7 @@ Incluye esquemas/fixtures, grafo G1 con E9/E10 cruzados y una Final, reserva de 
 
 Validación documental: 28 comprobaciones de schema/casos positivos y negativos, grafo/destinos, fechas UTC/deadline, enlaces internos y whitespace. Evidencia versionada del paquete: verificacion-contrato-A.json (r2) y verificacion-contrato-A-r3.json (r3). Parser C/adaptador B compatibles con marcador numérico 3 opcional, sin cambiar el string público ni v2. No acredita comportamiento integrado, cuentas reales o premios.
 
-El registro conserva la evidencia declarada por cada dueño y la reproducción B-RECOVERY-01: ausencia de ticks >=10 s bloquea incluso 3–3 y puede devolver ACCEPTANCE_CLOSED durante una ventana consultada OPEN. La regla técnica no queda aprobada por este PR documental; requiere reconciliación del dueño B con los criterios de cierre/recuperación. Los recorridos B con Combat real usan persistencia memory; Mongo real está probado por separado en C, no como el mismo recorrido.
+El registro conserva la evidencia declarada por cada dueño y la reproducción histórica B-RECOVERY-01 sobre 7910079. En be54b0a, siete escenarios dirigidos de A comprueban la recuperación 3–3 y la aceptación dentro de plazo corregidas. El cierre incompleto por gap >=10 s sigue como criterio no certificado (B-RECOVERY-01C), no aprobado por este PR documental. Los recorridos B con Combat real usan persistencia memory; Mongo real está probado por separado en C, no como el mismo recorrido.
 
 PR de implementación separados, que cada dueño prepara sobre su base vigente:
 

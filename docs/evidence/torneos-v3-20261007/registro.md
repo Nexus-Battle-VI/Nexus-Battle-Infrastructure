@@ -2,7 +2,15 @@
 
 Estado: **contrato disponible; integración pendiente de entregas certificadas**. Refs Nexus-Battle-VI/Nexus-Battle-Management#470.
 
-## Actualización r3 — entregas nuevas y marcador interno
+## Último corte de entregas B/C — controles finales y límites
+
+B entregó [Tournament #12](https://github.com/Nexus-Battle-VI/Nexus-Battle-Tournament/pull/12) en borrador, develop 2679af4, head/testedSHA be54b0a108e676ec79dadbfb593dff9c0ceb435c. Su estado y `evidencia/chat-B-verificacion-final.json` informan lint/format/typecheck/build, 318 unitarias/HTTP y 50 PostgreSQL (cero omitidas), cobertura ramas 88.66%/85.52%. A revisó ese reporte y verificó el SHA/base/head del PR; no reejecutó sus suites. CI 37656818640 sigue en curso al corte consultado. Los resultados generales anteriores 316/fixtures dirigidos quedan sustituidos por esta entrega final.
+
+C entregó head/testedSHA 00764585d24cc973fdd24768e8d2503b4cc04b90 en [Combat #86](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/pull/86), base dd67d47. A revisó logs locales finales: 3526 pruebas, 68 Mongo seleccionadas; CI [37655450014](https://github.com/Nexus-Battle-VI/Nexus-Battle-Combat/actions/runs/37655450014) confirma Calidad y pruebas/Python SUCCESS sobre 0076458, con 248 Mongo de suite completa declaradas por C y presentes en su log CI. Imagen en curso al consultar; no declarar workflow/despliegue íntegros aprobados. El fallo de 317726d se conserva como historia corregida, no fallo actual de calidad sobre 0076458.
+
+Los recorridos B prueban Tournament/HTTP/PostgreSQL real con motor/HMAC Combat real **en memoria** y Account/Inventory/JWT/pagos controlados; Mongo real se verifica por separado en C. No hay todavía un único recorrido Web→Tournament→Combat/Mongo con cuentas/premios reales. La reproducción dirigida A de siete casos sobre be54b0a corrige 3–3/aceptación; el criterio de cierres incompletos sin tick reciente sigue no certificado. Se conserva r3 y los dos blockers de premios, sin atribuir aprobación PO.
+
+## Actualización r3 — corte anterior de marcador interno
 
 Este apartado actualiza el corte inicial conservado más abajo. Versión documental `torneos-v3.0.0+r3`; contrato público y rutas sin cambio.
 
@@ -26,7 +34,15 @@ Nuevo bloqueo **PRIZE-RECIPIENT-01**: reconsultada la ruta Inventory `GET /api/i
 
 [Contrato normativo](../../contracts/torneos-v3.0.0.md), [corte machine-readable](corte.json), [matriz completa](matriz.json), [borrador de tareas HU-85](../../tasks/hu-85-ampliacion-20261007.md).
 
-## Corte posterior B — guard de recuperación no certificado
+## Corrección B be54b0a — núcleo corregido, criterio incompleto pendiente
+
+B sustituyó el commit 7910079 por `be54b0a108e676ec79dadbfb593dff9c0ceb435c`. A verificó checkout B limpio, fuentes src/test/support sin diferencias frente a ese commit y siete escenarios dirigidos (`evidencia/verificar-recuperacion-ventana-r2.cjs`): 3–3 produce intención COMBAT tras pausa de 10 s y tras pausa larga; primera aceptación a +42 s pasa pese a falta de ticks; GET muestra CLOSED/RESOLUTION_PENDING al deadline, sin mutar la decisión. Los recibos y el deadline se conservan. Estos dos defectos del corte anterior quedan **corregidos en componente**, no se mantiene su dictamen como si describiera be54b0a. A no inicia Combat ni accede a bases en este chequeo.
+
+Permanece **B-RECOVERY-01C**: cierre incompleto 3–0 con gap de observación >=10 s queda BLOCKED sin ganador, mientras con observación reciente produce ausencia. El umbral todavía decide el resultado sin probar que la aceptación estuvo indisponible. Se registra como criterio operativo/producto no certificado, separado de los bugs ya corregidos. No se aprueba una regla nueva ni se modifica el contrato normativo; diferenciar pausa del observador de fallo real sigue pendiente del dueño/validación.
+
+B entregó después los controles finales be54b0a (318 unitarias/HTTP y 50 PostgreSQL, reporte del dueño revisado por A) descritos en el último corte. A no repitió esas suites. Evidencia de componente exacta, 31 hashes de fuentes y casos en `evidencia/recuperacion-ventana-A-r2.json`. La evidencia anterior se conserva para explicar la corrección.
+
+## Corte anterior B 7910079 — guard reproducido, histórico
 
 B informa seis pruebas PostgreSQL de aceptación/reinicio/ausencia y tres de modalidades HTTP/Tournament/PostgreSQL con Combat real, más 23 unitarias/HTTP nuevas. Se observa el commit HU-85 `79100793d9095c12ad8f41fccb9f184bf7aecf0d`, todavía con cambios posteriores y controles finales a cargo de B. A inspeccionó la prueba y su harness: Combat ejecuta motor/HTTP/HMAC reales, pero persistencia memory y AUTH_MODE disabled; Account/Inventory y JWT son controlados. Es evidencia distinta de Mongo real en las suites de C y no se suman ambos como un único recorrido con todos los servicios reales. No se han recibido logs ni testedSHA final de las nueve pruebas.
 
