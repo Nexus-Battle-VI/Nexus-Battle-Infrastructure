@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "urn:nexus-battle:torneos:3.0.0",
-  "title": "Torneos torneos-v3.0.0, revisión documental 2",
+  "title": "Torneos torneos-v3.0.0, revisión documental 3",
   "description": "Formas normativas nuevas. Relaciones con torneo/actor, reglas temporales, importe/política y conteos requieren validación autoritativa además del schema.",
   "definitions": {
     "EntryPolicy": {
@@ -442,6 +442,10 @@
           "items": {
             "$ref": "#/definitions/Team"
           }
+        },
+        "contractVersion": {
+          "const": 3,
+          "description": "Marcador interno numérico opcional. mode/teamSize son obligatorios juntos; no sustituye el contractVersion público string."
         }
       },
       "required": [
@@ -873,6 +877,84 @@
         },
         {
           "$ref": "#/definitions/AbsenceResolution"
+        }
+      ]
+    },
+    "CombatMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractVersion",
+        "mode",
+        "teamSize"
+      ],
+      "properties": {
+        "contractVersion": {
+          "const": 3
+        },
+        "mode": {
+          "enum": [
+            "SOLO",
+            "DUO",
+            "TRIO"
+          ]
+        },
+        "teamSize": {
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "SOLO"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "teamSize": {
+                "const": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "DUO"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "teamSize": {
+                "const": 2
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "TRIO"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "teamSize": {
+                "const": 3
+              }
+            }
+          }
         }
       ]
     }

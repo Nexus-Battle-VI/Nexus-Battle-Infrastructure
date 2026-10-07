@@ -1,6 +1,6 @@
 # Torneos — contrato común torneos-v3.0.0
 
-Revisión documental 2, 7 de octubre de 2026. Estado: **especificación técnica disponible para B/C/D; implementación y aceptación integrada pendientes**. Refs Nexus-Battle-VI/Nexus-Battle-Management#470, #467, #468, #469 y #465.
+Revisión documental 3, 7 de octubre de 2026. Estado: **especificación técnica disponible para B/C/D; implementación y aceptación integrada pendientes**. Refs Nexus-Battle-VI/Nexus-Battle-Management#470, #467, #468, #469 y #465.
 
 La ampliación conserva los consumidores y torneos `torneos-hu77-84-78-hu83-v2.0.0`. La versión del contrato viaja en los datos: **las rutas continúan bajo `/api/v1`**. No se crea un prefijo HTTP `/api/v3`. Los esquemas normativos y los ejemplos de prueba están en [schema](torneos-v3.0.0.schema.json) y [fixtures](torneos-v3.0.0.fixtures.json).
 
@@ -36,7 +36,7 @@ type Member = {
 };
 type MembersExtension = { members: Member[]; companionId: string | null };
 ```
-`position:0` es el creador. `ownerId` se conserva; `companionId` es el segundo integrante o null. En TRIO no describe por sí solo el roster: `members` ordenados son autoritativos. Los recibos mantienen IDs y semántica; `registrationReceipt.memberIds` contiene el roster exacto.
+`position:0` es el creador. `ownerId` se conserva; `companionId` es alias del segundo integrante **solo en DUO**, y null en SOLO/TRIO. Los consumidores de modalidades usan siempre `members` ordenados como roster autoritativo. Los recibos mantienen IDs y semántica; `registrationReceipt.memberIds` contiene el roster exacto.
 
 El creador consiente al registrar, con `team-registration-v3`. Cada invitado utiliza su JWT en `POST /:id/teams/:teamId/consent {operationId,accept}`. Solo su consentimiento se modifica. Aceptar el último integrante deja `PENDING_PAYMENT`; SOLO llega ahí al registrarse. Rechazar/cancelar sigue la política pre-pago vigente. Cobrar/confirmar requiere todos los consentimientos, elegibilidad y cupo. Un integrante no consiente por otro.
 
@@ -92,12 +92,15 @@ Consultas únicas conservadas: `GET /:id/matches` y `GET /:id/matches/:encounter
 type ConvocationExtension = {
   contractVersion: "torneos-v3.0.0"; tournamentMode: "SOLO" | "DUO" | "TRIO"; teamSize: 1 | 2 | 3;
   acceptanceOpensAt: string; acceptanceClosesAt: string; scheduledStartAt: string;
+  serverNow: string; // reloj de servidor para presentar cuenta atrás, no permiso del cliente
   acceptanceStatus: "SCHEDULED" | "OPEN" | "CLOSED" | "BLOCKED_DELAY" | "RESOLVED";
   operationalStatus: "IDLE" | "RESOLUTION_PENDING" | "PREPARE_PENDING" | "START_PENDING" | "IN_BATTLE" | "FINISHED" | "DEPENDENCY_ERROR";
   acceptedCounts: [number, number];
   myAcceptance: AcceptanceReceipt | null;
-  blockReason: {code: string; message: string; since: string} | null;
+  blockReason: {code: string; message: string; since: string; responsible: "TOURNAMENT_OPERATIONS" | "COMBAT_OPERATIONS" | "PRIZE_OPERATIONS"} | null;
   resolution: TournamentResolution | null;
+  winnerTeamId: string | null; loserTeamId: string | null;
+  sources?: BracketMatch["sources"]; destinations?: BracketMatch["destinations"];
 };
 ```
 Conteos siguen los lados 0/1 del roster. Solo el propio recibo viaja a una sesión; no se publican fechas/recibos de aceptación individual de terceros. Los campos originales `status`, `preparationStatus`, `startedAt` y `result` se conservan con su autoridad; no se reutilizan como estados de convocatoria ni se altera el estado de una sala de Combat.
@@ -141,13 +144,17 @@ HU-80 consume ambas variantes una vez por resolutionId; deriva winner/loser y pr
 ```
 **Tournament traduce tournamentMode → mode** en su adaptador HTTP; no envía tournamentMode en ese wire. Combat valida mode/teamSize concordantes, exactamente dos lados completos del tamaño derivado, teamIds distintos y humanos únicos antes de llamadas innecesarias a Account/Inventory. No admite héroes, ganador, IA ni roomId del cliente. El roster persistido ordenado y el cuerpo firmado son idénticos en todo retry.
 
+El marcador interno **numérico** `contractVersion:3` es opcional en esta creación nueva. Si aparece debe ser exactamente 3 y viaja junto con mode/teamSize. Sin el marcador, mode/teamSize siguen identificando el wire nuevo y Combat deriva la misma versión de intención. No se envía el string público `torneos-v3.0.0` en ese campo ni se obliga a B a añadirlo. La variante sin marcador conserva la compatibilidad del cuerpo de revisión 2. Inicio/registro conservan sus formas, sin marcador nuevo requerido.
+
 La respuesta existente es **BattleRoomDto** con `id`, `mode` del motor PVP, `status`, `teams[{label,capacity,participants}]`, `createdBy`, etc. No se sustituye por un sobre inventado con roomId/operationId en la raíz. `mode:PVP` del DTO y `mode:TRIO` de esta petición son conceptos diferentes. Tournament valida dos lados y roster; vincula data.id.
+
+Las salas nuevas y su record añaden `tournament:{contractVersion:3,mode,teamSize}`. El bloque no transforma el mode raíz ni se añade retroactivamente a salas históricas. En respuesta, el 3 es versión interna de sala; el string torneos-v3.0.0 sigue siendo versión pública de Tournament.
 
 Inicio conserva `POST /.../:roomId/start {operationId,tournamentId,encounterId}`; registro conserva `GET /.../:roomId/record?afterSeq=N`, páginas/eventos HU-83 existentes. Operaciones internas deterministas: `tournament:${encounterId}:prepare` y `:start`. Un 503/timeout mantiene estado operativo pendiente, y se repite la misma sala/intención. No convierte fallos de Combat o elegibilidad en derrota.
 
-Compatibilidad: peticiones históricas sin mode/teamSize siguen exigiendo DUO, se reenvían **byte/semántica de cuerpo sin adiciones**, conservando su requestHash. Los documentos/salas existentes no se transforman. La huella de una petición nueva incluye modalidad/tamaño/roster; cambiar cualquier parte con el mismo ID es 409.
+Compatibilidad: peticiones históricas sin mode/teamSize/contractVersion siguen exigiendo DUO, se reenvían **byte/semántica de cuerpo sin adiciones**, conservando su requestHash y requestHashVersion 1 (ausente equivale a 1). Los documentos/salas existentes no se transforman. La huella nueva usa la solicitud validada, IDs sin espacios exteriores, modo/tamaño y versión interna 3 derivada, con requestHashVersion 2. Preserva el orden de equipos/miembros. Omitir o añadir únicamente el marcador opcional 3 no cambia esa intención nueva; cambiar roster/lados/modalidad/tamaño con el mismo ID es 409. HMAC firma siempre el cuerpo HTTP completo. El emisor mantiene su cuerpo original en retries y nunca actualiza una intención histórica al wire nuevo.
 
-**Entrega C observada:** 7df51d8 admite mode y capacidad 1/2/3 en parser/caso/agregado, pero todavía no valida teamSize; parte de d0a9cc4, seis commits detrás de develop dd67d47. La certificación v3 requiere la adaptación y pruebas sobre la base vigente. No se considera esta entrega integrada.
+**Entrega C actual observada:** 317726d36e9aa7775c6920a2d7782fb713cc7a75, limpio y basado en develop dd67d47. Sustituye la entrega antigua 7df51d8 para esta integración; valida mode/teamSize y acepta el marcador opcional. Añade DDL forward 026, sin modificar 018/025. A comprobó parser/política y el cuerpo emitido por el working tree B con transporte simulado; no acredita todavía batalla integrada ni cuentas reales. Los tests de C/Mongo se registran por el SHA declarado por su dueño.
 
 ## Administrador, worker, HMAC y errores
 
@@ -170,6 +177,8 @@ type PrizeSource =
   | {resultType:"ABSENCE"; finalEncounterId:string; resolutionId:string};
 ```
 Wallet/Inventory validan/idempotentizan esa fuente. Si un derecho requiere héroe propio y no hay uno validado, queda pendiente, sin inventarlo. **Esta forma es propuesta para sus dueños; no se despacha sobre las rutas v1 estrictas.** A documenta dependencia; B/C/D no escriben esos repositorios.
+
+Hay un segundo bloqueo independiente: `GET /api/internal/v1/players/:playerId/equipped-hero` de Inventory autoriza commerce/notifications/combat, no tournament. Tournament no puede usar identidad Combat para consultar premios. Mientras no exista fuente/caller autorizado, conserva el destinatario y derecho pendientes con `PRIZE_RECIPIENT_CONTRACT_REQUIRED`, responsable `PRIZE_OPERATIONS`, sin solicitud indebida ni héroe inventado. Una final jugada puede reutilizar héroes del registro oficial actual de Combat y su wire de diez campos; esto no certifica que el destino de premio esté publicado. Una Final sin sala mantiene además `PRIZE_RESOLUTION_CONTRACT_REQUIRED`. Ambos motivos se conservan aunque la UI muestre uno principal.
 
 ## Grafo G1 completo (una Final)
 
@@ -194,6 +203,6 @@ Conectores Web usan sources/destinations del servidor; no duplican cruces. La id
 
 ## Versionado y verificación
 
-Esta revisión sustituye el borrador local genérico v3 (prefijo /v3, memberIds/consents y nombres no fijados). Aquel borrador no estuvo certificado como cliente ni se publicó. La forma disponible se fija como torneos-v3.0.0 y revisión documental 2. Cambios futuros de wire/transiciones requieren nueva versión y actualización de consumidores por su dueño.
+Esta revisión sustituye el borrador local genérico v3 (prefijo /v3, memberIds/consents y nombres no fijados). Aquel borrador no estuvo certificado como cliente ni se publicó. La forma disponible se fija como torneos-v3.0.0 y revisión documental 3; ledger `torneos-v3.0.0+r3`. Frente a r2 se admite el marcador interno 3 opcional, se documenta su hash/metadatos, se precisa el alias companionId DUO y se añade el bloqueo de destinatario. La versión pública y las rutas de Tournament permanecen compatibles. Cambios futuros de wire/transiciones se versionan y los adapta cada dueño.
 
 El [registro de ejecución](../evidence/torneos-v3-20261007/registro.md) reserva DDL, identifica bases/entregas y hallazgos. La [matriz](../evidence/torneos-v3-20261007/matriz.json) distingue evidencia documental, pruebas del dueño y recorrido integrado. Ni validar el schema ni aprobar types demuestra usuarios reales, premios o aceptación funcional.

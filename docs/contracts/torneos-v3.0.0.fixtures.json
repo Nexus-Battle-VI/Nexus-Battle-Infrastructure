@@ -1,6 +1,6 @@
 {
   "contractVersion": "torneos-v3.0.0",
-  "documentRevision": 2,
+  "documentRevision": 3,
   "dataScope": "DATOS_DE_PRUEBA; no cuentas, salas ni combates reales",
   "modeMapping": {
     "SOLO": {
@@ -807,6 +807,109 @@
           "outcome": "WIN",
           "finishedAt": "2026-10-08T00:07:00.000Z"
         }
+      },
+      "valid": true
+    },
+    {
+      "name": "Combat TRIO con marcador interno 3 opcional",
+      "definition": "CombatCreate",
+      "data": {
+        "operationId": "tournament:opaque-e1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "opaque-e1",
+        "mode": "TRIO",
+        "teamSize": 3,
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": [
+              "p1",
+              "p2",
+              "p3"
+            ]
+          },
+          {
+            "teamId": "b",
+            "memberIds": [
+              "p4",
+              "p5",
+              "p6"
+            ]
+          }
+        ],
+        "contractVersion": 3
+      },
+      "valid": true
+    },
+    {
+      "name": "Marcador público string no se envía a Combat",
+      "definition": "CombatCreate",
+      "data": {
+        "operationId": "tournament:opaque-e1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "opaque-e1",
+        "mode": "TRIO",
+        "teamSize": 3,
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": [
+              "p1",
+              "p2",
+              "p3"
+            ]
+          },
+          {
+            "teamId": "b",
+            "memberIds": [
+              "p4",
+              "p5",
+              "p6"
+            ]
+          }
+        ],
+        "contractVersion": "torneos-v3.0.0"
+      },
+      "valid": false
+    },
+    {
+      "name": "Marcador numérico distinto rechazado",
+      "definition": "CombatCreate",
+      "data": {
+        "operationId": "tournament:opaque-e1:prepare",
+        "tournamentId": "T1",
+        "encounterId": "opaque-e1",
+        "mode": "TRIO",
+        "teamSize": 3,
+        "teams": [
+          {
+            "teamId": "a",
+            "memberIds": [
+              "p1",
+              "p2",
+              "p3"
+            ]
+          },
+          {
+            "teamId": "b",
+            "memberIds": [
+              "p4",
+              "p5",
+              "p6"
+            ]
+          }
+        ],
+        "contractVersion": 2
+      },
+      "valid": false
+    },
+    {
+      "name": "Metadatos de sala v3, distintos al modo PVP raíz",
+      "definition": "CombatMetadata",
+      "data": {
+        "contractVersion": 3,
+        "mode": "TRIO",
+        "teamSize": 3
       },
       "valid": true
     }

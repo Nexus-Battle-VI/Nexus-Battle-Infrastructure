@@ -19,6 +19,7 @@ Contrato: [torneos-v3.0.0](../contracts/torneos-v3.0.0.md). No se atribuyen los 
 | HU85-D01 | D | Formularios por modalidad y árboles | grafo del servidor legible en desktop/móvil, detalle por justa |
 | HU85-D02 | D | Aceptación y administración conectadas | identidad propia, hora prevista/real, ausencias/bloqueos/premios pendientes visibles |
 | HU85-DEP01 | Wallet/Inventory, dueño pendiente | Consumidor de premios basado en fuente/resolutionId | final ABSENCE sin sala ficticia, política/importes vigentes, una entrega por derecho |
+| HU85-DEP02 | Inventory, dueño pendiente | Fuente de héroe receptor autorizada para Tournament | caller propio autorizado; PENDING/PRIZE_RECIPIENT_CONTRACT_REQUIRED hasta disponer de fuente; sin impersonar Combat |
 | HU85-QA01 | A con cada dueño | Matriz integrada, instalación limpia y upgrade | SHAs finales, PostgreSQL/Mongo reales, auth y dobles explicitados |
 | HU85-UAT01 | usuario/PO | Recorrido con cuentas/héroes reales | resultado del usuario acreditado; tests/capturas solos no lo sustituyen |
 

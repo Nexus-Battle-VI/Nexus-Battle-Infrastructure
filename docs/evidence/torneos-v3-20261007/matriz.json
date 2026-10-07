@@ -34,13 +34,19 @@
       "scenario": "Equipo de otro tamaño",
       "expected": "Rechazo servidor de tamaño mixto o distinto a modalidad",
       "owner": "B/C",
-      "status": "NO_EJECUTADO_POR_A",
+      "status": "EVIDENCIA_COMPONENTE_PARSER_C; END_TO_END_NO_EJECUTADO",
       "testedServiceSHAs": null,
       "authentication": null,
       "realDependencies": [],
       "testDoubles": [],
-      "evidence": [],
-      "limitation": "No hay conjunto de commits B/C/D certificado para recorrido integrado."
+      "evidence": [
+        {
+          "path": "evidencia/conformidad-wire-r3.json",
+          "combatSHA": "317726d36e9aa7775c6920a2d7782fb713cc7a75",
+          "scope": "CONFORMIDAD_PARSER/POLITICA; fetch es doble, sin salas ni servicios/DB ni cuentas reales"
+        }
+      ],
+      "limitation": "Parser/política y hashes, sin creación/inicio de sala real ni recorridos completos de este caso."
     },
     {
       "id": "A4-04",
@@ -138,13 +144,19 @@
       "scenario": "SOLO y DUO",
       "expected": "Combinaciones aplicables completas, incompletas y empatadas",
       "owner": "B/C",
-      "status": "NO_EJECUTADO_POR_A",
+      "status": "EVIDENCIA_COMPONENTE_PARSER_C; END_TO_END_NO_EJECUTADO",
       "testedServiceSHAs": null,
       "authentication": null,
       "realDependencies": [],
       "testDoubles": [],
-      "evidence": [],
-      "limitation": "No hay conjunto de commits B/C/D certificado para recorrido integrado."
+      "evidence": [
+        {
+          "path": "evidencia/conformidad-wire-r3.json",
+          "combatSHA": "317726d36e9aa7775c6920a2d7782fb713cc7a75",
+          "scope": "CONFORMIDAD_PARSER/POLITICA; fetch es doble, sin salas ni servicios/DB ni cuentas reales"
+        }
+      ],
+      "limitation": "Parser/política y hashes, sin creación/inicio de sala real ni recorridos completos de este caso."
     },
     {
       "id": "A4-12",
@@ -248,20 +260,26 @@
       "realDependencies": [],
       "testDoubles": [],
       "evidence": [],
-      "limitation": "No hay conjunto de commits B/C/D certificado para recorrido integrado."
+      "limitation": "Premios: PRIZE_RESOLUTION_CONTRACT_REQUIRED y PRIZE_RECIPIENT_CONTRACT_REQUIRED; no hay consumidor/fuente certificados."
     },
     {
       "id": "A4-20",
       "scenario": "Datos antiguos y migración",
       "expected": "Mismo roster DUO, recibos/salas/hashes; sin ausencias retroactivas",
       "owner": "B/C",
-      "status": "NO_EJECUTADO_POR_A",
+      "status": "EVIDENCIA_COMPONENTE_PARSER_C; END_TO_END_NO_EJECUTADO",
       "testedServiceSHAs": null,
       "authentication": null,
       "realDependencies": [],
       "testDoubles": [],
-      "evidence": [],
-      "limitation": "No hay conjunto de commits B/C/D certificado para recorrido integrado."
+      "evidence": [
+        {
+          "path": "evidencia/conformidad-wire-r3.json",
+          "combatSHA": "317726d36e9aa7775c6920a2d7782fb713cc7a75",
+          "scope": "CONFORMIDAD_PARSER/POLITICA; fetch es doble, sin salas ni servicios/DB ni cuentas reales"
+        }
+      ],
+      "limitation": "Parser/política y hashes, sin creación/inicio de sala real ni recorridos completos de este caso."
     },
     {
       "id": "A4-21",
@@ -302,5 +320,6 @@
       "evidence": [],
       "limitation": "No hay conjunto de commits B/C/D certificado para recorrido integrado."
     }
-  ]
+  ],
+  "documentRevision": 3
 }

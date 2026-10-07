@@ -30,9 +30,13 @@
       "repo": "Nexus-Battle-Combat",
       "sha": "dd67d471af403097333b15d84cb1a00d0a41e0ec",
       "ownerDelivery": {
-        "sha": "7df51d81a249335c67f0a7ce0845a0f5747d2339",
-        "base": "d0a9cc49be3f2914a569f2cf7f2197af5154cf1e",
-        "behindDevelopCommits": 6
+        "sha": "317726d36e9aa7775c6920a2d7782fb713cc7a75",
+        "base": "dd67d471af403097333b15d84cb1a00d0a41e0ec",
+        "behindDevelopCommits": 0,
+        "previousTechnicalCommit": "5d247e06769a07867dd27b57c80c2d03556125fc",
+        "checkout": "tmp/torneos-modalidades-arboles-20261007/Nexus-Battle-Combat",
+        "workingTree": "LIMPIO_OBSERVADO",
+        "normativeWire": "mode/teamSize juntos; marcador contractVersion:3 opcional"
       },
       "mergedPRs": [
         {
@@ -47,7 +51,12 @@
           "number": 80,
           "sha": "123e77439334fe9999f25ef00e02833881ce551c"
         }
-      ]
+      ],
+      "historicalOwnerDelivery": {
+        "sha": "7df51d81a249335c67f0a7ce0845a0f5747d2339",
+        "base": "d0a9cc49be3f2914a569f2cf7f2197af5154cf1e",
+        "behindDevelopCommits": 6
+      }
     },
     {
       "repo": "Nexus-Battle-Web",
@@ -185,5 +194,26 @@
     "ref": "feat/torneos-cierre-observacion-20261006",
     "commit": "c9446f8e3ccabd8eda14ff7fd3fde107d3361cf8",
     "verification": "git bundle verify: complete history, is okay"
+  },
+  "documentRevision": 3,
+  "revisionObservedAtUtc": "2026-10-07T16:47:16Z",
+  "receivedTournamentCommit": {
+    "sha": "fc7a95ebc1af4779755a1cfc037c560d470cdd56",
+    "scope": "registro/modalidades/avance",
+    "hu85Commit": null,
+    "hu85Status": "working tree en adaptación; PG 5 tests declarados por B"
+  },
+  "prizeRecipientDependency": {
+    "inventoryDevelop": "7c76dda41b03b6bb5934b86ce00430fb8cfdbfd2",
+    "controllerBlob": "9e3ccd938c4096ff14a1241f66cbd61fb90a7ce6",
+    "route": "GET /api/internal/v1/players/:playerId/equipped-hero",
+    "allowedCallers": [
+      "commerce",
+      "notifications",
+      "combat"
+    ],
+    "TournamentAllowed": false,
+    "pendingCode": "PRIZE_RECIPIENT_CONTRACT_REQUIRED",
+    "responsible": "PRIZE_OPERATIONS"
   }
 }

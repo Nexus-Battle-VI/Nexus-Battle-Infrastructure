@@ -2,9 +2,23 @@
 
 Estado: **contrato disponible; integración pendiente de entregas certificadas**. Refs Nexus-Battle-VI/Nexus-Battle-Management#470.
 
+## Actualización r3 — entregas nuevas y marcador interno
+
+Este apartado actualiza el corte inicial conservado más abajo. Versión documental `torneos-v3.0.0+r3`; contrato público y rutas sin cambio.
+
+B entregó `fc7a95ebc1af4779755a1cfc037c560d470cdd56` (registro/modalidad/avance), inspeccionado; HU-85/convocatoria del working tree sigue pendiente de su commit final. El adaptador ya traduce tournamentMode→mode. C actual está en `tmp/torneos-modalidades-arboles-20261007/Nexus-Battle-Combat`, limpio en `317726d36e9aa7775c6920a2d7782fb713cc7a75`, con develop dd67d47 como ancestro. La entrega 7df51d8 queda como historia, no base integrada actual.
+
+Inicialmente C 5d247e0 exigía el marcador numérico contractVersion:3, incompatible con el wire r2 de B. Durante la verificación publicó 317726d, que lo hace opcional. A comprobó que ambos cuerpos nuevos —con y sin marcador 3— pasan su parser y generan la misma intención normalizada v2. El string público torneos-v3.0.0 no se envía como marcador interno. Peticiones históricas siguen con huella original v1. C añade metadatos tournament y migración forward 026; 018/025 se conservan.
+
+A ejecutó `evidencia/verificar-wire-combat-r3.cjs`: parser/política C reales y adaptador B real con **fetch doble**, 3 modalidades, marcador opcional, rechazo string, duplicado, orden de lados y hash histórico. El cuerpo actual B pasa C; hashes de fuentes capturados sin cambios durante esa comprobación. No crea/inicia salas ni accede a DB/Account/Inventory. Evidencia machine-readable en `evidencia/conformidad-wire-r3.json` del paquete.
+
+C declara 47 pruebas sobre MongoDB 8.0.24 real en su padre 5d247e0; el estado final de 317726d y cobertura siguen a cargo de C. B declara 5 pruebas nuevas de aceptación/reinicio/final por ausencia sobre PostgreSQL real, todavía sin SHA HU85 entregado. A no repitió sus suites ni convirtió esos resultados en aceptación integrada.
+
+Nuevo bloqueo **PRIZE-RECIPIENT-01**: reconsultada la ruta Inventory `GET /api/internal/v1/players/:playerId/equipped-hero` en develop 7c76dda, blob `9e3ccd938c4096ff14a1241f66cbd61fb90a7ce6`. Permite commerce/notifications/combat, no tournament. El working tree B usa `UnavailableTournamentPrizeRecipients` y devuelve PRIZE_RECIPIENT_CONTRACT_REQUIRED sin petición indebida. Conservar derecho/destinatario PENDING, responsable PRIZE_OPERATIONS. La fuente heroId de una Final jugada puede ser su registro oficial; no se inventa héroe para ausencia. Este bloqueo es independiente de PRIZE_RESOLUTION_CONTRACT_REQUIRED por sala ausente y de publicar consumidores de premio.
+
 [Contrato normativo](../../contracts/torneos-v3.0.0.md), [corte machine-readable](corte.json), [matriz completa](matriz.json), [borrador de tareas HU-85](../../tasks/hu-85-ampliacion-20261007.md).
 
-## Qué se comprobó ahora
+## Corte inicial r2 (histórico)
 
 Se reconsultaron develop y los PR fusionados de la base HU-85 mediante git fetch/GitHub API. Se encontró c9446f8 limpio en un repositorio independiente, no como rama del original. No se debe reconstruir desde el original sucio. B está aislado desde 2679af4 y recupera avance/premios selectivamente.
 
