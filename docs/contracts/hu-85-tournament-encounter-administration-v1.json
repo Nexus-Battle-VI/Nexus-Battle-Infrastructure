@@ -1,0 +1,114 @@
+{
+  "contract": "hu-85-tournament-encounter-administration-v1",
+  "commonVersion": "torneos-hu77-84-78-hu83-v2.0.0",
+  "status": "PROPUESTA_PENDIENTE_DE_REVISION",
+  "testDataOnly": true,
+  "pendingDecisionsNotApproved": [
+    "ausencias-calendario-reprogramacion-cancelacion-sin-derrotas-automaticas",
+    "tamano-de-equipo-2-vs-hasta-6",
+    "registro-de-intentos-rechazados"
+  ],
+  "examples": [
+    {
+      "case": "C1",
+      "criteria": ["CA-01"],
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tournaments/admin/t-1/matches/t-1:E1/prepare",
+        "body": { "operationId": "prep-e1-001" }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "actionId": "00000000-0000-4000-8000-000000000001",
+          "tournamentId": "t-1",
+          "encounterId": "t-1:E1",
+          "action": "PREPARE",
+          "actor": "account-admin-1",
+          "operationId": "prep-e1-001",
+          "occurredAt": "2026-10-06T15:00:00.000Z",
+          "replayed": false,
+          "battleId": "room-e1",
+          "status": "READY",
+          "preparationStatus": "PREPARED"
+        }
+      }
+    },
+    {
+      "case": "C7",
+      "criteria": ["CA-04"],
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tournaments/admin/t-1/matches/t-1:E1/start",
+        "body": { "operationId": "start-e1-001" }
+      },
+      "retry": "misma solicitud repetida",
+      "response": {
+        "status": 200,
+        "body": {
+          "actionId": "00000000-0000-4000-8000-000000000002",
+          "tournamentId": "t-1",
+          "encounterId": "t-1:E1",
+          "action": "START",
+          "actor": "account-admin-1",
+          "operationId": "start-e1-001",
+          "occurredAt": "2026-10-06T15:05:00.000Z",
+          "replayed": true,
+          "battleId": "room-e1",
+          "status": "IN_PROGRESS",
+          "preparationStatus": "IN_BATTLE"
+        }
+      }
+    },
+    {
+      "case": "C4",
+      "criteria": ["CA-03"],
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tournaments/admin/t-1/matches/t-1:E5/prepare",
+        "body": { "operationId": "prep-e5-001" }
+      },
+      "response": {
+        "status": 409,
+        "body": {
+          "code": "PARTICIPANTS_UNRESOLVED",
+          "message": "La justa todavía no tiene los dos equipos resueltos."
+        }
+      }
+    },
+    {
+      "case": "C6",
+      "criteria": ["CA-03"],
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tournaments/admin/t-1/matches/t-1:E2/prepare",
+        "body": { "operationId": "prep-e2-001" }
+      },
+      "response": {
+        "status": 422,
+        "body": {
+          "code": "COMBAT_REJECTED_PARTICIPANTS",
+          "message": "Combat rechazó a un participante.",
+          "blockers": [{ "playerId": "player-3", "reason": "NO_EQUIPPED_HERO" }]
+        }
+      }
+    },
+    {
+      "case": "C10",
+      "criteria": ["CA-01", "CA-04"],
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tournaments/admin/t-1/matches/t-1:E3/prepare",
+        "body": { "operationId": "prep-e3-001" }
+      },
+      "responses": [
+        {
+          "attempt": 1,
+          "status": 503,
+          "body": { "code": "SERVICE_UNAVAILABLE", "message": "Combat no está disponible." }
+        },
+        { "attempt": 2, "status": 200, "note": "misma sala, sin duplicados" }
+      ]
+    }
+  ]
+}
