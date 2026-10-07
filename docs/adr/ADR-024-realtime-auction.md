@@ -1,6 +1,6 @@
 # ADR-024 — Tiempo real para Subasta
 
-- **Estado:** Proposed — no existe todavía evidencia registrada de aprobación de Product Owners y Scrum Masters (ver «Evidencia de aceptación»)
+- **Estado:** **Accepted** el 2026-10-07 — aceptado por decisión de guishe2207 (responsable de las Tasks de EN-034), con revisión y fusión de [Infrastructure#208](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/208) por GabrielSastoque. No hay validación separada de Product Owners y Scrum Masters registrada (ver «Evidencia de aceptación»)
 - **Fecha:** 2026-10-07
 - **Decide:** Arquitectura, con validación de Auction y Web
 - **Relacionado:** [ADR-004](ADR-004-identity-directory.md), [ADR-007](ADR-007-aws-cost-optimized-platform.md), [ADR-010](ADR-010-reverse-proxy.md), [ADR-011](ADR-011-deployment-topology.md), [ADR-019](ADR-019-sprint-2-bounded-contexts.md), [ADR-020](ADR-020-realtime-combat.md), [EN-034 #523](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/523), [TASK EN-034.1 #583](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/583), [EPIC-07 #7](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/7), contrato borrador en [Nexus-Battle-Auction#98](https://github.com/Nexus-Battle-VI/Nexus-Battle-Auction/pull/98)
@@ -123,7 +123,8 @@ El interruptor `AUCTION_REALTIME_ENABLED` desactiva el endpoint de suscripción 
 
 ## Evidencia de aceptación
 
-- **Pendiente.** Este ADR se registra como `Proposed`. Pasa a `Accepted` con la validación de Product Owners y Scrum Masters registrada, conforme a la gobernanza de [ADR-001](ADR-001-repository-strategy.md).
+- **Aceptado el 2026-10-07** por decisión de guishe2207, responsable de las Tasks de EN-034. El PR [Infrastructure#208](https://github.com/Nexus-Battle-VI/Nexus-Battle-Infrastructure/pull/208) fue aprobado y fusionado por GabrielSastoque. **No se ha registrado una validación separada de Product Owners y Scrum Masters**, que ADR-020 sí tuvo; si la gobernanza de [ADR-001](ADR-001-repository-strategy.md) la exige para este ADR, debe añadirse aquí como evidencia.
+- **Contrato publicado:** [auction-realtime-v1.md](../contracts/auction-realtime-v1.md).
 - **Aceptar no es implementar:** Auction todavía no tiene WebSocket. Se añade con TASK EN-034.2 (#584).
 - **Estado de ADR-020 a la fecha:** el esquema con ticket de ADR-020 se describe como no integrado en Combat (HU-15.2 añadió un vertical mínimo con JWT en el primer mensaje, sin ticket). Este ADR adopta el esquema con ticket tal como lo define ADR-020; si Combat y Auction lo implementan por separado conviene extraer la emisión y verificación de tickets a un componente compartido o alinear ambas implementaciones.
 - La verificación de una conexión de más de 60 s a través de Caddy queda como prueba en TASK EN-034.5 (#587).
