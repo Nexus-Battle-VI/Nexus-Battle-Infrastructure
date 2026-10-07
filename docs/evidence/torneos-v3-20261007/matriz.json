@@ -484,5 +484,7 @@
     "evidence": "evidencia/entregas-B-C-A-r4.json; logs previos y CI actual revisados sin repetir suites",
     "ciRunId": 37655450014
   },
-  "latestEvidenceCapturedAtUtc": "2026-10-07T17:47:31Z"
+  "latestEvidenceCapturedAtUtc": "2026-10-07T17:47:31Z",
+  "historicalCut": "r4; ver publicacion-r5.json para el corte actualizado",
+  "currentEvidence": "publicacion-r5.json"
 }

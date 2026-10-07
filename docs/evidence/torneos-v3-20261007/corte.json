@@ -182,9 +182,7 @@
   },
   "hu85": {
     "state": "CLOSED",
-    "assignees": [
-      "xocamacho"
-    ],
+    "assignees": ["xocamacho"],
     "clarificationCommentId": 6039231084,
     "updatedAt": "2026-10-07T13:42:06Z",
     "mutated": false
@@ -207,11 +205,7 @@
     "inventoryDevelop": "7c76dda41b03b6bb5934b86ce00430fb8cfdbfd2",
     "controllerBlob": "9e3ccd938c4096ff14a1241f66cbd61fb90a7ce6",
     "route": "GET /api/internal/v1/players/:playerId/equipped-hero",
-    "allowedCallers": [
-      "commerce",
-      "notifications",
-      "combat"
-    ],
+    "allowedCallers": ["commerce", "notifications", "combat"],
     "TournamentAllowed": false,
     "pendingCode": "PRIZE_RECIPIENT_CONTRACT_REQUIRED",
     "responsible": "PRIZE_OPERATIONS"
@@ -239,5 +233,7 @@
     "AProofScope": "Solo forma JSON histórica simulada en memoria; TypeError sin pendingAcceptances. No prueba upgrade PostgreSQL ni existencia de un entorno afectado.",
     "required": "Auditar historial y JSON por entorno conservado. Si 007 preliminar aplicada: forward después del último nombre, array faltante=>[], failedAt faltante=>null, función SQL actualizada; conservar rosters/recibos/operaciones/decisiones/sorteos/salas. Si no existe destino conservado, documentar comprobación.",
     "conditionalReservation": "008 si sigue libre al consultar historial; de lo contrario siguiente ordinal libre posterior. No reescribir historial aplicado."
-  }
+  },
+  "historicalCut": "r4; ver publicacion-r5.json para el corte actualizado",
+  "currentEvidence": "publicacion-r5.json"
 }

@@ -21,11 +21,7 @@
               "maxItems": 0
             }
           },
-          "required": [
-            "version",
-            "free",
-            "methods"
-          ]
+          "required": ["version", "free", "methods"]
         },
         {
           "type": "object",
@@ -56,10 +52,7 @@
                         "maximum": 9007199254740991
                       }
                     },
-                    "required": [
-                      "method",
-                      "amount"
-                    ]
+                    "required": ["method", "amount"]
                   },
                   {
                     "type": "object",
@@ -94,11 +87,7 @@
               }
             }
           },
-          "required": [
-            "version",
-            "free",
-            "methods"
-          ]
+          "required": ["version", "free", "methods"]
         }
       ]
     },
@@ -118,11 +107,7 @@
           "maxLength": 100
         },
         "tournamentMode": {
-          "enum": [
-            "SOLO",
-            "DUO",
-            "TRIO"
-          ]
+          "enum": ["SOLO", "DUO", "TRIO"]
         },
         "entryPolicy": {
           "$ref": "#/definitions/EntryPolicy"
@@ -155,23 +140,15 @@
       ],
       "oneOf": [
         {
-          "required": [
-            "entryPolicy"
-          ],
+          "required": ["entryPolicy"],
           "not": {
-            "required": [
-              "entryFee"
-            ]
+            "required": ["entryFee"]
           }
         },
         {
-          "required": [
-            "entryFee"
-          ],
+          "required": ["entryFee"],
           "not": {
-            "required": [
-              "entryPolicy"
-            ]
+            "required": ["entryPolicy"]
           }
         }
       ]
@@ -190,10 +167,7 @@
           "pattern": "\\S"
         }
       },
-      "required": [
-        "kind",
-        "subject"
-      ]
+      "required": ["kind", "subject"]
     },
     "RegisterTeam": {
       "type": "object",
@@ -226,12 +200,7 @@
           }
         }
       },
-      "required": [
-        "operationId",
-        "name",
-        "avatar",
-        "invitedMemberIds"
-      ]
+      "required": ["operationId", "name", "avatar", "invitedMemberIds"]
     },
     "Consent": {
       "type": "object",
@@ -247,10 +216,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "operationId",
-        "accept"
-      ]
+      "required": ["operationId", "accept"]
     },
     "Acceptance": {
       "type": "object",
@@ -263,9 +229,7 @@
           "pattern": "\\S"
         }
       },
-      "required": [
-        "operationId"
-      ]
+      "required": ["operationId"]
     },
     "AcceptanceReceipt": {
       "type": "object",
@@ -394,10 +358,7 @@
           }
         }
       },
-      "required": [
-        "teamId",
-        "memberIds"
-      ]
+      "required": ["teamId", "memberIds"]
     },
     "CombatCreate": {
       "type": "object",
@@ -422,18 +383,10 @@
           "pattern": "\\S"
         },
         "mode": {
-          "enum": [
-            "SOLO",
-            "DUO",
-            "TRIO"
-          ]
+          "enum": ["SOLO", "DUO", "TRIO"]
         },
         "teamSize": {
-          "enum": [
-            1,
-            2,
-            3
-          ]
+          "enum": [1, 2, 3]
         },
         "teams": {
           "type": "array",
@@ -586,19 +539,11 @@
                 }
               }
             },
-            "required": [
-              "teamId",
-              "memberIds"
-            ]
+            "required": ["teamId", "memberIds"]
           }
         }
       },
-      "required": [
-        "operationId",
-        "tournamentId",
-        "encounterId",
-        "teams"
-      ]
+      "required": ["operationId", "tournamentId", "encounterId", "teams"]
     },
     "CombatStart": {
       "type": "object",
@@ -623,31 +568,21 @@
           "pattern": "\\S"
         }
       },
-      "required": [
-        "operationId",
-        "tournamentId",
-        "encounterId"
-      ]
+      "required": ["operationId", "tournamentId", "encounterId"]
     },
     "HU83Result": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "winnerTeamLabel": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "reason": {
           "type": "string",
           "minLength": 1
         },
         "outcome": {
-          "enum": [
-            "WIN",
-            "NO_WINNER"
-          ]
+          "enum": ["WIN", "NO_WINNER"]
         },
         "finishedAt": {
           "type": "string",
@@ -655,12 +590,7 @@
           "pattern": "Z$"
         }
       },
-      "required": [
-        "winnerTeamLabel",
-        "reason",
-        "outcome",
-        "finishedAt"
-      ]
+      "required": ["winnerTeamLabel", "reason", "outcome", "finishedAt"]
     },
     "PlayedResolution": {
       "type": "object",
@@ -693,16 +623,10 @@
           "uniqueItems": true
         },
         "winnerTeamId": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "loserTeamId": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "combatRoomId": {
           "type": "string",
@@ -739,17 +663,10 @@
           "pattern": "\\S"
         },
         "selectedSide": {
-          "enum": [
-            0,
-            1
-          ]
+          "enum": [0, 1]
         }
       },
-      "required": [
-        "kind",
-        "drawId",
-        "selectedSide"
-      ]
+      "required": ["kind", "drawId", "selectedSide"]
     },
     "AbsenceResolution": {
       "type": "object",
@@ -804,11 +721,7 @@
           }
         },
         "teamSize": {
-          "enum": [
-            1,
-            2,
-            3
-          ]
+          "enum": [1, 2, 3]
         },
         "ruleApplied": {
           "enum": [
@@ -883,28 +796,16 @@
     "CombatMetadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "contractVersion",
-        "mode",
-        "teamSize"
-      ],
+      "required": ["contractVersion", "mode", "teamSize"],
       "properties": {
         "contractVersion": {
           "const": 3
         },
         "mode": {
-          "enum": [
-            "SOLO",
-            "DUO",
-            "TRIO"
-          ]
+          "enum": ["SOLO", "DUO", "TRIO"]
         },
         "teamSize": {
-          "enum": [
-            1,
-            2,
-            3
-          ]
+          "enum": [1, 2, 3]
         }
       },
       "allOf": [
@@ -952,6 +853,110 @@
             "properties": {
               "teamSize": {
                 "const": 3
+              }
+            }
+          }
+        }
+      ]
+    },
+    "PrizeGrant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operationId",
+        "tournamentId",
+        "championTeamId",
+        "finalEncounterId",
+        "finalRoomId",
+        "playerId",
+        "heroId",
+        "kind",
+        "amount",
+        "productId"
+      ],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "tournamentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "championTeamId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "finalEncounterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "finalRoomId": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "playerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "heroId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "kind": {
+          "enum": ["CREDITS", "EPIC"]
+        },
+        "amount": {
+          "type": ["string", "null"]
+        },
+        "productId": {
+          "type": ["string", "null"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "CREDITS"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "amount": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]{0,15}$"
+              },
+              "productId": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "amount": {
+                "type": "null"
+              },
+              "productId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^\\S(?:.*\\S)?$"
               }
             }
           }

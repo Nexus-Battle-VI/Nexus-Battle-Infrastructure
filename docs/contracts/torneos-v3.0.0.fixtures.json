@@ -1,6 +1,6 @@
 {
   "contractVersion": "torneos-v3.0.0",
-  "documentRevision": 4,
+  "documentRevision": 5,
   "dataScope": "DATOS_DE_PRUEBA; no cuentas, salas ni combates reales",
   "modeMapping": {
     "SOLO": {
@@ -415,10 +415,7 @@
           "kind": "ACCOUNT_AVATAR",
           "subject": "p1"
         },
-        "invitedMemberIds": [
-          "p2",
-          "p3"
-        ]
+        "invitedMemberIds": ["p2", "p3"]
       },
       "valid": true
     },
@@ -432,10 +429,7 @@
           "kind": "ACCOUNT_AVATAR",
           "subject": "p1"
         },
-        "invitedMemberIds": [
-          "p2",
-          "p2"
-        ]
+        "invitedMemberIds": ["p2", "p2"]
       },
       "valid": false
     },
@@ -449,10 +443,7 @@
           "kind": "ACCOUNT_AVATAR",
           "subject": "p1"
         },
-        "invitedMemberIds": [
-          "p2",
-          "p3"
-        ],
+        "invitedMemberIds": ["p2", "p3"],
         "ownerId": "someone-else"
       },
       "valid": false
@@ -495,19 +486,11 @@
         "teams": [
           {
             "teamId": "a",
-            "memberIds": [
-              "p1",
-              "p2",
-              "p3"
-            ]
+            "memberIds": ["p1", "p2", "p3"]
           },
           {
             "teamId": "b",
-            "memberIds": [
-              "p4",
-              "p5",
-              "p6"
-            ]
+            "memberIds": ["p4", "p5", "p6"]
           }
         ]
       },
@@ -524,19 +507,11 @@
         "teams": [
           {
             "teamId": "a",
-            "memberIds": [
-              "p1",
-              "p2",
-              "p3"
-            ]
+            "memberIds": ["p1", "p2", "p3"]
           },
           {
             "teamId": "b",
-            "memberIds": [
-              "p4",
-              "p5",
-              "p6"
-            ]
+            "memberIds": ["p4", "p5", "p6"]
           }
         ],
         "tournamentMode": "TRIO"
@@ -555,19 +530,11 @@
         "teams": [
           {
             "teamId": "a",
-            "memberIds": [
-              "p1",
-              "p2",
-              "p3"
-            ]
+            "memberIds": ["p1", "p2", "p3"]
           },
           {
             "teamId": "b",
-            "memberIds": [
-              "p4",
-              "p5",
-              "p6"
-            ]
+            "memberIds": ["p4", "p5", "p6"]
           }
         ]
       },
@@ -585,18 +552,11 @@
         "teams": [
           {
             "teamId": "a",
-            "memberIds": [
-              "p1",
-              "p2",
-              "p3"
-            ]
+            "memberIds": ["p1", "p2", "p3"]
           },
           {
             "teamId": "b",
-            "memberIds": [
-              "p4",
-              "p5"
-            ]
+            "memberIds": ["p4", "p5"]
           }
         ]
       },
@@ -614,19 +574,11 @@
         "teams": [
           {
             "teamId": "a",
-            "memberIds": [
-              "p1",
-              "p1",
-              "p3"
-            ]
+            "memberIds": ["p1", "p1", "p3"]
           },
           {
             "teamId": "b",
-            "memberIds": [
-              "p4",
-              "p5",
-              "p6"
-            ]
+            "memberIds": ["p4", "p5", "p6"]
           }
         ]
       },
@@ -642,17 +594,11 @@
         "teams": [
           {
             "teamId": "a",
-            "memberIds": [
-              "p1",
-              "p2"
-            ]
+            "memberIds": ["p1", "p2"]
           },
           {
             "teamId": "b",
-            "memberIds": [
-              "p3",
-              "p4"
-            ]
+            "memberIds": ["p3", "p4"]
           }
         ]
       },
@@ -668,19 +614,11 @@
         "teams": [
           {
             "teamId": "a",
-            "memberIds": [
-              "p1",
-              "p2",
-              "p3"
-            ]
+            "memberIds": ["p1", "p2", "p3"]
           },
           {
             "teamId": "b",
-            "memberIds": [
-              "p4",
-              "p5",
-              "p6"
-            ]
+            "memberIds": ["p4", "p5", "p6"]
           }
         ]
       },
@@ -693,16 +631,10 @@
         "resultType": "ABSENCE",
         "resolutionId": "absence-stable-demo",
         "resolvedAt": "2026-10-08T00:02:00.000Z",
-        "teamIds": [
-          "a",
-          "b"
-        ],
+        "teamIds": ["a", "b"],
         "winnerTeamId": "a",
         "loserTeamId": "b",
-        "acceptedCounts": [
-          2,
-          1
-        ],
+        "acceptedCounts": [2, 1],
         "teamSize": 3,
         "ruleApplied": "HIGHER_ACCEPTANCE_COUNT",
         "reason": "ACCEPTANCE_WINDOW_CLOSED",
@@ -717,16 +649,10 @@
         "resultType": "ABSENCE",
         "resolutionId": "absence-stable-demo",
         "resolvedAt": "2026-10-08T00:02:00.000Z",
-        "teamIds": [
-          "a",
-          "b"
-        ],
+        "teamIds": ["a", "b"],
         "winnerTeamId": "a",
         "loserTeamId": "b",
-        "acceptedCounts": [
-          2,
-          1
-        ],
+        "acceptedCounts": [2, 1],
         "teamSize": 3,
         "ruleApplied": "HIGHER_ACCEPTANCE_COUNT",
         "reason": "ACCEPTANCE_WINDOW_CLOSED",
@@ -742,16 +668,10 @@
         "resultType": "ABSENCE",
         "resolutionId": "absence-stable-demo",
         "resolvedAt": "2026-10-08T00:02:00.000Z",
-        "teamIds": [
-          "a",
-          "b"
-        ],
+        "teamIds": ["a", "b"],
         "winnerTeamId": "a",
         "loserTeamId": "b",
-        "acceptedCounts": [
-          0,
-          0
-        ],
+        "acceptedCounts": [0, 0],
         "teamSize": 3,
         "ruleApplied": "TIED_ACCEPTANCE_COUNT",
         "reason": "ACCEPTANCE_WINDOW_CLOSED",
@@ -770,16 +690,10 @@
         "resultType": "ABSENCE",
         "resolutionId": "absence-stable-demo",
         "resolvedAt": "2026-10-08T00:02:00.000Z",
-        "teamIds": [
-          "a",
-          "b"
-        ],
+        "teamIds": ["a", "b"],
         "winnerTeamId": "a",
         "loserTeamId": "b",
-        "acceptedCounts": [
-          0,
-          0
-        ],
+        "acceptedCounts": [0, 0],
         "teamSize": 3,
         "ruleApplied": "TIED_ACCEPTANCE_COUNT",
         "reason": "ACCEPTANCE_WINDOW_CLOSED",
@@ -794,10 +708,7 @@
         "resultType": "PLAYED",
         "resolutionId": "combat-demo",
         "resolvedAt": "2026-10-08T00:07:00.000Z",
-        "teamIds": [
-          "a",
-          "b"
-        ],
+        "teamIds": ["a", "b"],
         "winnerTeamId": "a",
         "loserTeamId": "b",
         "combatRoomId": "actual-room-demo",
@@ -822,19 +733,11 @@
         "teams": [
           {
             "teamId": "a",
-            "memberIds": [
-              "p1",
-              "p2",
-              "p3"
-            ]
+            "memberIds": ["p1", "p2", "p3"]
           },
           {
             "teamId": "b",
-            "memberIds": [
-              "p4",
-              "p5",
-              "p6"
-            ]
+            "memberIds": ["p4", "p5", "p6"]
           }
         ],
         "contractVersion": 3
@@ -853,19 +756,11 @@
         "teams": [
           {
             "teamId": "a",
-            "memberIds": [
-              "p1",
-              "p2",
-              "p3"
-            ]
+            "memberIds": ["p1", "p2", "p3"]
           },
           {
             "teamId": "b",
-            "memberIds": [
-              "p4",
-              "p5",
-              "p6"
-            ]
+            "memberIds": ["p4", "p5", "p6"]
           }
         ],
         "contractVersion": "torneos-v3.0.0"
@@ -884,19 +779,11 @@
         "teams": [
           {
             "teamId": "a",
-            "memberIds": [
-              "p1",
-              "p2",
-              "p3"
-            ]
+            "memberIds": ["p1", "p2", "p3"]
           },
           {
             "teamId": "b",
-            "memberIds": [
-              "p4",
-              "p5",
-              "p6"
-            ]
+            "memberIds": ["p4", "p5", "p6"]
           }
         ],
         "contractVersion": 2
@@ -912,6 +799,90 @@
         "teamSize": 3
       },
       "valid": true
+    },
+    {
+      "name": "Créditos final por ausencia",
+      "definition": "PrizeGrant",
+      "data": {
+        "operationId": "qa-prize:absence:0:CREDITS",
+        "tournamentId": "qa-tournament",
+        "championTeamId": "qa-champion",
+        "finalEncounterId": "qa-opaque-final",
+        "finalRoomId": null,
+        "playerId": "qa-player",
+        "heroId": "qa-owned-hero",
+        "kind": "CREDITS",
+        "amount": "501",
+        "productId": null
+      },
+      "valid": true
+    },
+    {
+      "name": "Épica final por ausencia",
+      "definition": "PrizeGrant",
+      "data": {
+        "operationId": "qa-prize:absence:0:EPIC",
+        "tournamentId": "qa-tournament",
+        "championTeamId": "qa-champion",
+        "finalEncounterId": "qa-opaque-final",
+        "finalRoomId": null,
+        "playerId": "qa-player",
+        "heroId": "qa-owned-hero",
+        "kind": "EPIC",
+        "amount": null,
+        "productId": "qa-epic"
+      },
+      "valid": true
+    },
+    {
+      "name": "Rechazo sala omitida",
+      "definition": "PrizeGrant",
+      "data": {
+        "operationId": "qa-prize:absence:0:CREDITS",
+        "tournamentId": "qa-tournament",
+        "championTeamId": "qa-champion",
+        "finalEncounterId": "qa-opaque-final",
+        "playerId": "qa-player",
+        "heroId": "qa-owned-hero",
+        "kind": "CREDITS",
+        "amount": "501",
+        "productId": null
+      },
+      "valid": false
+    },
+    {
+      "name": "Rechazo sala vacía",
+      "definition": "PrizeGrant",
+      "data": {
+        "operationId": "qa-prize:absence:0:CREDITS",
+        "tournamentId": "qa-tournament",
+        "championTeamId": "qa-champion",
+        "finalEncounterId": "qa-opaque-final",
+        "finalRoomId": "",
+        "playerId": "qa-player",
+        "heroId": "qa-owned-hero",
+        "kind": "CREDITS",
+        "amount": "501",
+        "productId": null
+      },
+      "valid": false
+    },
+    {
+      "name": "Rechazo crédito fraccionario",
+      "definition": "PrizeGrant",
+      "data": {
+        "operationId": "qa-prize:absence:0:CREDITS",
+        "tournamentId": "qa-tournament",
+        "championTeamId": "qa-champion",
+        "finalEncounterId": "qa-opaque-final",
+        "finalRoomId": null,
+        "playerId": "qa-player",
+        "heroId": "qa-owned-hero",
+        "kind": "CREDITS",
+        "amount": "1.5",
+        "productId": null
+      },
+      "valid": false
     }
   ],
   "deadlineCases": [

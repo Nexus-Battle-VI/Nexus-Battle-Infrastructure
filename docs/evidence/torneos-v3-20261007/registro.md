@@ -1,6 +1,14 @@
 # Registro de ejecución A — 7 de octubre de 2026
 
-Estado: **contrato disponible; integración pendiente de entregas certificadas**. Refs Nexus-Battle-VI/Nexus-Battle-Management#470.
+Estado: **contrato y ampliación preparados para PR; integración, despliegue y aceptación PO pendientes**. Refs Nexus-Battle-VI/Nexus-Battle-Management#470.
+
+## Corte de publicación r5
+
+El usuario autorizó corregir y publicar como PR. HU-77 identifica ahora SOLO/DUO/TRIO (1v1/2v2/3v3); se alinearon las menciones pendientes de HU-85/86 sin cerrar historias ni cambiar asignaciones. Este corte sustituye el dictamen pendiente de consumidores/observación de r4, conservado abajo como histórico.
+
+Tournament integra Broadcasts/ExternalLinks en AppModule y migrador operativo 008/009. La observación conserva 2/4/6 combatientes; el recorrido con Combat real valida E1/E2 independientes en las tres modalidades. Wallet 010 e Inventory 018 permiten finalRoomId:null, mantienen las diez claves, huellas y recibos históricos. Inventory autoriza caller tournament solo para el lookup adicional de héroe; Tournament exige playerId coincidente y fija el destinatario antes de despachar. Se corrigió la carrera de índices únicos del registro de operaciones Wallet. Web deja de anunciar espera de Combat si la justa ya está en curso o terminada.
+
+La [evidencia r5](publicacion-r5.json) identifica los commits y distingue suites de componente, motores reales y el puente integrado. Ese puente deriva un campeón TRIO por 14 resoluciones por ausencia en PostgreSQL, entrega tres abonos y una épica mediante HTTP/HMAC a Wallet/PostgreSQL e Inventory/Mongo, y verifica concurrencia/replay sin duplicar. Account, JWT y Catálogo son dobles explícitos. No acredita Cognito, política G2/catálogo operativo, frontend integrado ni vídeo externo. Las limitaciones heredadas de precisión Wallet y de upgrades de 007 preliminar se conservan; no se atribuye aceptación funcional al PO.
 
 ## Último corte r4 — aceptación corregida, CI verde y upgrade condicionado
 
@@ -68,12 +76,12 @@ Hashes de las 31 fuentes cargadas sin cambios durante la reproducción en `evide
 
 Se reconsultaron develop y los PR fusionados de la base HU-85 mediante git fetch/GitHub API. Se encontró c9446f8 limpio en un repositorio independiente, no como rama del original. No se debe reconstruir desde el original sucio. B está aislado desde 2679af4 y recupera avance/premios selectivamente.
 
-| repo | develop reconsultado | checkout de escritura de la ejecución |
-| --- | --- | --- |
+| repo           | develop reconsultado                     | checkout de escritura de la ejecución                                      |
+| -------------- | ---------------------------------------- | -------------------------------------------------------------------------- |
 | Infrastructure | 4397e313050f5965539f00a8e49dbb4b8387d520 | tmp/infrastructure-torneos-v3-20261007, rama docs/torneos-v3-hu85-20261007 |
-| Tournament | 2679af41c47519578bbb21fbd82ebb4521b3869d | tmp/tournament-modes-hu85-20261007, B |
-| Combat | dd67d471af403097333b15d84cb1a00d0a41e0ec | tmp/hu85-combat, C |
-| Web | 59df33012bf5d6153d5075b0b96e4f9929c00f15 | tmp/torneos-modalidades-arboles-20261007/Nexus-Battle-Web, D |
+| Tournament     | 2679af41c47519578bbb21fbd82ebb4521b3869d | tmp/tournament-modes-hu85-20261007, B                                      |
+| Combat         | dd67d471af403097333b15d84cb1a00d0a41e0ec | tmp/hu85-combat, C                                                         |
+| Web            | 59df33012bf5d6153d5075b0b96e4f9929c00f15 | tmp/torneos-modalidades-arboles-20261007/Nexus-Battle-Web, D               |
 
 A conserva los originales: Tournament df2c544 (86 rutas cambiadas), Web a487eb2 (391), Infrastructure 0df09dd (8, incluyendo dos borradores de A), y Combat review ef10577 limpio. La copia Tournament c9446f8 está limpia; Web revisión 3294cac tiene 251 rutas cambiadas. Estos conteos son del corte **actual**, no resultados de planes viejos. El inventario completo de hashes queda en el paquete compartido; no incluye contenidos/credenciales ni sustituye un respaldo de archivos sin commit.
 
@@ -85,14 +93,14 @@ El checkout aislado de A se creó con git worktree porque el chat está asociado
 
 ## Migraciones y DDL aplicada
 
-| reserva Tournament | contenido | estado |
-| --- | --- | --- |
-| 001–003 | archivo/registro/bracket publicados | hashes idénticos entre develop y checkout B |
-| 004-tournament-admin-actions | administración HU-85 publicada | hash idéntico; conservar |
-| 005-tournament-external-links | adaptación selectiva de enlaces si se recupera | reservado, no obligatorio |
-| 006-tournament-mode-members-progression | modalidad/miembros/proyección recuperada | entregada en fc7a95e, PR12 borrador |
-| 007-tournament-round-acceptance-resolution | calendario/aceptaciones/resoluciones e intentos | entregada en 98628f7; upgrade desde 001–004 declarado por B |
-| 008 o siguiente ordinal libre | puente para 007 preliminar, si aplicada en entorno conservado | reserva condicional; historial/JSON/upgrade específico sin certificar |
+| reserva Tournament                         | contenido                                                     | estado                                                                |
+| ------------------------------------------ | ------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 001–003                                    | archivo/registro/bracket publicados                           | hashes idénticos entre develop y checkout B                           |
+| 004-tournament-admin-actions               | administración HU-85 publicada                                | hash idéntico; conservar                                              |
+| 005-tournament-external-links              | adaptación selectiva de enlaces si se recupera                | reservado, no obligatorio                                             |
+| 006-tournament-mode-members-progression    | modalidad/miembros/proyección recuperada                      | entregada en fc7a95e, PR12 borrador                                   |
+| 007-tournament-round-acceptance-resolution | calendario/aceptaciones/resoluciones e intentos               | entregada en 98628f7; upgrade desde 001–004 declarado por B           |
+| 008 o siguiente ordinal libre              | puente para 007 preliminar, si aplicada en entorno conservado | reserva condicional; historial/JSON/upgrade específico sin certificar |
 
 También existen 006-tournament-results-prizes y 007-tournament-broadcast **locales** en c9446f8. Esos nombres no se portan como sustitutos de 006/007 de esta base. Si la DDL local de enlaces/prizes/broadcast ya fue aplicada en un entorno reutilizado, se requiere puente incremental adaptado a su historial, no borrar/renombrar entradas de kysely_migration ni ejecutar CREATE repetido.
 
