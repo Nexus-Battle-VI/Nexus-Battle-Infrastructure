@@ -1,7 +1,7 @@
 {
   "contractVersion": "torneos-v3.0.0",
   "scope": "Matriz de producto/integración; no confundir validación de schema con comportamiento implementado",
-  "capturedAtUtc": "2026-10-07T16:23:18Z",
+  "capturedAtUtc": "2026-10-07T17:01:56Z",
   "cases": [
     {
       "id": "A4-01",
@@ -72,7 +72,8 @@
       "realDependencies": [],
       "testDoubles": [],
       "evidence": [],
-      "limitation": "No hay conjunto de commits B/C/D certificado para recorrido integrado."
+      "limitation": "No hay conjunto de commits B/C/D certificado para recorrido integrado.",
+      "ownerReportedEvidence": "B declara 3 modalidades HTTP/Tournament/PostgreSQL + Combat real E1/E2, sin logs/testedSHA final entregados. Harness: Combat memory/Account/Inventory y JWT controlados."
     },
     {
       "id": "A4-06",
@@ -92,26 +93,41 @@
       "scenario": "3–3 TRIO",
       "expected": "Batalla real, resultado PLAYED, seis humanos en cola/eventos",
       "owner": "B/C",
-      "status": "NO_EJECUTADO_POR_A",
+      "status": "NO_CONFORMIDAD_COMPONENTE_REPRODUCIDA_B_RECOVERY_01",
       "testedServiceSHAs": null,
       "authentication": null,
       "realDependencies": [],
       "testDoubles": [],
       "evidence": [],
-      "limitation": "No hay conjunto de commits B/C/D certificado para recorrido integrado."
+      "limitation": "No es una prueba end-to-end ni acreditación de indisponibilidad real; el umbral altera el resultado y permanece sin conformidad.",
+      "ownerReportedEvidence": "B declara 3 modalidades HTTP/Tournament/PostgreSQL + Combat real E1/E2, sin logs/testedSHA final entregados. Harness: Combat memory/Account/Inventory y JWT controlados.",
+      "AComponentEvidence": {
+        "report": "evidencia/recuperacion-ventana-A.json",
+        "observedTournamentHEAD": "79100793d9095c12ad8f41fccb9f184bf7aecf0d",
+        "sourceHashesInReport": true,
+        "scope": "Casos de uso reales, reloj/puertos en memoria; no HTTP/PG/caída real",
+        "actual": "Gap >=10000 ms bloquea OPEN incluso 3–3; faltan distinción disponibilidad/ticks y recuperación de cierre."
+      }
     },
     {
       "id": "A4-08",
       "scenario": "3–2 / 3–0 TRIO",
       "expected": "Completo gana ABSENCE ONE_COMPLETE",
       "owner": "B",
-      "status": "NO_EJECUTADO_POR_A",
+      "status": "NO_CONFORMIDAD_COMPONENTE_REPRODUCIDA_B_RECOVERY_01",
       "testedServiceSHAs": null,
       "authentication": null,
       "realDependencies": [],
       "testDoubles": [],
       "evidence": [],
-      "limitation": "No hay conjunto de commits B/C/D certificado para recorrido integrado."
+      "limitation": "No es una prueba end-to-end ni acreditación de indisponibilidad real; el umbral altera el resultado y permanece sin conformidad.",
+      "AComponentEvidence": {
+        "report": "evidencia/recuperacion-ventana-A.json",
+        "observedTournamentHEAD": "79100793d9095c12ad8f41fccb9f184bf7aecf0d",
+        "sourceHashesInReport": true,
+        "scope": "Casos de uso reales, reloj/puertos en memoria; no HTTP/PG/caída real",
+        "actual": "Gap >=10000 ms bloquea OPEN incluso 3–3; faltan distinción disponibilidad/ticks y recuperación de cierre."
+      }
     },
     {
       "id": "A4-09",
@@ -228,13 +244,20 @@
       "scenario": "Reinicio durante ventana; sin navegador",
       "expected": "Persistencia aceptaciones/deadline, worker procesa cierres pendientes",
       "owner": "B",
-      "status": "NO_EJECUTADO_POR_A",
+      "status": "NO_CONFORMIDAD_COMPONENTE_REPRODUCIDA_B_RECOVERY_01",
       "testedServiceSHAs": null,
       "authentication": null,
       "realDependencies": [],
       "testDoubles": [],
       "evidence": [],
-      "limitation": "No hay conjunto de commits B/C/D certificado para recorrido integrado."
+      "limitation": "No es una prueba end-to-end ni acreditación de indisponibilidad real; el umbral altera el resultado y permanece sin conformidad.",
+      "AComponentEvidence": {
+        "report": "evidencia/recuperacion-ventana-A.json",
+        "observedTournamentHEAD": "79100793d9095c12ad8f41fccb9f184bf7aecf0d",
+        "sourceHashesInReport": true,
+        "scope": "Casos de uso reales, reloj/puertos en memoria; no HTTP/PG/caída real",
+        "actual": "Gap >=10000 ms bloquea OPEN incluso 3–3; faltan distinción disponibilidad/ticks y recuperación de cierre."
+      }
     },
     {
       "id": "A4-18",
@@ -321,5 +344,15 @@
       "limitation": "No hay conjunto de commits B/C/D certificado para recorrido integrado."
     }
   ],
-  "documentRevision": 3
+  "documentRevision": 3,
+  "latestTournamentEvidence": {
+    "observedHEAD": "79100793d9095c12ad8f41fccb9f184bf7aecf0d",
+    "scope": "SHA observado con working tree posterior; controles generales de B pendientes",
+    "ownerReportedTests": {
+      "postgres": 9,
+      "unitHttp": 23
+    },
+    "AComponentReproduction": "recuperacion-ventana-A.json",
+    "realCombatHarness": "HTTP/motor/HMAC reales, persistencia memory; Account/Inventory/JWT controlados; no Mongo en este recorrido"
+  }
 }

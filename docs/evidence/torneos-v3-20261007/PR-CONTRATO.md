@@ -8,7 +8,9 @@ Cuando se registra un TRIO, Tournament debe proyectar tres integrantes por lado 
 
 Incluye esquemas/fixtures, grafo G1 con E9/E10 cruzados y una Final, reserva de migraciones nuevas y matriz de integración con pendientes. No modifica los contratos v2, migraciones aplicadas ni implementaciones de otros servicios.
 
-Validación documental: schema/casos positivos y negativos, grafo/destinos, fechas UTC/deadline, enlaces internos y whitespace. Los resultados exactos se registran en el archivo verificacion-contrato.json del paquete compartido al ejecutar. No acredita todavía comportamiento integrado, Mongo, cuentas reales o premios.
+Validación documental: 28 comprobaciones de schema/casos positivos y negativos, grafo/destinos, fechas UTC/deadline, enlaces internos y whitespace. Evidencia versionada del paquete: verificacion-contrato-A.json (r2) y verificacion-contrato-A-r3.json (r3). Parser C/adaptador B compatibles con marcador numérico 3 opcional, sin cambiar el string público ni v2. No acredita comportamiento integrado, cuentas reales o premios.
+
+El registro conserva la evidencia declarada por cada dueño y la reproducción B-RECOVERY-01: ausencia de ticks >=10 s bloquea incluso 3–3 y puede devolver ACCEPTANCE_CLOSED durante una ventana consultada OPEN. La regla técnica no queda aprobada por este PR documental; requiere reconciliación del dueño B con los criterios de cierre/recuperación. Los recorridos B con Combat real usan persistencia memory; Mongo real está probado por separado en C, no como el mismo recorrido.
 
 PR de implementación separados, que cada dueño prepara sobre su base vigente:
 

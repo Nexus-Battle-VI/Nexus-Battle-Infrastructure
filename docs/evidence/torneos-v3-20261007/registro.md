@@ -26,6 +26,16 @@ Nuevo bloqueo **PRIZE-RECIPIENT-01**: reconsultada la ruta Inventory `GET /api/i
 
 [Contrato normativo](../../contracts/torneos-v3.0.0.md), [corte machine-readable](corte.json), [matriz completa](matriz.json), [borrador de tareas HU-85](../../tasks/hu-85-ampliacion-20261007.md).
 
+## Corte posterior B — guard de recuperación no certificado
+
+B informa seis pruebas PostgreSQL de aceptación/reinicio/ausencia y tres de modalidades HTTP/Tournament/PostgreSQL con Combat real, más 23 unitarias/HTTP nuevas. Se observa el commit HU-85 `79100793d9095c12ad8f41fccb9f184bf7aecf0d`, todavía con cambios posteriores y controles finales a cargo de B. A inspeccionó la prueba y su harness: Combat ejecuta motor/HTTP/HMAC reales, pero persistencia memory y AUTH_MODE disabled; Account/Inventory y JWT son controlados. Es evidencia distinta de Mongo real en las suites de C y no se suman ambos como un único recorrido con todos los servicios reales. No se han recibido logs ni testedSHA final de las nueve pruebas.
+
+**B-RECOVERY-01 (P1):** un intervalo >=10000 ms sin lastObservedAt convierte OPEN en WINDOW_INTERRUPTED antes del cierre. A lo reprodujo con cinco escenarios sobre los casos de uso/dominio reales y puertos/reloj en memoria (`evidencia/verificar-recuperacion-ventana.cjs`). Con 3–3 recibos durables, lastObservedAt a +110 s y reanudación al deadline +120 s, no existe intención de Combat: queda BLOCKED. Con 3–0 tampoco resuelve. A +42 s, tras pausa del observador de 12 s, la consulta muestra OPEN pero una primera aceptación devuelve 409 ACCEPTANCE_CLOSED dentro del horario. Con observación a +115 s, el cierre 3–3 sí produce COMBAT. Recibos y deadline se conservan en todos esos casos.
+
+No se ha demostrado que falten ticks porque el canal de aceptación fuera inaccesible. Con ambos equipos completos tampoco hay ausencia que inferir: las seis intenciones están confirmadas. El umbral es una decisión técnica de B, **no una regla nueva aprobada por el usuario**. Los criterios vigentes siguen siendo ambos completos juegan, retomar cierres tras reinicio y no inventar una derrota ante una incidencia comprobada. Se pide a B separar disponibilidad de observación, reconciliar cierre/consulta/primera aceptación y añadir regresiones; revisar el guard SQL coherentemente sin reescribir historia ya aplicada. A no modifica Tournament ni elimina protecciones ante caídas reales.
+
+Hashes de las 31 fuentes cargadas sin cambios durante la reproducción en `evidencia/recuperacion-ventana-A.json`. Este chequeo acredita el efecto del guard, no HTTP/PostgreSQL, caída real, disponibilidad medida ni controles finales del SHA. La matriz A4-07/A4-08/A4-17 queda sin conformidad de componente hasta resolver este hallazgo. Contrato normativo r3 sin cambios; comunicación solamente por archivos.
+
 ## Corte inicial r2 (histórico)
 
 Se reconsultaron develop y los PR fusionados de la base HU-85 mediante git fetch/GitHub API. Se encontró c9446f8 limpio en un repositorio independiente, no como rama del original. No se debe reconstruir desde el original sucio. B está aislado desde 2679af4 y recupera avance/premios selectivamente.
