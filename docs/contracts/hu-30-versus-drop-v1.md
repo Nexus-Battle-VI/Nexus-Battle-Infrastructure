@@ -61,6 +61,33 @@ La misma ruta de Combat sirve 1v1, 2v2 y 3v3. Tournament, cuando cree justas en 
 
 La identidad por unidad en Player-Inventory y la tasa de caída en Catalog, declaradas como brechas reales en el diseño, **ya están cerradas**: `battle-drop-units` materializa la identidad física de cada pieza equipada al congelar la instantánea (solo para lo efectivamente equipado, no para todo el inventario histórico), y Catalog acepta `dropChanceBasisPoints` en `ARMA`/`ARMADURA`/`ITEM` al crear un producto. El catálogo no asigna 0 % por omisión: un producto **existente** sin la tasa configurada hace que `CaptureBattleDropSnapshot` rechace la instantánea con `DROP_RATE_UNAVAILABLE` en vez de inventar un valor, y **bloquearía el inicio de cualquier batalla Versus** donde ese producto esté equipado (`StartBattle` captura la instantánea de cada humano síncronamente). Por eso Catalog añade `PATCH /api/v1/admin/products/{id}/drop-chance`: la única vía administrativa, mínima y deliberadamente acotada a ese único campo, para configurar la tasa de un producto creado antes de HU-30 sin reabrir la inmutabilidad general de `attributes` que `UpdateProductDetails` ya declara a propósito. El contrato de producto de tasa es aditivo y no modifica las probabilidades históricas del SRS sin decisión de producto.
 
+### 5.1 Invariante de configuración de drop en producto equipable (incidente 2026-10, corrección quirúrgica)
+
+**Lo anterior describía un campo *aceptado*, no *exigido*: esa brecha se materializó en producción.** Catalog permitía crear `ARMA`/`ARMADURA`/`ITEM` sin `dropChanceBasisPoints`, y Web no lo pedía en el asistente de alta. El resultado: productos equipables nuevos nacían sin tasa, y al equiparlos `CaptureBattleDropSnapshot` los rechazaba con `DROP_RATE_UNAVAILABLE`, propagando un 503 a `POST /api/v1/combat/rooms/{roomId}/start` — **esto llegó a bloquear Jugar Online**.
+
+**Invariante, desde la corrección:**
+
+```text
+type == ARMA | ARMADURA | ITEM
+  → dropChanceBasisPoints es OBLIGATORIO al CREAR el producto
+  → rango 0..10000 (0 es un valor explícito válido, distinto de ausente)
+  → HEROE | HABILIDAD | EPICA quedan fuera, sin ampliar el alcance
+```
+
+- **Catalog** (`CreateCanonicalProduct`): rechaza con 400 (`DomainError`) la creación de un `ARMA`/`ARMADURA`/`ITEM` sin `dropChanceBasisPoints`. La restricción aplica **solo a la creación**: `parseProductAttributes` sigue aceptando el campo ausente al *leer* un producto ya persistido, para no impedir que el servicio arranque o liste el catálogo histórico antes del backfill (§5.2).
+- **Web**: el paso "Tipo y atributos" del asistente pide el porcentaje (0..100) para `ARMA`/`ARMADURA`/`ITEM`, lo convierte a basis points al construir la petición, y el paso de revisión muestra exactamente el valor que se va a persistir. Un producto sin esta tasa no permite avanzar.
+- **Gestión de productos** (pantalla administrativa existente): un producto equipable sin tasa configurada puede corregirse ahí mismo, reutilizando `PATCH .../drop-chance` (ya descrito arriba) desde un formulario dedicado — no se duplica el mecanismo, solo se expone en la UI que antes no lo hacía.
+- **Player-Inventory y Combat no cambian**: `DROP_RATE_UNAVAILABLE` sigue siendo la defensa correcta ante un dato incompleto; no se convierte en advertencia ni se asume `0` por su cuenta. El incidente no se originó en Combat — Combat detectaba correctamente que faltaba una precondición.
+
+### 5.2 Backfill de productos históricos (operación puntual, no una regla de dominio)
+
+Los productos equipables que ya existían en el entorno desplegado antes de esta corrección se reconcilian con un backfill controlado, no con código que invente tasas:
+
+- **Productos oficiales** (coinciden por tipo + nombre normalizado con el documento del Proyecto Integrador II, Tabla 20): reciben exactamente el porcentaje oficial del SRS (`OFFICIAL_SRS_RATE`).
+- **Productos sin regla oficial** (creados por el equipo, sin fila correspondiente en el SRS): reciben `0 bp` **explícito y documentado como `PROVISIONAL_NO_SRS_RATE`** — `0 bp` configurado es una decisión operativa para no bloquear Versus, no una afirmación de que el producto no debería caer nunca; el valor definitivo sigue pendiente de decisión de producto.
+- El backfill usa el caso de uso oficial (`ConfigureProductDropChance`/`PATCH .../drop-chance`) producto a producto, nunca una escritura directa a MongoDB: conserva validación, versión optimista, auditoría y outbox.
+- Es `dry-run` por defecto, idempotente, y no sobrescribe silenciosamente una tasa ya configurada (reporta conflicto en vez de pisarla).
+
 `P-HU30-TIE` sigue abierto: ni el comentario de #77, ni las Tasks, ni las tablas 8–19 del SRS, ni los contratos/ADR vigentes fijan desempate. También queda pendiente confirmar cualquier regla de respawn/múltiples derrotas de la misma víctima si Combat llegase a admitirlas; el flujo actual de salud 0 no permite una nueva acción de esa víctima.
 
 ## 6. Criterios de aceptación
