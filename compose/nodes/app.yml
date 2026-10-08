@@ -393,6 +393,9 @@ services:
       PERSISTENCE_DRIVER: postgres
       DATABASE_URL: postgres://auction:${DB_PASSWORD}@${DATA_HOST}:5432/auction
       AUTH_MODE: ${AUTH_MODE:-disabled}
+      # EN-034 (ADR-024): senales realtime de Subasta. Apagado por defecto; activarlo exige una sola
+      # replica de Auction (los tickets viven en memoria) y la migracion 021.
+      AUCTION_REALTIME_ENABLED: ${AUCTION_REALTIME_ENABLED:-false}
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
       # Con `:?`: Auction se niega a arrancar si hay una *_BASE_URL interna

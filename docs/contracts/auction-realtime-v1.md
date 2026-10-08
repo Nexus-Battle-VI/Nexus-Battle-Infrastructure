@@ -1,6 +1,6 @@
 # Contrato de señales realtime de Subasta v1 — EN-034 / TASK EN-034.1
 
-Estado: **contrato publicado; sin implementar**. Auction todavía no expone el WebSocket (TASK EN-034.2, Management #584) y la Web no lo consume (TASK EN-034.4, #586).
+Estado: **implementado en Auction** (TASK EN-034.2, Management #584, Nexus-Battle-Auction#99), apagado por defecto tras `AUCTION_REALTIME_ENABLED`. La Web todavía no lo consume (TASK EN-034.4, #586). Verificado con pruebas de extremo a extremo contra PostgreSQL real; la verificación de una conexión larga a través de Caddy sigue pendiente (TASK EN-034.5, #587).
 
 Decisión de arquitectura: [ADR-024](../adr/ADR-024-realtime-auction.md), que extiende [ADR-020](../adr/ADR-020-realtime-combat.md). Diseño detallado y diagrama de secuencia: `docs/tasks/TASK-34.1-contrato-realtime.md` en `Nexus-Battle-Auction`. Enabler: [EN-034 #523](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/523).
 
@@ -26,7 +26,7 @@ El backend es la fuente de verdad. El canal transporta **señales de invalidaci�
 ```json
 {
   "ticket": "opaque-random-string",
-  "expiresAt": "2026-10-07T12:00:30.000Z"
+  "expiresInSeconds": 30
 }
 ```
 
@@ -51,16 +51,27 @@ Solo tres tipos. Cualquier otro se rechaza y cierra con `4400`.
 | `auctions/{auctionId}` | Detalle de subasta, panel de puja | Señales de esa subasta, con `summary` |
 | `auctions` | Marketplace | Señales de cualquier subasta, **sin** `summary` |
 
-Suscribirse exige poder hacer el `GET` equivalente. Una subasta inexistente o no visible responde igual que ese `GET`.
+El servidor valida solo el **formato** del canal (`auctions` o `auctions/{auctionId}` con un identificador bien formado). No comprueba que la subasta exista: suscribirse a una inexistente es válido y nunca recibe señales. Las señales no llevan datos personales y su resumen coincide con lo que ya muestran el listado y el detalle, de modo que no hay información que proteger por canal; la autorización se aplica al emitir el ticket (rol `Player` o `GameMaster`).
 
 ## 5. Mensajes del servidor
+
+### Autenticación y mantenimiento
+
+```json
+{ "type": "authenticated" }
+{ "type": "resync" }
+```
+
+- `authenticated`: respuesta al mensaje `auth` válido.
+- `resync`: la conexión de escucha de Auction con PostgreSQL se perdió y se recuperó; las señales emitidas mientras estuvo caída no se recuperan. Todo cliente con alguna suscripción debe **invalidar y releer** lo que observa (equivale a una reconexión sin haber perdido el socket).
 
 ### Confirmaciones
 
 ```json
 { "type": "subscribed", "channel": "auctions/auction-1" }
 { "type": "unsubscribed", "channel": "auctions/auction-1" }
-{ "type": "error", "code": "SUBSCRIPTION_LIMIT", "message": "..." }
+{ "type": "error", "code": "SUBSCRIPTION_LIMIT" }
+{ "type": "error", "code": "INVALID_CHANNEL" }
 ```
 
 ### Señal `AuctionRealtimeSignalV1`
@@ -107,7 +118,7 @@ Ni `bidderId`, ni `sellerId`, ni `winnerId`, ni `loserBidderIds`, ni ningún dat
 ## 6. Revisión, orden y deduplicación
 
 - Cada subasta tiene una columna `revision bigint` (migración 021) que se incrementa **dentro de la misma transacción** que cualquier cambio observable: puja confirmada, compra inmediata, cierre, cancelación y publicación.
-- La señal se emite **después del commit**, nunca antes.
+- La señal se emite **después del commit**, nunca antes. La emiten triggers de PostgreSQL con `pg_notify` en el canal `auction_realtime` (migración 021): PostgreSQL entrega la notificación **solo si la transacción confirma**, y una revertida no emite nada. Auction mantiene una conexión de escucha propia (`LISTEN`) y reparte cada aviso a sus suscriptores. Correspondencia: alta de la subasta → `PUBLISHED` (revisión 0); puja nueva → `BID_ACCEPTED`; cambio de `status` a `FINISHED` → `SETTLED`, a `SOLD` → `BOUGHT_NOW`, a `CANCELLED` → `CANCELLED`. `BOUGHT_NOW` sale del cambio de estado, sin evento de dominio nuevo.
 - El cliente guarda la última `revision` vista por `auctionId` y **descarta** toda señal con `revision` menor o igual.
 - `summary` es solo una pista: aunque exista, el cliente siempre dispara el refetch y prevalece su resultado.
 
@@ -117,6 +128,7 @@ Ni `bidderId`, ni `sellerId`, ni `winnerId`, ni `loserBidderIds`, ni ningún dat
 2. Reconecta con backoff exponencial con jitter (tope sugerido 30 s) y repite el flujo de ticket: cada conexión necesita uno nuevo.
 3. Tras autenticar, vuelve a suscribirse a lo observado e **invalida las consultas de subasta que observaba**.
 4. Mientras está desconectado, la interfaz no presenta el valor como «en vivo».
+5. Ante un mensaje `resync`, repite el paso 3 sin cerrar el socket.
 
 No hay `resume`, `lastSeq` ni bitácora: el refetch cumple esa función. Un reinicio de Caddy o de Auction cierra todas las conexiones, y es esperado.
 
@@ -137,7 +149,6 @@ No hay `resume`, `lastSeq` ni bitácora: el refetch cumple esa función. Un rein
 | --- | --- |
 | `4400` | Mensaje inválido o de tipo no permitido |
 | `4401` | Ticket ausente, usado, caducado o sin autenticar a tiempo |
-| `4403` | Rol sin permiso |
 | `4429` | Límite de conexiones por usuario excedido |
 
 ## 10. Reversión
@@ -157,7 +168,7 @@ Con `AUCTION_REALTIME_ENABLED` apagado, el endpoint de tickets y el WebSocket de
 
 ## 12. Limitaciones conocidas
 
-- **Una sola réplica de Auction.** La difusión es en memoria del proceso (ADR-011, ADR-024). Con más de una réplica, un cambio confirmado en una no llegaría a los clientes conectados a otra; el estado no queda incorrecto, solo tarda hasta el siguiente refetch. Escalar exige un bus de difusión y un ADR nuevo.
+- **Una sola réplica de Auction.** Los avisos de PostgreSQL llegarían a todas las réplicas (cada una escucha), pero los **tickets viven en la memoria del proceso**: un ticket emitido por una réplica no lo consume otra. Con más de una réplica hay que compartir el almacén de tickets (o dirigir la conexión a la réplica que lo emitió) y registrarlo en un ADR nuevo.
 - **Memoria.** El contenedor de Auction tiene `mem_limit: 160m`; los límites de §8 son obligatorios y TASK EN-034.2 debe medir el consumo.
 - **Verificación pendiente.** Mantener una conexión de más de 60 s a través de Caddy se prueba en TASK EN-034.5 (#587).
 - **Web.** El módulo de Subasta de la Web (HU-87, HU-88) aún no existe.
