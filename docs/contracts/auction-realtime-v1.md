@@ -169,6 +169,6 @@ Con `AUCTION_REALTIME_ENABLED` apagado, el endpoint de tickets y el WebSocket de
 ## 12. Limitaciones conocidas
 
 - **Una sola réplica de Auction.** Los avisos de PostgreSQL llegarían a todas las réplicas (cada una escucha), pero los **tickets viven en la memoria del proceso**: un ticket emitido por una réplica no lo consume otra. Con más de una réplica hay que compartir el almacén de tickets (o dirigir la conexión a la réplica que lo emitió) y registrarlo en un ADR nuevo.
-- **Memoria.** El contenedor de Auction tiene `mem_limit: 160m`; los límites de §8 son obligatorios y TASK EN-034.2 debe medir el consumo.
-- **Verificación pendiente.** Mantener una conexión de más de 60 s a través de Caddy se prueba en TASK EN-034.5 (#587).
+- **Memoria.** El contenedor de Auction tiene `mem_limit: 160m`; los límites de §8 son obligatorios. Medido: 90 conexiones con 20 suscripciones cada una y 1000 señales difundidas añaden unos 3,6 MiB (ver [la evidencia](../evidence/EN-034-realtime-verificacion.md)).
+- **Verificado en servidor.** Una conexión de 75 s sin tráfico sobrevive a Caddy gracias al latido de 25 s y recibe señales después ([evidencia](../evidence/EN-034-realtime-verificacion.md)). Pendiente: el sitio público con TLS en el despliegue de AWS y el cliente de la Web (TASK EN-034.4, #586).
 - **Web.** El módulo de Subasta de la Web (HU-87, HU-88) aún no existe.
