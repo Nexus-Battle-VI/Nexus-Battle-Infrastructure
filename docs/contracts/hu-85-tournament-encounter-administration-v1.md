@@ -3,6 +3,8 @@
 Versión común: `torneos-hu77-84-78-hu83-v2.0.0` (sin cambios: HU-85 solo añade rutas y no modifica los contratos publicados).
 Estado: **propuesta técnica para implementación local (HU-85.1, Management#485). Pendiente de revisión por los responsables; no se atribuye aprobación a ningún equipo.** Las decisiones de negocio marcadas «NO APROBADA» no se pueden implementar como reglas.
 
+> **Actualización (8 de octubre de 2026).** La administración Preparar/Iniciar de este documento sigue vigente. Lo referente a calendario, ventana de aceptación, ausencias, tamaño de equipo y avance quedó resuelto por [torneos-v3.0.0](torneos-v3.0.0.md) e integrado en Tournament (PR #12): torneos con modalidad `SOLO`, `DUO` o `TRIO`, seis ventanas de aceptación de 120 segundos por ronda, aceptación por jugador (`POST /:id/matches/:encounterId/acceptance`), avance por ausencia como victoria normal y sorteo en empate. Donde este documento diga «sin regla aprobada» o «sin derrotas automáticas», aplica a los torneos anteriores sin política de calendario; para los demás manda torneos-v3.0.0.
+
 Fuente vigente: [HU-85 #470](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/470). Depende del bracket publicado ([HU-78](hu-78-tournament-bracket-v2.md)), de las consultas ([HU-83](hu-78-83-query-compatibility-v2.md)) y de las rutas internas de torneo de Combat (`/api/internal/v1/combat/tournament-rooms`).
 
 ## Alcance
@@ -137,13 +139,13 @@ La exclusión es **por justa** (serialización por `torneo|justa` en el servicio
 
 El archivo JSON de ejemplos contiene exclusivamente datos de prueba (`t-1`, `account-admin-1`, `room-e1`). No son valores de producción ni identificadores reales. Los adaptadores de Combat en memoria y los datos locales de Web son dobles de prueba, deben identificarse como tales y no sustituyen la verificación contra Combat real (HU-85.4).
 
-## Regla firme de la HU: sin derrotas automáticas
+## Regla para torneos sin política de calendario: sin derrotas automáticas
 
-La HU #470 prohíbe asignar derrotas automáticas por ausencia sin una regla aprobada. Por eso Preparar, Iniciar y los rechazos **nunca** escriben resultado, ganador, cierre ni estado `FINISHED`: el único origen de un resultado es el registro autoritativo de Combat (HU-83). El paso del tiempo, una justa sin iniciar o una fecha vencida no cambian ninguna justa. Caso de prueba **C13** (CA-03): un año después de la fecha del torneo ninguna justa tiene resultado ni cierre, un rechazo no cambia nada y el administrador aún puede iniciar sin que eso concluya la justa.
+La HU #470 prohíbe asignar derrotas automáticas por ausencia sin una regla aprobada. Esto sigue siendo cierto para los torneos creados sin modalidad ni calendario de aceptación (compatibilidad v2); los torneos v3 aplican la regla de ausencia de [torneos-v3.0.0](torneos-v3.0.0.md). Por eso Preparar, Iniciar y los rechazos **nunca** escriben resultado, ganador, cierre ni estado `FINISHED`: el único origen de un resultado es el registro autoritativo de Combat (HU-83). El paso del tiempo, una justa sin iniciar o una fecha vencida no cambian ninguna justa. Caso de prueba **C13** (CA-03): un año después de la fecha del torneo ninguna justa tiene resultado ni cierre, un rechazo no cambia nada y el administrador aún puede iniciar sin que eso concluya la justa.
 
-## Decisiones pendientes — NO APROBADAS
+## Decisiones que seguían pendientes al redactar este documento
 
-Estas decisiones **no** se implementan como reglas; la propuesta solo indica el comportamiento seguro por omisión.
+Estado original de estas decisiones, conservado como historial. Calendario, ausencias, tamaño de equipo y avance fueron resueltos después por torneos-v3.0.0; siguen pendientes reprogramación y cancelación, y el registro de intentos rechazados.
 
 1. **Ausencias, calendario, reprogramación y cancelación.** No existe regla aprobada, así que HU-85 no implementa reprogramar ni cancelar justas ni reaccionar a una fecha vencida. Lo único firme viene de la HU y se cumple: **no se asignan derrotas ni ganadores automáticos por ausencia** (ver «Regla firme de la HU»).
 2. **Tamaño de equipo.** El contrato de torneo usa equipos de dos; Combat hoy fija dos equipos × dos humanos. La discusión de «hasta 6 por batalla» no está aprobada y esta propuesta no la soporta.
