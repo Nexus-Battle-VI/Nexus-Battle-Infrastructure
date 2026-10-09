@@ -289,7 +289,7 @@ services:
   # no tienen rutas de negocio. Cada uno con base propia en el nodo de datos.
   # ---------------------------------------------------------------------
   combat:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:?combat necesita el tag real (sha-<corto>) de la imagen publicada, nunca "latest" en produccion}
     # 256m (antes 160m): con 160m el kernel mato a Combat 19 veces el 2026-10-07 (cgroup
     # OOM, pico medido 165,7 MB, 14 reinicios) sin dejar ningun log de la aplicacion.
     # La memoria oscila (116-128 MiB anon), asi que es techo bajo y no fuga. La imagen
@@ -332,6 +332,105 @@ services:
       # sigue transfiriendo la pieza, pero la notificacion de cada jugador
       # queda pendiente hasta que se defina.
       NOTIFICATIONS_SERVICE_BASE_URL: http://notifications:3005
+    depends_on:
+      combat-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # EN-037.4 (Management #573): worker TECNICO de entrenamiento continuo de
+  # IA de combate. Pertenece al bounded context Combat (ADR-023 "la IA de
+  # juego no constituye un bounded context ni un microservicio separado"):
+  # misma imagen de Combat (etapa `trainer` del Dockerfile, con Python/uv/
+  # PyTorch CPU añadidos), mismo MongoDB logico `combat`, sin puerto
+  # publicado, sin ruta en Caddy. Nunca bloquea el arranque de `combat`
+  # (§9.5 del prompt maestro de #573): solo depende de que las migraciones
+  # ya corrieron, nunca al reves -- si este worker cae, el API sigue
+  # disponible.
+  combat-trainer:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat-trainer:${COMBAT_IMAGE_TAG:?combat-trainer necesita el tag real (sha-<corto>) de la imagen publicada, nunca "latest" en produccion}
+    # `--ai-dir`/`--python-command`/`--database-name` ya resuelven con
+    # defaults correctos para esta imagen
+    # (`continuous-training-worker.ts`): solo `--source-commit` es
+    # obligatorio aqui, porque la imagen NUNCA contiene `.git`
+    # (`.dockerignore`) y el fallback a `git rev-parse HEAD` fallaria con
+    # un error, nunca con un SHA inventado (§7.2 del prompt maestro).
+    command:
+      [
+        'node',
+        'dist/infrastructure/training/continuous-training-worker.js',
+        '--source-commit',
+        '${COMBAT_SOURCE_COMMIT:?combat-trainer necesita el SHA real de la imagen de Combat publicada, nunca "unknown"}',
+      ]
+    # Limite PROVISIONAL, NUNCA medido en el nodo app real (§11/§18.1 del
+    # prompt maestro de #573: "NO EJECUTADO" por falta de acceso AWS/SSM en
+    # este entorno -- ver
+    # docs/evidence/en-037-4-ai-deployment/resource-measurements.md). Cota
+    # de seguridad derivada de medicion LOCAL real (Docker Desktop,
+    # x86_64, nunca Graviton): coordinador Node idle ~46 MiB + subproceso
+    # Python/PyTorch en un entrenamiento representativo (MLP diminuto,
+    # batch 256, 50 pasos) con RSS pico ~333 MiB. Revisar con medicion SSM
+    # real antes de confiar en este valor en produccion.
+    mem_limit: 512m
+    pids_limit: 128
+    environment:
+      # `NODE_ENV: development` en un worker que corre en produccion es
+      # una desviacion real (revision de codigo, #573) -- pero es la
+      # MISMA convencion que las otras 13 imagenes Node/Python de ESTE
+      # fichero ya usan (ninguna declara `NODE_ENV: production`). La causa
+      # es que `loadConfig()` de Combat (`src/infrastructure/config/env.ts`)
+      # ata, en una sola funcion, requisitos del SERVIDOR HTTP publico
+      # (AUTH_MODE=jwt, Cognito, URLs de Account/Catalog/Wallet) a
+      # `NODE_ENV=production` -- y este worker no sirve HTTP ni llama a
+      # ninguno de esos servicios. Separar esa configuracion (servidor
+      # publico vs. proceso tecnico) es un cambio de codigo de Combat, no
+      # de infraestructura -- fuera del alcance de #573 (ninguna Task de
+      # IA pide modificar `env.ts`). Documentado como limitacion conocida,
+      # no corregida aqui.
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: mongo
+      MONGODB_URI: mongodb://combat:${DB_PASSWORD}@${DATA_HOST}:27017/combat?authSource=combat&replicaSet=rs0
+      # El modelo es deliberadamente pequeno (ADR-023: Linear 72->64->32->1):
+      # sin beneficio real de paralelismo BLAS. Limitar a 1 hilo evita que
+      # un entrenamiento compita por los 2 vCPU de `t4g.medium` con el resto
+      # de `app` mientras corre (§7.4 del prompt maestro).
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+    depends_on:
+      combat-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # EN-037.4 (Management #573): worker TECNICO de evaluacion/promocion
+  # automatica. Reutiliza la MISMA imagen `runtime` que `combat` -- NUNCA
+  # necesita Python/PyTorch: el harness de evaluacion (#569) corre
+  # enteramente en Node/ONNX Runtime Node dentro del mismo proceso
+  # (`runAiEvaluation`), nunca como subproceso (§6.1 del prompt maestro:
+  # "el evaluador puede reutilizar la imagen runtime de Combat"). Mismo
+  # criterio de independencia que `combat-trainer`.
+  combat-evaluator:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:?combat necesita el tag real (sha-<corto>) de la imagen publicada, nunca "latest" en produccion}
+    command:
+      [
+        'node',
+        'dist/infrastructure/evaluation/automatic-evaluation-worker.js',
+        '--source-commit',
+        '${COMBAT_SOURCE_COMMIT:?combat-evaluator necesita el SHA real de la imagen de Combat publicada, nunca "unknown"}',
+      ]
+    # Limite PROVISIONAL, NUNCA medido en el nodo app real (§11/§18.1: "NO
+    # EJECUTADO", misma nota que `combat-trainer`). Medicion LOCAL real:
+    # worker Node idle/polling ~37 MiB -- una evaluacion FULL_EVALUATION
+    # real (cientos de combates simulados, incluido MCTS) no se midio
+    # localmente por el costo de tiempo; revisar con medicion SSM real
+    # antes de confiar en este valor en produccion.
+    mem_limit: 384m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: mongo
+      MONGODB_URI: mongodb://combat:${DB_PASSWORD}@${DATA_HOST}:27017/combat?authSource=combat&replicaSet=rs0
     depends_on:
       combat-migrate:
         condition: service_completed_successfully
@@ -724,7 +823,7 @@ services:
     restart: 'no'
 
   combat-migrate:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:?combat necesita el tag real (sha-<corto>) de la imagen publicada, nunca "latest" en produccion}
     command: ['node', 'dist/infrastructure/persistence/migrate.js']
     mem_limit: 128m
     pids_limit: 64

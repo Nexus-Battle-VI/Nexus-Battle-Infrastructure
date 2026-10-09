@@ -351,6 +351,18 @@ jobs:
       - name: Validar la composicion de referencia
         env:
           INTERNAL_SERVICE_AUTH_SECRET: secreto-ficticio-validacion-compose
+          # EN-037.4 (Management #573): `combat-trainer`/`combat-evaluator`
+          # exigen `COMBAT_SOURCE_COMMIT` con `:?` en `compose/nodes/app.yml`
+          # (las imagenes de los workers nunca contienen `.git`, asi que un
+          # valor ausente debe fallar aqui, no en el nodo real). Como en la
+          # linea de arriba, el valor es ficticio: lo que se comprueba es la
+          # sintaxis/estructura, no el commit real.
+          COMBAT_SOURCE_COMMIT: 0000000000000000000000000000000000000000
+          # Revision de codigo (#573): las CUATRO imagenes de Combat
+          # (`combat`, `combat-migrate`, `combat-trainer`, `combat-evaluator`)
+          # tambien exigen `COMBAT_IMAGE_TAG` con `:?` -- mismo motivo que
+          # arriba, valor ficticio solo para la validacion de sintaxis.
+          COMBAT_IMAGE_TAG: sha-000000000000
         run: |
           cp compose/compose.example.yml compose/compose.yml
           docker compose -f compose/compose.yml config > /dev/null

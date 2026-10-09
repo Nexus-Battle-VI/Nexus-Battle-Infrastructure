@@ -257,7 +257,7 @@ services:
   # no tienen rutas de negocio. Cada uno con base propia en el nodo de datos.
   # ---------------------------------------------------------------------
   combat:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:-latest}
     # 256m (antes 160m): con 160m el kernel mato a Combat 19 veces el 2026-10-07 (cgroup
     # OOM, pico medido 165,7 MB, 14 reinicios) sin dejar ningun log de la aplicacion.
     # La memoria oscila (116-128 MiB anon), asi que es techo bajo y no fuga. La imagen
@@ -300,6 +300,58 @@ services:
       # sigue transfiriendo la pieza, pero la notificacion de cada jugador
       # queda pendiente hasta que se defina.
       NOTIFICATIONS_SERVICE_BASE_URL: http://notifications:3005
+    depends_on:
+      combat-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # EN-037.4 (Management #573): mismo worker tecnico que `compose/nodes/app.yml`
+  # (ver ese fichero para la justificacion completa), adaptado a la topologia
+  # de un solo nodo de esta composicion de referencia (Mongo local, nunca
+  # `${DATA_HOST}`). `COMBAT_SOURCE_COMMIT` SI tiene un default local
+  # (`local-dev`): en la composicion de referencia no hay un pipeline de
+  # publicacion detras, asi que exigirlo con `:?` solo estorbaria el
+  # desarrollo local; `compose/nodes/app.yml` (produccion real) SI lo exige.
+  combat-trainer:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat-trainer:${COMBAT_IMAGE_TAG:-latest}
+    command:
+      [
+        'node',
+        'dist/infrastructure/training/continuous-training-worker.js',
+        '--source-commit',
+        '${COMBAT_SOURCE_COMMIT:-local-dev}',
+      ]
+    mem_limit: 512m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: mongo
+      MONGODB_URI: mongodb://combat:${DB_PASSWORD:-cambiar}@mongo:27017/combat?authSource=combat&replicaSet=rs0
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+    depends_on:
+      combat-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  combat-evaluator:
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:-latest}
+    command:
+      [
+        'node',
+        'dist/infrastructure/evaluation/automatic-evaluation-worker.js',
+        '--source-commit',
+        '${COMBAT_SOURCE_COMMIT:-local-dev}',
+      ]
+    mem_limit: 384m
+    pids_limit: 128
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      PERSISTENCE_DRIVER: mongo
+      MONGODB_URI: mongodb://combat:${DB_PASSWORD:-cambiar}@mongo:27017/combat?authSource=combat&replicaSet=rs0
     depends_on:
       combat-migrate:
         condition: service_completed_successfully
@@ -687,7 +739,7 @@ services:
     restart: 'no'
 
   combat-migrate:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:-latest}
     command: ['node', 'dist/infrastructure/persistence/migrate.js']
     mem_limit: 128m
     pids_limit: 64
