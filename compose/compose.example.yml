@@ -257,7 +257,7 @@ services:
   # no tienen rutas de negocio. Cada uno con base propia en el nodo de datos.
   # ---------------------------------------------------------------------
   combat:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:-latest}
     # 256m (antes 160m): con 160m el kernel mato a Combat 19 veces el 2026-10-07 (cgroup
     # OOM, pico medido 165,7 MB, 14 reinicios) sin dejar ningun log de la aplicacion.
     # La memoria oscila (116-128 MiB anon), asi que es techo bajo y no fuga. La imagen
@@ -313,7 +313,7 @@ services:
   # publicacion detras, asi que exigirlo con `:?` solo estorbaria el
   # desarrollo local; `compose/nodes/app.yml` (produccion real) SI lo exige.
   combat-trainer:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat-trainer:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat-trainer:${COMBAT_IMAGE_TAG:-latest}
     command:
       [
         'node',
@@ -337,7 +337,7 @@ services:
     restart: unless-stopped
 
   combat-evaluator:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:-latest}
     command:
       [
         'node',
@@ -739,7 +739,7 @@ services:
     restart: 'no'
 
   combat-migrate:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:-latest}
     command: ['node', 'dist/infrastructure/persistence/migrate.js']
     mem_limit: 128m
     pids_limit: 64

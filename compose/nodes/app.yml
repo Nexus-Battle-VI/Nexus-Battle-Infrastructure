@@ -289,7 +289,7 @@ services:
   # no tienen rutas de negocio. Cada uno con base propia en el nodo de datos.
   # ---------------------------------------------------------------------
   combat:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:?combat necesita el tag real (sha-<corto>) de la imagen publicada, nunca "latest" en produccion}
     # 256m (antes 160m): con 160m el kernel mato a Combat 19 veces el 2026-10-07 (cgroup
     # OOM, pico medido 165,7 MB, 14 reinicios) sin dejar ningun log de la aplicacion.
     # La memoria oscila (116-128 MiB anon), asi que es techo bajo y no fuga. La imagen
@@ -347,7 +347,7 @@ services:
   # ya corrieron, nunca al reves -- si este worker cae, el API sigue
   # disponible.
   combat-trainer:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat-trainer:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat-trainer:${COMBAT_IMAGE_TAG:?combat-trainer necesita el tag real (sha-<corto>) de la imagen publicada, nunca "latest" en produccion}
     # `--ai-dir`/`--python-command`/`--database-name` ya resuelven con
     # defaults correctos para esta imagen
     # (`continuous-training-worker.ts`): solo `--source-commit` es
@@ -373,6 +373,19 @@ services:
     mem_limit: 512m
     pids_limit: 128
     environment:
+      # `NODE_ENV: development` en un worker que corre en produccion es
+      # una desviacion real (revision de codigo, #573) -- pero es la
+      # MISMA convencion que las otras 13 imagenes Node/Python de ESTE
+      # fichero ya usan (ninguna declara `NODE_ENV: production`). La causa
+      # es que `loadConfig()` de Combat (`src/infrastructure/config/env.ts`)
+      # ata, en una sola funcion, requisitos del SERVIDOR HTTP publico
+      # (AUTH_MODE=jwt, Cognito, URLs de Account/Catalog/Wallet) a
+      # `NODE_ENV=production` -- y este worker no sirve HTTP ni llama a
+      # ninguno de esos servicios. Separar esa configuracion (servidor
+      # publico vs. proceso tecnico) es un cambio de codigo de Combat, no
+      # de infraestructura -- fuera del alcance de #573 (ninguna Task de
+      # IA pide modificar `env.ts`). Documentado como limitacion conocida,
+      # no corregida aqui.
       NODE_ENV: development
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: mongo
@@ -397,7 +410,7 @@ services:
   # "el evaluador puede reutilizar la imagen runtime de Combat"). Mismo
   # criterio de independencia que `combat-trainer`.
   combat-evaluator:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:?combat necesita el tag real (sha-<corto>) de la imagen publicada, nunca "latest" en produccion}
     command:
       [
         'node',
@@ -810,7 +823,7 @@ services:
     restart: 'no'
 
   combat-migrate:
-    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:latest
+    image: ghcr.io/nexus-battle-vi/nexus-battle-combat:${COMBAT_IMAGE_TAG:?combat necesita el tag real (sha-<corto>) de la imagen publicada, nunca "latest" en produccion}
     command: ['node', 'dist/infrastructure/persistence/migrate.js']
     mem_limit: 128m
     pids_limit: 64
