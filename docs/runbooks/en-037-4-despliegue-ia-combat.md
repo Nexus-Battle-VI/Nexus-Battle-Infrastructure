@@ -50,20 +50,30 @@ docker buildx imagetools inspect ghcr.io/nexus-battle-vi/nexus-battle-combat-tra
 nunca devolver un manifest — si lo hiciera, el comando no estaría
 comprobando nada.
 
-## 3. Generar `COMBAT_SOURCE_COMMIT`
+## 3. Generar `COMBAT_SOURCE_COMMIT` y `COMBAT_IMAGE_TAG`
 
 El `.env` que Terraform genera en el nodo `app` (ver comentario en
-`compose/nodes/app.yml`) debe incluir:
+`compose/nodes/app.yml`) debe incluir AMBAS variables, describiendo el
+MISMO commit/imagen (revisión de código, #573 — antes solo existía
+`COMBAT_SOURCE_COMMIT` mientras las cuatro imágenes de Combat seguían en
+`:latest`, permitiendo que una se actualizara sin la otra):
 
 ```
 COMBAT_SOURCE_COMMIT=<el SHA completo correspondiente al tag sha-<corto> publicado>
+COMBAT_IMAGE_TAG=sha-<los primeros 12 caracteres del mismo SHA>
 ```
 
-**Nunca** `unknown`/`latest`/`development`: la imagen de los workers no
-contiene `.git` (`.dockerignore`), así que sin este valor explícito el
-proceso falla al arrancar con un error claro (`required variable
-COMBAT_SOURCE_COMMIT is missing a value`) en vez de registrar un
-`sourceCommit` falso.
+**Nunca** `unknown`/`latest`/`development` para `COMBAT_SOURCE_COMMIT`: la
+imagen de los workers no contiene `.git` (`.dockerignore`), así que sin
+este valor explícito el proceso falla al arrancar con un error claro
+(`required variable COMBAT_SOURCE_COMMIT is missing a value`) en vez de
+registrar un `sourceCommit` falso.
+
+**Nunca** `latest` para `COMBAT_IMAGE_TAG` en producción: las cuatro
+imágenes de Combat (`combat`, `combat-migrate`, `combat-trainer`,
+`combat-evaluator`) se fijan con esta MISMA variable — si difiere del
+commit real, el `sourceCommit` que los workers registran podría no
+corresponder al binario que realmente está corriendo.
 
 ## 4. Sustituir la composición en el nodo `app` (mismo patrón que Sprint 3)
 

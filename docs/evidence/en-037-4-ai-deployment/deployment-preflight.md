@@ -55,8 +55,11 @@ cause o lo corrija.
       `nexus-battle-combat-trainer:sha-<corto>` existen en GHCR, con
       arquitectura `linux/arm64` presente en el manifest (`docker buildx
       imagetools inspect ghcr.io/.../nexus-battle-combat-trainer:sha-<corto>`).
-- [ ] `COMBAT_SOURCE_COMMIT` en el `.env` generado por Terraform coincide
-      EXACTAMENTE con el SHA de la imagen desplegada.
+- [ ] `COMBAT_SOURCE_COMMIT` **y** `COMBAT_IMAGE_TAG` en el `.env` generado
+      por Terraform coinciden EXACTAMENTE entre sí y con el SHA de la
+      imagen realmente desplegada (revisión de código, #573: las cuatro
+      imágenes de Combat ahora se fijan por `COMBAT_IMAGE_TAG`, nunca
+      `latest`, precisamente para que esto no pueda divergir en silencio).
 - [ ] Medición SSM real completada (`resource-measurements.md`, las cuatro
       filas "NO EJECUTADO" ya tienen números reales) — **sin esto, no
       desplegar los workers en el nodo real**, el prompt maestro de #573 lo
