@@ -593,6 +593,10 @@ services:
       ACCOUNT_BASE_URL: http://account:3000
       WALLET_BASE_URL: http://wallet:3009
       COMBAT_BASE_URL: http://combat:3006
+      # HU-86: Tournament pide a Player-Inventory el heroe equipado del campeon y entrega los
+      # premios de objeto. Sin esta URL esa integracion queda "no disponible" y responde 503,
+      # aunque el contenedor este sano (el 2026-10-10 se desplego sin ella).
+      INVENTORY_BASE_URL: http://inventory:3002
     depends_on:
       tournament-migrate:
         condition: service_completed_successfully
