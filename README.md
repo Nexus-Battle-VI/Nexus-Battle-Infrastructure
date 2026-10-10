@@ -68,6 +68,7 @@ Un documento de arquitectura que presenta intenciones como hechos es peor que no
 | [021](docs/adr/ADR-021-combat-randomness-and-effect-table.md) | Aleatoriedad de Combat y mapeo uniforme a la tabla de efectos | Accepted |
 | [022](docs/adr/ADR-022-sprint-3-bounded-contexts.md) | Contextos acotados de Sprint 3: Tournament y Chatbot | Accepted |
 | [023](docs/adr/ADR-023-combat-ai-architecture.md) | Arquitectura de inteligencia artificial de combate | Proposed |
+| [024](docs/adr/ADR-024-realtime-auction.md) | Tiempo real para Subasta | Accepted |
 
 El estado vigente se declara dentro de cada ADR. Una decisión solo pasa a
 `Accepted` con evidencia de aprobación registrada.
@@ -96,6 +97,7 @@ Ampliación en curso de torneos SOLO/DUO/TRIO y HU-85: [contrato común torneos-
 | [catalog-product-assets-v1.md](docs/contracts/catalog-product-assets-v1.md) | Contrato de diseño aprobado para carga, finalización y lectura de recursos visuales |
 | [catalog-events-v1.asyncapi.yaml](docs/contracts/catalog-events-v1.asyncapi.yaml) | AsyncAPI propuesto de `catalog.product.created` V1 |
 | [auction-settlement-events-v1.asyncapi.yaml](docs/contracts/auction-settlement-events-v1.asyncapi.yaml) | Contrato AsyncAPI de `auction.settled.v1` para HU-65.6 (Management #328) |
+| [auction-realtime-v1.md](docs/contracts/auction-realtime-v1.md) | Contrato de señales realtime de Subasta (EN-034, ADR-024): WebSocket de solo lectura, ticket de un solo uso, señal de invalidación con `revision`. **Publicado; sin implementar** |
 | [event-catalog.md](docs/contracts/event-catalog.md) | Eventos de dominio y mensajes |
 | [hu-10-mission-completion-reward-v1.md](docs/contracts/hu-10-mission-completion-reward-v1.md) | Contrato de liquidación de recompensas de finalización de misión (HU-10): XP con origen propio, créditos de misión en Wallet, productos por `inventory/grants`, snapshot e idempotencia. **Implementado y verificado técnicamente; aceptación pendiente** |
 | [hu-09-experience-reward-v1.md](docs/contracts/hu-09-experience-reward-v1.md) | Contrato de la recompensa de experiencia por derrota de un rival (HU-09). **Implementado en Combat, Player-Inventory y Missions; `P-2` cerrada** |
