@@ -426,6 +426,11 @@ services:
     # antes de confiar en este valor en produccion.
     mem_limit: 384m
     pids_limit: 128
+    # Sin HEALTHCHECK: la imagen runtime de Combat trae uno que pide /api/health/ready por HTTP, y este
+    # worker no sirve HTTP. Sin esto Docker lo marca `unhealthy` para siempre (visto el 2026-10-10:
+    # 6 fallos seguidos) y enmascara la senal que se usa para vigilar el nodo.
+    healthcheck:
+      disable: true
     environment:
       NODE_ENV: development
       LOG_LEVEL: info
