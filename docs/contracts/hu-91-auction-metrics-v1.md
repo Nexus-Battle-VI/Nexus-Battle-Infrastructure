@@ -289,7 +289,7 @@ Se reporta: `average`, `median` (`percentile_cont(0.5)`), `p90`, `sampleSize` y 
 ```
 
 **Errores comunes** (cuerpo `{ statusCode, code, message }`, igual que `auction-error.mapper.ts`):
-`400 INVALID_PERIOD` · `400 INVALID_PARAMETER` · `401` (token ausente/ inválido, o `AUTH_MODE=disabled`) · `403` (rol insuficiente — **sin datos ni identificadores**, CA-06) · `503` (BD no disponible).
+`400 INVALID_PERIOD` · `400 INVALID_PARAMETER` · `401` (token ausente/ inválido, o `AUTH_MODE=disabled`) · `403` (rol insuficiente — **sin datos ni identificadores**, CA-06) · `503` (BD no disponible; en el consolidado §4.6, `503 METRICS_UNAVAILABLE` solo si fallan todas las secciones).
 
 ---
 
@@ -515,6 +515,48 @@ Parámetro extra: `granularity` = `DAY` | `WEEK` | `MONTH` (defecto `DAY`; con s
 ```
 
 Reglas: buckets contiguos y completos (con ceros y `successRate: null` / `averageClosingTimeSeconds: null` donde `closed = 0`). `WEEK` empieza lunes UTC. Un bucket parcial en los extremos se recorta al periodo pero conserva `bucketStart/End` completos. Cada conteo del bucket usa su ancla (`bucketAnchors`), de modo que `Σ buckets` coincide con los totales de §4.1 para el mismo periodo (invariante de prueba).
+
+---
+
+### 4.6 Consolidado — `GET /api/v1/admin/auction-metrics/summary` *(Task HU-91.6)*
+
+Una sola llamada para la pantalla de métricas: orquesta los casos de uso de §4.1–§4.5 con **un único periodo**, de modo que las cinco secciones miden exactamente el mismo intervalo. No define métricas nuevas: cada `data` es, tal cual, la respuesta del endpoint individual (incluido su envoltorio).
+
+**Parámetros:** `from`, `to` (comunes), `limit` (1–50, defecto 10; aplica a rankings §4.2 y usuarios §4.4) y `granularity` (`DAY` | `WEEK` | `MONTH`, defecto `DAY`; `DAY` admite como máximo 92 días, §4.5).
+
+**Validación primero:** periodo, `limit` y `granularity` se validan antes de calcular nada. Un parámetro inválido es siempre `400 INVALID_PERIOD` / `400 INVALID_PARAMETER`, nunca una sección `DEGRADED`.
+
+```jsonc
+{
+  "definitionsVersion": "hu-91.v1",
+  "period": { "from": "...", "to": "...", "timezone": "UTC", "bounds": "[from,to)" },
+  "asOf": "2026-10-04T15:20:11.000Z",
+  "limit": 10,
+  "granularity": "WEEK",
+  "sections": {
+    "volumeAndSuccess":     { "status": "AVAILABLE", "data": { /* §4.1 */ } },
+    "closingTimeAndTrends": { "status": "AVAILABLE", "data": { /* §4.5 */ } },
+    "productRankings":      { "status": "AVAILABLE", "data": { /* §4.2 */ } },
+    "averagePrices":        { "status": "DEGRADED",  "reason": "SECTION_COMPUTATION_FAILED" },
+    "usersAndCommissions":  { "status": "AVAILABLE", "data": { /* §4.4 */ } }
+  }
+}
+```
+
+**Estados de sección**
+
+| `status` | Significado |
+| --- | --- |
+| `AVAILABLE` | `data` presente, idéntico al endpoint individual. |
+| `DEGRADED` | El cálculo de esa sección falló. Lleva `reason` genérico (`SECTION_COMPUTATION_FAILED`); **nunca** el mensaje de la excepción, hosts ni cadenas de conexión. El fallo se registra en el log del servicio. |
+
+**Reglas**
+
+- Una sección que falla **no** provoca `500` ni arrastra a las demás: `200` con esa sección `DEGRADED`.
+- `503 METRICS_UNAVAILABLE` (`{ statusCode, code, message }`) **solo** si fallan las cinco secciones.
+- **Catalog caído no degrada `productRankings`.** El enriquecimiento es parte del contrato de §4.2: la sección sigue `AVAILABLE` con `data.enrichment.status` = `PARTIAL` o `UNAVAILABLE` y los conteos correctos. `DEGRADED` queda reservado a fallos del cálculo propio de Auction.
+- Mismos permisos que el resto (§6): `@Roles(Role.Administrator)` + `@AuthenticationRequired()`; `401`/`403` sin datos agregados.
+- El consolidado no reemplaza a los endpoints individuales, que siguen vigentes (reintento por sección, integraciones).
 
 ---
 
