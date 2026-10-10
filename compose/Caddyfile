@@ -141,6 +141,15 @@
 		reverse_proxy missions:3007
 	}
 
+	# Metricas de subasta (HU-91, contrato `hu-91.v1`): viven bajo /admin pero pertenecen a
+	# Auction. La ruta especifica debe ganar al comodin de Catalog; sin ella, la llamada de la
+	# pantalla "Metricas de subasta" cae en Catalog y no llega a Auction. El servicio exige rol
+	# ADMINISTRATOR / SUPER_ADMINISTRATOR y responde 401/403 por su cuenta, asi que publicar la
+	# ruta no la deja abierta.
+	handle /api/v1/admin/auction-metrics* {
+		reverse_proxy auction:3008
+	}
+
 	# Administracion del catalogo (HU-34). Incluye
 	# `PATCH /api/v1/admin/products/{id}/inventory` y los recursos visuales.
 	#
