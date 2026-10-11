@@ -24,15 +24,25 @@ resource "aws_cognito_user_pool" "this" {
    * `ConfirmSignUp`), asi que la opcion es `CONFIRM_WITH_CODE` y el mensaje DEBE
    * contener el marcador `{####}`, que Cognito sustituye por el codigo.
    *
-   * Funciona con el emisor por defecto (`COGNITO_DEFAULT`): personalizar el TEXTO
-   * no exige SES. Lo que SES habilitaria es HTML con marca y volumen; el emisor
-   * por defecto entrega texto y tiene un tope diario (~50 correos), suficiente
-   * para la demo. Es una actualizacion in-place del pool: no reemplaza nada.
+   * EN-031: el cuerpo es HTML con el mismo armazon que los correos de
+   * Notifications (`templates/verification-email.html`, derivado de su
+   * plantilla `account-verification-code`). Las imagenes se cargan desde Web
+   * (`/assets/email/`), asi que Web debe desplegarse ANTES que este cambio.
+   * La guia de Cognito admite etiquetas HTML y hasta 20 000 caracteres UTF-8;
+   * la plantilla usa ~3 100. Cognito usa esta misma plantilla al verificar el
+   * correo en otros flujos, por eso el texto no habla solo del alta.
+   *
+   * La API documenta `EmailMessage` como exclusivo de `DEVELOPER`, pero el pool
+   * desplegado lo acepta con `COGNITO_DEFAULT` desde HU-01 (comprobado con
+   * DescribeUserPool el 2026-10-11). Que el emisor por defecto ENTREGUE el HTML
+   * renderizado no esta documentado: se comprueba con un alta real tras el
+   * apply, y si llegaran las etiquetas en crudo se revierte este bloque.
+   * Es una actualizacion in-place del pool: no reemplaza nada.
    */
   verification_message_template {
     default_email_option = "CONFIRM_WITH_CODE"
-    email_subject        = "Tu codigo de Nexus Battles VI"
-    email_message        = "Bienvenido a THE NEXUS BATTLES VI. Tu codigo de confirmacion es {####}. Escribelo en la pantalla de confirmacion para activar tu cuenta. Si no solicitaste este registro, ignora este mensaje."
+    email_subject        = "Tu código de verificación de Nexus Battles VI"
+    email_message        = file("${path.module}/templates/verification-email.html")
   }
 
   /**
