@@ -223,6 +223,17 @@ POST /api/internal/v1/inventory/commitments/{operationId}/extend
 { "expiresAt": "2026-10-02T04:32:00Z" }
 ```
 
+## Semántica de rotación ejecutada por Combat
+
+- Combat evalúa `HIGH -> MEDIUM -> LOW` y ofrece a la política solo la primera
+  acción viable; ninguna política puede saltar a una prioridad inferior.
+- `fallback: "BASIC_ATTACK"` no autoriza a fabricar estadísticas. Solo se ejecuta
+  si `effectiveStats.attack` y `effectiveStats.damage` están presentes.
+- Para un perfil de soporte puro sin habilidad viable, Combat registra
+  `legalActions=[]`, `selectedAction={"kind":"END_TURN"}` y
+  `decisionSource="SYSTEM"`; el enemigo continúa su turno.
+- `END_TURN` no consume Poder, no causa daño y no consume RNG ofensivo.
+
 ## Fuera de este contrato
 
 - Forma de las rotaciones: HU-71.
