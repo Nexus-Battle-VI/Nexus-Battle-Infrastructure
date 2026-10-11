@@ -332,6 +332,12 @@ services:
       # sigue transfiriendo la pieza, pero la notificacion de cada jugador
       # queda pendiente hasta que se defina.
       NOTIFICATIONS_SERVICE_BASE_URL: http://notifications:3005
+      # EN-036.2: etiquetado MCTS EN VIVO. Cada decision etiquetada corre una busqueda de 128 rollouts
+      # en el proceso de Combat (costo real de CPU, nunca en el camino de la respuesta). Apagado por
+      # defecto; se enciende con MCTS_LIVE_TEACHER_LABELING_ENABLED=true en el .env del nodo y se
+      # revierte igual (recrear combat). Es lo unico que alimenta de etiquetas a `combat-trainer`:
+      # las decisiones ya registradas NUNCA podran etiquetarse (el evento no guarda la sala).
+      MCTS_LIVE_TEACHER_LABELING_ENABLED: ${MCTS_LIVE_TEACHER_LABELING_ENABLED:-false}
     depends_on:
       combat-migrate:
         condition: service_completed_successfully
@@ -354,12 +360,18 @@ services:
     # obligatorio aqui, porque la imagen NUNCA contiene `.git`
     # (`.dockerignore`) y el fallback a `git rev-parse HEAD` fallaria con
     # un error, nunca con un SHA inventado (§7.2 del prompt maestro).
+    # `--allow-missing-labels`: el historial anterior a activar el etiquetado en vivo tiene decisiones
+    # ONLINE/TOURNAMENT que nunca podran etiquetarse, y el dataset lee TODO el historial. Sin esta
+    # bandera cada build fallaba con MissingTeacherLabelError (visto el 2026-10-10: 1150 decisiones).
+    # Las decisiones sin label se OMITEN del dataset, nunca se inventan. Requiere la imagen de Combat
+    # que trae Combat#102; con una imagen anterior el worker rechaza la bandera y no arranca.
     command:
       [
         'node',
         'dist/infrastructure/training/continuous-training-worker.js',
         '--source-commit',
         '${COMBAT_SOURCE_COMMIT:?combat-trainer necesita el SHA real de la imagen de Combat publicada, nunca "unknown"}',
+        '--allow-missing-labels',
       ]
     # Limite PROVISIONAL, NUNCA medido en el nodo app real (§11/§18.1 del
     # prompt maestro de #573: "NO EJECUTADO" por falta de acceso AWS/SSM en
