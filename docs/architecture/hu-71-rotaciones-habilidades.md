@@ -1,6 +1,6 @@
 # HU-71 — Diseño de la configuración de rotaciones de habilidades
 
-**Estado:** diseño. **No implementado.** Missions no tiene rutas de negocio en `develop` y Combat no aplica rotaciones. Nada de este documento autoriza a marcar rutas como disponibles en [service-catalog.md](../contracts/service-catalog.md).
+**Estado:** implementado; aclaraciones del PO ratificadas el 2026-10-10.
 
 ## Trazabilidad
 
@@ -23,7 +23,7 @@
 | --- | --- |
 | ¿Qué guarda Missions? | Hasta tres rotaciones por jugador, héroe y misión, cada una con su prioridad (`HIGH`, `MEDIUM` o `LOW`) y una secuencia de acciones. |
 | ¿Quién decide si una rotación es viable? | Combat, en cada turno de la simulación: Poder suficiente, recarga cumplida y estado de salud del héroe. |
-| ¿Qué pasa si ninguna es viable? | La IA ejecuta el ataque básico sin consumir Poder (CA-03). Es un resultado del contrato, no un error. |
+| ¿Qué pasa si ninguna es viable? | Un perfil ofensivo ejecuta ataque básico sin Poder (CA-03). Un CHAMÁN/MÉDICO sin Ataque/Daño cierra el turno con `SYSTEM/END_TURN`, sin inventar ofensiva. |
 | ¿Cómo se evita que dos ediciones se pisen? | Versión optimista: cada guardado indica la versión que leyó (`expectedVersion`). |
 | ¿Qué usa la simulación? | Una **copia congelada** que la matrícula toma al confirmar. Editar después no cambia una misión en curso. |
 
@@ -45,11 +45,11 @@
 | P-R2 | Las prioridades van sin huecos: con una rotación, `HIGH`; con dos, `HIGH` y `MEDIUM`; con tres, las tres. | «Rotación 1, 2 y 3» son posiciones, no etiquetas libres. |
 | P-R3 | Cada rotación tiene entre 1 y 3 acciones. | Coincide con el ejemplo de referencia; más acciones las decide el PO (decisión 2). |
 | P-R4 | Cada acción es `ABILITY` con un `abilityId` que el héroe tenga, o `BASIC_ATTACK`. Missions valida las referencias al guardar, contra las habilidades que publica Player/Inventory. | Evita que la simulación falle con `422` por una referencia inválida, lo que la anularía (HU-72). |
-| P-R5 | Una acción `BASIC_ATTACK` siempre es viable. | Cuesta 0 Poder y no tiene recarga (HU-18 y HU-11). |
+| P-R5 | Una acción `BASIC_ATTACK` es viable solo si el perfil autoritativo tiene Ataque y Daño. | Cuesta 0 Poder y no tiene recarga, pero los soportes puros no poseen capacidad ofensiva. |
 | P-R6 | Cada rotación tiene su propio cursor: avanza cuando se ejecuta uno de sus pasos y vuelve al inicio tras el último. Una rotación no viable no avanza. | La HU habla de «secuencias» y no define qué pasa entre turnos (decisión 3). |
 | P-R7 | La bitácora de la simulación anota en cada acción del héroe qué rotación y qué paso se usaron, y por qué se saltaron las de mayor prioridad. | Permite comprobar CA-02 y CA-03 con la bitácora, sin acceder a Combat. |
 | P-R8 | La matrícula de HU-70 recibe `strategyVersion` en lugar de `rotations`. Si no coincide con la versión guardada: `409 STRATEGY_VERSION_MISMATCH`. | El jugador confirma con la estrategia que tiene delante; si otra pestaña la cambió, se entera. |
-| P-R9 | Sin estrategia guardada, la matrícula sigue adelante con estrategia vacía: la IA solo usará el ataque básico. Web avisa antes de confirmar. | Evita bloquear la misión; la HU no la declara obligatoria (decisión 4). |
+| P-R9 | Sin estrategia guardada, la matrícula sigue adelante: un héroe ofensivo usa ataque básico; un soporte puro usa `END_TURN`. Web avisa antes de confirmar. | Evita bloquear la misión sin fabricar estadísticas inexistentes. |
 
 ## Caso de uso textual
 
@@ -82,9 +82,9 @@ Ver [decisión por turno](#decisión-por-turno). Missions no participa: solo env
 Diagrama: [hu-71-turn-decision.puml](../diagrams/hu-71-turn-decision.puml). La ejecuta Combat en la simulación:
 
 1. Para cada rotación en orden de prioridad, tomar la acción que marca su cursor.
-2. La rotación es viable si esa acción es `BASIC_ATTACK`, o si es `ABILITY` y el héroe tiene Poder para su costo, la recarga está en 0 y cumple la condición de salud (decisión 5). Se comprueba en ese orden de causa: recarga (`ON_COOLDOWN`), Poder (`NOT_ENOUGH_POWER`) y salud (`HEALTH_CONDITION`); la bitácora anota la primera que falla.
+2. La rotación es viable si la acción está permitida por el perfil, y además, para `ABILITY`, tiene Poder, recarga 0 y cumple salud. Una curación exige salud menor a 90 %. Un soporte puro no puede usar ataque básico ni habilidades ofensivas.
 3. Ejecutar la acción de la primera rotación viable y avanzar **solo** su cursor.
-4. Si ninguna es viable, ejecutar el ataque básico sin consumir Poder (CA-03).
+4. Si ninguna es viable, ejecutar ataque básico sin Poder cuando el perfil puede atacar; de lo contrario cerrar con `SYSTEM/END_TURN` y dejar continuar al enemigo.
 
 | Caso | Rotación 1 | Rotación 2 | Rotación 3 | Acción | Poder consumido |
 | --- | --- | --- | --- | --- | --- |
@@ -95,6 +95,7 @@ Diagrama: [hu-71-turn-decision.puml](../diagrams/hu-71-turn-decision.puml). La e
 | D-5: la acción actual de la 1 es `BASIC_ATTACK` | Viable | — | — | Ataque básico de la rotación 1 | 0 |
 | D-6: solo hay una rotación y no es viable | Sin Poder | No existe | No existe | Ataque básico de respaldo | 0 |
 | D-7: cuarta rotación al guardar (CA-04) | — | — | — | `422 TOO_MANY_ROTATIONS` | — |
+| D-8: soporte puro sin habilidad viable | No viable | No viable | No viable | `SYSTEM/END_TURN` | 0 |
 
 Cuando una habilidad se ejecuta con Poder insuficiente en una batalla, Combat la **degrada** a ataque básico (HU-19). En la simulación no hace falta: la regla de viabilidad salta antes a la siguiente rotación.
 
@@ -180,6 +181,6 @@ La ruta prevista en `Nexus-Battle-Missions/docs/architecture.md` (`PUT /api/v1/m
 2. **Cuántas acciones admite una rotación.** Propuesta P-R3: entre 1 y 3.
 3. **Qué pasa con el cursor entre turnos.** Propuesta P-R6: cada rotación avanza el suyo y vuelve al inicio.
 4. **¿Es obligatoria la estrategia para matricular?** Propuesta P-R9: no.
-5. **Qué es el «estado de salud del héroe»** en la viabilidad. La HU lo nombra sin regla. Lo tiene que fijar el PO y aplicarlo Combat.
+5. **Estado de salud resuelto:** una curación es viable con salud estrictamente menor a 90 %; a partir de 90 % se omite.
 6. **¿Se admite la habilidad épica en una rotación?** La épica aún no está implementada en Combat (HU-31) y su recarga es de 2 turnos.
 7. **Habilidades por `heroId`.** Hoy Player/Inventory solo publica las habilidades del héroe **seleccionado** (`equipped-hero`); Missions necesita las de un héroe concreto.

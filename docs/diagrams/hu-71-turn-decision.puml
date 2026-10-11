@@ -6,9 +6,13 @@ start
 while (¿Queda una rotación por evaluar?) is (sí)
   :Leer la acción que marca el cursor de esa rotación;
   if (¿La acción es BASIC_ATTACK?) then (sí)
-    :Ejecutar el ataque básico de la rotación\n(costo 0 de Poder);
-    :Avanzar el cursor de esa rotación;
-    stop
+    if (¿El perfil tiene Ataque y Daño?) then (sí)
+      :Ejecutar el ataque básico de la rotación\n(costo 0 de Poder);
+      :Avanzar el cursor de esa rotación;
+      stop
+    else (no)
+      :Anotar OFFENSIVE_ACTION_NOT_AVAILABLE;
+    endif
   endif
   if (¿La recarga de la habilidad está en 0?) then (no)
     :Anotar la omisión ON_COOLDOWN;
@@ -22,7 +26,11 @@ while (¿Queda una rotación por evaluar?) is (sí)
     stop
   endif
 endwhile (no)
-:Ejecutar el ataque básico de respaldo\nsin consumir Poder (CA-03);
+if (¿El perfil tiene Ataque y Daño?) then (sí)
+  :Ejecutar el ataque básico de respaldo\nsin consumir Poder (CA-03);
+else (no)
+  :Cerrar el turno como SYSTEM/END_TURN\nsin daño, Poder ni RNG ofensivo;
+endif
 :Anotar fallback true y las omisiones;
 stop
 @enduml

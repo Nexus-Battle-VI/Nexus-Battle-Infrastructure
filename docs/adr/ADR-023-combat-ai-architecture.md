@@ -431,20 +431,22 @@ curación casi completa. Curación efectiva para la utilidad:
 ```text
 rotaciones del jugador
        ↓
-Combat determina acciones permitidas/viables
+Combat determina la unica accion permitida por prioridad estricta
        ↓
 legalActions
        ↓
 AiDecisionPort
        ↓
-la política decide estratégicamente dentro de ese conjunto
+la política decide sobre esa unica candidata
 ```
 
-El modelo no puede ignorar una restricción funcional de rotaciones; las
-rotaciones tampoco reducen necesariamente el futuro modelo a un `if/else`
-determinista — dentro del conjunto viable, la política sigue decidiendo
-estratégicamente. Si ninguna rotación es viable, fallback a ataque básico
-conforme HU-71 (comportamiento ya implementado hoy en `chooseAction()`).
+El modelo no puede ignorar una restricción funcional de rotaciones. La prioridad
+`HIGH -> MEDIUM -> LOW` es estricta: Combat ofrece únicamente la acción de la
+primera rotación viable, por lo que una política RuleBased, MCTS o Neural no
+puede escoger una prioridad inferior. Si ninguna rotación es viable, Combat usa
+el ataque básico solo si el perfil autoritativo tiene Ataque y Daño. Para un
+CHAMÁN/MÉDICO de soporte puro, `legalActions=[]` produce el cierre técnico
+`SYSTEM/END_TURN`; no se inventan estadísticas, daño, consumo de Poder ni RNG.
 
 **Épica del bot (HU-93):** `P(con épica) = 0.05`, `P(sin épica) = 0.95`. Si el
 sorteo es positivo: como máximo una épica, compatible con el héroe, definida
