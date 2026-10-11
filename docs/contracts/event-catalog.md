@@ -344,12 +344,21 @@ Los identificadores forman parte del contrato. Añadir o retirar uno **es un cam
 
 | Plantilla | Variables | Emisor previsto |
 | --- | --- | --- |
-| `account-verification-code` | `displayName`, `code`, `expiresInMinutes` | Account |
+| `account-verification-code` | `displayName`, `code`, `expiresInMinutes` | Account (sin emisor hoy: el código del alta lo envía Cognito) |
 | `account-welcome` | `displayName` | Account |
+| `account-password-recovery-code` | `code` | Account (recuperación de contraseña) |
+| `account-password-reset-confirmation` | Ninguna | Account (recuperación de contraseña) |
 | `account-deletion-closed` | Ninguna | Account (HU-43.4, Management #306) |
+| `account-sanction-applied` | `displayName`, `sanctionId`, `sanctionType`, `reason`, `appliedAt`, `appealDeadline`, `appealWindowDays`, `expiresAt` | Account (sanciones) |
 | `commerce-order-confirmed` | `displayName`, `orderId`, `total` | Commerce |
+| `commerce-purchase-confirmed-v1` | `orderId`, `total`, `itemsHtml`, `itemsText` | Notifications, al recibir la confirmación de compra de Commerce |
+| `catalog-product-created` | `productName`, `productType`, `productId`, `imageUrl` | Notifications, al consumir `catalog.product.created` |
 
 Los marcadores sin valor se sustituyen por cadena vacía, **nunca por `undefined`**: un correo con la palabra «undefined» en el cuerpo es un fallo visible para quien lo recibe.
+
+**Las variables son texto (EN-031).** En el HTML, Notifications escapa el valor de toda variable; solo inserta sin escapar las que la plantilla declara como HTML de confianza (`itemsHtml`, que el propio Notifications construye ya escapado). Un emisor que envíe HTML en `displayName` o `reason` verá las etiquetas como texto, no interpretadas. Las fechas (`appliedAt`, `appealDeadline`, `expiresAt`) viajan en ISO 8601 y el correo las muestra en español de Colombia; `sanctionType` y `productType` viajan como código y el correo los traduce. Cambiar el aspecto de un correo **no** es un cambio de contrato; cambiar sus variables, sí.
+
+El correo con el código del alta **no** pasa por este catálogo: lo envía Cognito con la plantilla `verification_message_template` del módulo `identity` (HTML desde EN-031).
 
 ## Reglas de evolución
 
