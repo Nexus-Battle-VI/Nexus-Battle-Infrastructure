@@ -300,6 +300,12 @@ services:
       # sigue transfiriendo la pieza, pero la notificacion de cada jugador
       # queda pendiente hasta que se defina.
       NOTIFICATIONS_SERVICE_BASE_URL: http://notifications:3005
+      # EN-036.2: etiquetado MCTS EN VIVO. Cada decision etiquetada corre una busqueda de 128 rollouts
+      # en el proceso de Combat (costo real de CPU, nunca en el camino de la respuesta). Apagado por
+      # defecto; se enciende con MCTS_LIVE_TEACHER_LABELING_ENABLED=true en el .env del nodo y se
+      # revierte igual (recrear combat). Es lo unico que alimenta de etiquetas a `combat-trainer`:
+      # las decisiones ya registradas NUNCA podran etiquetarse (el evento no guarda la sala).
+      MCTS_LIVE_TEACHER_LABELING_ENABLED: ${MCTS_LIVE_TEACHER_LABELING_ENABLED:-false}
     depends_on:
       combat-migrate:
         condition: service_completed_successfully
@@ -314,12 +320,18 @@ services:
   # desarrollo local; `compose/nodes/app.yml` (produccion real) SI lo exige.
   combat-trainer:
     image: ghcr.io/nexus-battle-vi/nexus-battle-combat-trainer:${COMBAT_IMAGE_TAG:-latest}
+    # `--allow-missing-labels`: el historial anterior a activar el etiquetado en vivo tiene decisiones
+    # ONLINE/TOURNAMENT que nunca podran etiquetarse, y el dataset lee TODO el historial. Sin esta
+    # bandera cada build fallaba con MissingTeacherLabelError (visto el 2026-10-10: 1150 decisiones).
+    # Las decisiones sin label se OMITEN del dataset, nunca se inventan. Requiere la imagen de Combat
+    # que trae Combat#102; con una imagen anterior el worker rechaza la bandera y no arranca.
     command:
       [
         'node',
         'dist/infrastructure/training/continuous-training-worker.js',
         '--source-commit',
         '${COMBAT_SOURCE_COMMIT:-local-dev}',
+        '--allow-missing-labels',
       ]
     mem_limit: 512m
     pids_limit: 128
@@ -347,6 +359,11 @@ services:
       ]
     mem_limit: 384m
     pids_limit: 128
+    # Sin HEALTHCHECK: la imagen runtime de Combat trae uno que pide /api/health/ready por HTTP, y este
+    # worker no sirve HTTP. Sin esto Docker lo marca `unhealthy` para siempre (visto el 2026-10-10:
+    # 6 fallos seguidos) y enmascara la senal que se usa para vigilar el nodo.
+    healthcheck:
+      disable: true
     environment:
       NODE_ENV: development
       LOG_LEVEL: info
@@ -506,6 +523,10 @@ services:
       ACCOUNT_BASE_URL: http://account:3000
       WALLET_BASE_URL: http://wallet:3009
       COMBAT_BASE_URL: http://combat:3006
+      # HU-86: Tournament pide a Player-Inventory el heroe equipado del campeon y entrega los
+      # premios de objeto. Sin esta URL esa integracion queda "no disponible" y responde 503,
+      # aunque el contenedor este sano (el 2026-10-10 se desplego sin ella).
+      INVENTORY_BASE_URL: http://inventory:3002
     depends_on:
       tournament-migrate:
         condition: service_completed_successfully
