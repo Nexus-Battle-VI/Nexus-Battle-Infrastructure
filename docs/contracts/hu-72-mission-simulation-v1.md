@@ -1,6 +1,29 @@
 # Contrato conceptual — simulación de misión (HU-72)
 
-**Estado:** conceptual. **No implementado.** La operación interna hacia Combat es una **propuesta para Team Alfa**, dueño de Combat: hoy no existe `POST /api/internal/v1/combat/simulations`. Este archivo no autoriza a marcarla como capacidad en [service-catalog.md](service-catalog.md).
+**Estado:** implementado y verificado en integración. La operación interna
+`POST /api/internal/v1/combat/simulations` existe en Combat y es consumida por
+Missions mediante HTTP/HMAC. El texto histórico que sigue conserva las
+decisiones originales; la sección de estado vigente aclara las diferencias.
+
+## Estado vigente de la integración (2026-10-11)
+
+- Missions conserva la orquestación `QUEUED -> REQUESTED -> SIMULATED -> SETTLED`,
+  el resultado sellado hasta `endsAt` y la liberación idempotente del héroe.
+- Combat conserva la autoridad sobre legalidad, daño, efectos, RNG y resultado.
+- Héroe y ataques ofensivos de enemigos pasan por el mismo
+  `DecisionPolicySelector` productivo que JcE Online: `NEURAL` con modelo
+  `ACTIVE` válido y `RULE_BASED` como fallback ante ausencia, error o acción
+  ilegal.
+- `MissionRotationConstraint` filtra antes del selector, por lo que una
+  prioridad inferior nunca desplaza una `HIGH` viable. Un soporte puro sin
+  candidata produce `SYSTEM/END_TURN`.
+- El contrato externo v1 no cambia. La bitácora puede incluir la extensión
+  compatible `decisionSource` en acciones del héroe y del enemigo.
+- Los eventos de decisión conservan `origin=MISSION`. No se generan
+  `MctsTeacherLabel`: el contrato de NPC no permite construir un `BattleRoom`
+  preacción genuino sin inventar subtipo, equipamiento o tabla de efectos.
+- `ABANDONED` continúa pendiente de una decisión funcional. `VOIDED` sigue
+  reservado para anulaciones técnicas.
 
 Trazabilidad: [HU-72 #57](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/57) y [TASK HU-72.1 #373](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/373). Diseño: [hu-72-simulacion-mision.md](../architecture/hu-72-simulacion-mision.md). Parte de la matrícula de [HU-70](hu-70-mission-enrollment-v1.md). Escenarios: [hu-72-mission-simulation-fixtures-v1.json](hu-72-mission-simulation-fixtures-v1.json).
 
