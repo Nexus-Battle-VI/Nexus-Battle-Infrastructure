@@ -1,6 +1,41 @@
 # HU-72 — Diseño de la ejecución de la simulación de misión
 
-**Estado:** diseño. **No implementado.** Combat no expone `POST /api/internal/v1/combat/simulations` y Missions no tiene rutas de negocio en `develop`. Nada de este documento autoriza a marcar capacidades como disponibles en [service-catalog.md](../contracts/service-catalog.md).
+**Estado:** implementado. Combat expone
+`POST /api/internal/v1/combat/simulations` y Missions ejecuta la orquestación
+asíncrona descrita aquí. Las propuestas y pendientes históricos se conservan
+para trazabilidad; prevalece la sección de arquitectura vigente.
+
+## Arquitectura vigente (2026-10-11)
+
+```text
+Missions -> HTTP/HMAC -> Combat MissionSimulation
+                         -> MissionRotationConstraint
+                         -> DecisionPolicySelector
+                            -> Neural ACTIVE, si es válida
+                            -> RuleBased fallback
+                         -> validación y reglas de Combat
+                         -> resultado/bitácora/telemetría MISSION
+Missions -> SettlementPolicy -> COMPLETED | FAILED | VOIDED
+         -> liberación idempotente -> reporte/recompensas/logros
+```
+
+El selector se comparte con JcE Online y se usa tanto para el héroe como para
+los ataques legalmente representables de enemigos. `GUARDED`, furia de jefe,
+encuentros, presupuesto temporal, recuperación entre encuentros, Máster y botín
+siguen siendo reglas de modalidad. No se inventan habilidades, Poder,
+equipamiento ni identidades de jugador para NPC.
+
+La comparación ataque/defensa, el cálculo y la aplicación acotada de daño y la
+secuencia RNG se delegan en políticas del dominio de Combat. El contrato v1 de
+Misiones conserva su impacto `1d20` y crítico configurable; Online conserva el
+dado por subtipo y la tabla HU-25. Esa diferencia es explícita porque el perfil
+NPC v1 no trae subtipo/equipamiento suficiente para aplicar fielmente la tabla
+Online.
+
+No hay `MctsTeacherLabel` para MISSION: el teacher requiere un `BattleRoom`
+preacción real. Los `CombatDecisionEvent` sí se persisten con estado,
+`legalActions`, selección, actor, secuencia y fuente real (`NEURAL`,
+`RULE_BASED` o `SYSTEM`).
 
 ## Trazabilidad
 
