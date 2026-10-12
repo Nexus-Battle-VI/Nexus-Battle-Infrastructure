@@ -95,6 +95,10 @@ services:
       # abierta: el guard interno responde 503 en lugar de dejar pasar, para que
       # un despliegue incompleto no se convierta en un endpoint sin proteger.
       INTERNAL_SERVICE_AUTH_SECRET: ${INTERNAL_SERVICE_AUTH_SECRET:-}
+      # HU-42: firma el token de apelacion de alcance restringido. Vacio NO
+      # abre una ruta: `NODE_ENV=production` lo exige, y fuera de produccion
+      # Account cae a un secreto de desarrollo fijo y visible (nunca este).
+      APPEAL_TOKEN_SECRET: ${APPEAL_TOKEN_SECRET:-}
       # `combat` se suma para HU-15: consume `/internal/accounts/:subject/battle-profile`
       # al resolver el ingreso a una sala de batalla.
       # `tournament` consulta la elegibilidad y la identidad de equipo (HU-77) en
