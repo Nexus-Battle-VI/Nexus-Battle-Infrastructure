@@ -72,6 +72,10 @@ services:
       # las rutas `@InternalOnly('tournament')` de Account; sin el nombre en esta
       # lista el guard responde 403 aunque la firma HMAC sea valida.
       INTERNAL_SERVICE_ALLOWED_SERVICES: catalog,combat,auction,tournament
+      # HU-42: firma el token de apelacion de alcance restringido. Vacio NO
+      # abre una ruta: `NODE_ENV=production` lo exige, y fuera de produccion
+      # Account cae a un secreto de desarrollo fijo y visible (nunca este).
+      APPEAL_TOKEN_SECRET: ${APPEAL_TOKEN_SECRET:-}
       PORT: 3000
       LOG_LEVEL: info
       PERSISTENCE_DRIVER: postgres
