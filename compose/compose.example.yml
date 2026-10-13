@@ -266,7 +266,10 @@ services:
     # OOM, pico medido 165,7 MB, 14 reinicios) sin dejar ningun log de la aplicacion.
     # La memoria oscila (116-128 MiB anon), asi que es techo bajo y no fuga. La imagen
     # de HU-85/EN-036.4 pasa a glibc (bookworm-slim), que usa mas RSS que Alpine.
-    mem_limit: 256m
+    # 384m (antes 256m): el 2026-10-13 la imagen sha-898a04b10595 arranca en reposo con ~170 MiB anon
+    # (~198 MiB), asi que 256m dejaba ~58 MiB de margen y el kernel mato a Combat (cgroup OOM, pico 256 MiB)
+    # al probar torneos con el etiquetado MCTS en vivo encendido. Con 384m el margen en reposo es ~185 MiB.
+    mem_limit: 384m
     pids_limit: 128
     environment:
       NODE_ENV: development
