@@ -1,0 +1,38 @@
+{
+  "status": "PASSED",
+  "played": 14,
+  "players": 8,
+  "rounds": 6,
+  "commands": 560,
+  "allPlayedByElimination": true,
+  "champion": "zyoyoz",
+  "resultsInPostgres": 14,
+  "transfers": 0,
+  "economicCalls": 0,
+  "boundaries": {
+    "real": [
+      "Bundle productivo Web",
+      "Aplicaciones compiladas Tournament y Combat",
+      "HMAC",
+      "PostgreSQL",
+      "Persistencia Combat en memoria (límite explícito de este recorrido)",
+      "WebSocket",
+      "Motor de turnos, daño y resultados"
+    ],
+    "qa": [
+      "JWT de ocho identidades",
+      "Account, Wallet e Inventory con objetos y compromiso de héroes",
+      "Reloj de negocio acelerado entre rondas; reloj de seguridad de pared"
+    ]
+  },
+  "checks": [
+    "8 cupos SOLO confirmados gratuitamente; 14 encuentros publicados",
+    "4 salas distintas, dos jugadores conectados por sala; acceso de Carlos a otra sala rechazado con 403",
+    "Los ocho jugadores de la primera ronda tienen segunda batalla, por ganadores o por perdedores",
+    "Historial personal de Carlos y 403 en detalle de batalla ajena",
+    "Campeón y resultados conservados al reiniciar Tournament",
+    "14 batallas decididas por eliminación, ambas personas actuaron en cada una, 14 resultados durables y campeón",
+    "7 equipos terminan su participación; una sola final, sin reinicio de llaves",
+    "Sin créditos, experiencia, cofre, premios ni transferencias tras reiniciar Tournament; este recorrido no reinicia Combat en memoria"
+  ]
+}
