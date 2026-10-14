@@ -1,0 +1,996 @@
+{
+  "date": "2026-10-13",
+  "status": "PASSED",
+  "boundaries": {
+    "real": [
+      "Bundle productivo Web",
+      "Aplicaciones compiladas Tournament y Combat",
+      "HMAC",
+      "PostgreSQL",
+      "MongoDB",
+      "WebSocket",
+      "Motor de turnos, daño y resultados"
+    ],
+    "qa": [
+      "JWT de ocho identidades",
+      "Account, Wallet e Inventory con objetos y compromiso de héroes",
+      "Reloj de negocio acelerado entre rondas; reloj de seguridad de pared"
+    ]
+  },
+  "players": [
+    "Carlos",
+    "GABO",
+    "Dabji",
+    "jose_mora0905",
+    "Jeffryepsteingo",
+    "Stichwar",
+    "zyoyoz",
+    "xoo"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "matches": ["E1", "E2", "E3", "E4"],
+      "accepted": 8,
+      "results": 4,
+      "wins": 4
+    },
+    {
+      "round": 2,
+      "matches": ["E5", "E6", "E7", "E8"],
+      "accepted": 8,
+      "results": 4,
+      "wins": 8
+    },
+    {
+      "round": 3,
+      "matches": ["E10", "E11", "E9"],
+      "accepted": 6,
+      "results": 3,
+      "wins": 11
+    },
+    {
+      "round": 4,
+      "matches": ["E12"],
+      "accepted": 2,
+      "results": 1,
+      "wins": 12
+    },
+    {
+      "round": 5,
+      "matches": ["E13"],
+      "accepted": 2,
+      "results": 1,
+      "wins": 13
+    },
+    {
+      "round": 6,
+      "matches": ["Final"],
+      "accepted": 2,
+      "results": 1,
+      "wins": 14
+    }
+  ],
+  "matches": [
+    {
+      "label": "E1",
+      "round": 1,
+      "matchId": "56024489-74aa-41b7-b39e-8c2a39908f88",
+      "roomId": "6f884215-6989-428d-ab61-debe9d32a24c",
+      "players": ["Carlos", "GABO"],
+      "connected": 2,
+      "commands": 44,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+      "startedAt": "2026-10-14T03:44:48.261Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+        "finishedAt": "2026-10-14T03:45:25.009Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+            "remainingHealth": 3,
+            "maxHealth": 40,
+            "lifePercent": 7.5,
+            "eliminated": false
+          },
+          {
+            "teamLabel": "a31c230f-9b53-4102-af8c-42ddae9c3171",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "a31c230f-9b53-4102-af8c-42ddae9c3171",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "GABO",
+            "displayName": "GABO",
+            "heroId": "9fec972f-384c-4ac2-a89c-931111b78ab8",
+            "result": "LOST"
+          },
+          {
+            "teamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Carlos",
+            "displayName": "Carlos",
+            "heroId": "5438ef29-a9f4-4797-a36c-9b24f8e9ca4d",
+            "result": "WON"
+          }
+        ]
+      },
+      "durationMs": 36748
+    },
+    {
+      "label": "E2",
+      "round": 1,
+      "matchId": "10349683-c3f6-46eb-9008-f844c3736379",
+      "roomId": "af72096f-2391-482c-8e9c-e7fe490f7640",
+      "players": ["Dabji", "jose_mora0905"],
+      "connected": 2,
+      "commands": 40,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "60bc167c-25d2-4229-80f0-bf4ff93051ba",
+      "startedAt": "2026-10-14T03:44:48.324Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "60bc167c-25d2-4229-80f0-bf4ff93051ba",
+        "finishedAt": "2026-10-14T03:44:54.642Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "60bc167c-25d2-4229-80f0-bf4ff93051ba",
+            "remainingHealth": 4,
+            "maxHealth": 40,
+            "lifePercent": 10,
+            "eliminated": false
+          },
+          {
+            "teamLabel": "85abd97b-279c-4926-8bca-82b22f9e471e",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "85abd97b-279c-4926-8bca-82b22f9e471e",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "jose_mora0905",
+            "displayName": "jose_mora0905",
+            "heroId": "faf75bde-effa-40d3-a0ad-4ff6276bb54d",
+            "result": "LOST"
+          },
+          {
+            "teamLabel": "60bc167c-25d2-4229-80f0-bf4ff93051ba",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Dabji",
+            "displayName": "Dabji",
+            "heroId": "bd2e12c7-11bd-43e5-a21a-8680a449aa17",
+            "result": "WON"
+          }
+        ]
+      },
+      "durationMs": 6318
+    },
+    {
+      "label": "E3",
+      "round": 1,
+      "matchId": "7d28513a-c066-43d2-817e-f0085301bc05",
+      "roomId": "758927a5-9bd9-41f7-a08b-87fbc212fae3",
+      "players": ["Stichwar", "Jeffryepsteingo"],
+      "connected": 2,
+      "commands": 37,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+      "startedAt": "2026-10-14T03:44:48.320Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+        "finishedAt": "2026-10-14T03:44:54.237Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+            "remainingHealth": 3,
+            "maxHealth": 40,
+            "lifePercent": 7.5,
+            "eliminated": false
+          },
+          {
+            "teamLabel": "b9030e00-b685-4b67-877f-907932a41eb5",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Jeffryepsteingo",
+            "displayName": "Jeffryepsteingo",
+            "heroId": "8b2e145a-cf61-47af-a471-bfc317b21ed0",
+            "result": "WON"
+          },
+          {
+            "teamLabel": "b9030e00-b685-4b67-877f-907932a41eb5",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Stichwar",
+            "displayName": "Stichwar",
+            "heroId": "74bdbadb-8a6a-4a80-ac59-88eda1fbf00b",
+            "result": "LOST"
+          }
+        ]
+      },
+      "durationMs": 5917
+    },
+    {
+      "label": "E4",
+      "round": 1,
+      "matchId": "4bafba4e-e981-45d2-80a7-d0c80554c40c",
+      "roomId": "323fea8a-8fdb-4890-bfa3-eadd050324f9",
+      "players": ["zyoyoz", "xoo"],
+      "connected": 2,
+      "commands": 39,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+      "startedAt": "2026-10-14T03:44:48.329Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+        "finishedAt": "2026-10-14T03:44:54.549Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          },
+          {
+            "teamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+            "remainingHealth": 7,
+            "maxHealth": 40,
+            "lifePercent": 17.5,
+            "eliminated": false
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "xoo",
+            "displayName": "xoo",
+            "heroId": "26bf656e-03dd-40a6-a350-1e02f69c08d6",
+            "result": "WON"
+          },
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "zyoyoz",
+            "displayName": "zyoyoz",
+            "heroId": "ba39f103-8321-4178-aa57-798f236a1716",
+            "result": "LOST"
+          }
+        ]
+      },
+      "durationMs": 6220
+    },
+    {
+      "label": "E5",
+      "round": 2,
+      "matchId": "bcccad99-a910-4a82-9753-7bff568f5606",
+      "roomId": "9486954a-5f30-40e5-abe9-48338ed34a0e",
+      "players": ["Carlos", "Dabji"],
+      "connected": 2,
+      "commands": 47,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+      "startedAt": "2026-10-14T03:54:48.254Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+        "finishedAt": "2026-10-14T03:54:55.947Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+            "remainingHealth": 1,
+            "maxHealth": 40,
+            "lifePercent": 2.5,
+            "eliminated": false
+          },
+          {
+            "teamLabel": "60bc167c-25d2-4229-80f0-bf4ff93051ba",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Carlos",
+            "displayName": "Carlos",
+            "heroId": "5438ef29-a9f4-4797-a36c-9b24f8e9ca4d",
+            "result": "WON"
+          },
+          {
+            "teamLabel": "60bc167c-25d2-4229-80f0-bf4ff93051ba",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Dabji",
+            "displayName": "Dabji",
+            "heroId": "bd2e12c7-11bd-43e5-a21a-8680a449aa17",
+            "result": "LOST"
+          }
+        ]
+      },
+      "durationMs": 7693
+    },
+    {
+      "label": "E6",
+      "round": 2,
+      "matchId": "9c6ba21c-d52a-4bb6-a03f-81d7428172de",
+      "roomId": "43bb7259-970e-4e5a-9ef8-637c8563eb7d",
+      "players": ["Jeffryepsteingo", "xoo"],
+      "connected": 2,
+      "commands": 33,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+      "startedAt": "2026-10-14T03:54:48.267Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+        "finishedAt": "2026-10-14T03:54:53.886Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+            "remainingHealth": 20,
+            "maxHealth": 40,
+            "lifePercent": 50,
+            "eliminated": false
+          },
+          {
+            "teamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Jeffryepsteingo",
+            "displayName": "Jeffryepsteingo",
+            "heroId": "8b2e145a-cf61-47af-a471-bfc317b21ed0",
+            "result": "WON"
+          },
+          {
+            "teamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "xoo",
+            "displayName": "xoo",
+            "heroId": "26bf656e-03dd-40a6-a350-1e02f69c08d6",
+            "result": "LOST"
+          }
+        ]
+      },
+      "durationMs": 5619
+    },
+    {
+      "label": "E7",
+      "round": 2,
+      "matchId": "6cbae2be-f436-4e7e-a434-63d3f3bd1cf5",
+      "roomId": "5f12ed25-b550-448f-8c3c-75b0a9d28dfd",
+      "players": ["GABO", "jose_mora0905"],
+      "connected": 2,
+      "commands": 41,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "85abd97b-279c-4926-8bca-82b22f9e471e",
+      "startedAt": "2026-10-14T03:54:48.284Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "85abd97b-279c-4926-8bca-82b22f9e471e",
+        "finishedAt": "2026-10-14T03:54:55.140Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "a31c230f-9b53-4102-af8c-42ddae9c3171",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          },
+          {
+            "teamLabel": "85abd97b-279c-4926-8bca-82b22f9e471e",
+            "remainingHealth": 14,
+            "maxHealth": 40,
+            "lifePercent": 35,
+            "eliminated": false
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "85abd97b-279c-4926-8bca-82b22f9e471e",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "jose_mora0905",
+            "displayName": "jose_mora0905",
+            "heroId": "faf75bde-effa-40d3-a0ad-4ff6276bb54d",
+            "result": "WON"
+          },
+          {
+            "teamLabel": "a31c230f-9b53-4102-af8c-42ddae9c3171",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "GABO",
+            "displayName": "GABO",
+            "heroId": "9fec972f-384c-4ac2-a89c-931111b78ab8",
+            "result": "LOST"
+          }
+        ]
+      },
+      "durationMs": 6856
+    },
+    {
+      "label": "E8",
+      "round": 2,
+      "matchId": "c2581a20-72de-4497-975f-f6eb38da09df",
+      "roomId": "c7bc1921-ef6f-4145-81ab-6488cd9a694d",
+      "players": ["Stichwar", "zyoyoz"],
+      "connected": 2,
+      "commands": 46,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+      "startedAt": "2026-10-14T03:54:48.295Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+        "finishedAt": "2026-10-14T03:54:55.918Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "b9030e00-b685-4b67-877f-907932a41eb5",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          },
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "remainingHealth": 7,
+            "maxHealth": 40,
+            "lifePercent": 17.5,
+            "eliminated": false
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "b9030e00-b685-4b67-877f-907932a41eb5",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Stichwar",
+            "displayName": "Stichwar",
+            "heroId": "74bdbadb-8a6a-4a80-ac59-88eda1fbf00b",
+            "result": "LOST"
+          },
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "zyoyoz",
+            "displayName": "zyoyoz",
+            "heroId": "ba39f103-8321-4178-aa57-798f236a1716",
+            "result": "WON"
+          }
+        ]
+      },
+      "durationMs": 7623
+    },
+    {
+      "label": "E10",
+      "round": 3,
+      "matchId": "1dfdb044-c266-4088-b8ce-4c5e9a2478d2",
+      "roomId": "84073d12-b4a1-4d2d-9f90-1f5eaa9b0fd1",
+      "players": ["Dabji", "zyoyoz"],
+      "connected": 2,
+      "commands": 42,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+      "startedAt": "2026-10-14T04:04:48.668Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+        "finishedAt": "2026-10-14T04:04:56.032Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "60bc167c-25d2-4229-80f0-bf4ff93051ba",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          },
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "remainingHealth": 2,
+            "maxHealth": 40,
+            "lifePercent": 5,
+            "eliminated": false
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "60bc167c-25d2-4229-80f0-bf4ff93051ba",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Dabji",
+            "displayName": "Dabji",
+            "heroId": "bd2e12c7-11bd-43e5-a21a-8680a449aa17",
+            "result": "LOST"
+          },
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "zyoyoz",
+            "displayName": "zyoyoz",
+            "heroId": "ba39f103-8321-4178-aa57-798f236a1716",
+            "result": "WON"
+          }
+        ]
+      },
+      "durationMs": 7364
+    },
+    {
+      "label": "E11",
+      "round": 3,
+      "matchId": "949ceba9-220d-47ff-a49f-0331c2202525",
+      "roomId": "20c35352-322d-48fd-9a35-f8a814510592",
+      "players": ["Carlos", "Jeffryepsteingo"],
+      "connected": 2,
+      "commands": 42,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+      "startedAt": "2026-10-14T04:04:48.678Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+        "finishedAt": "2026-10-14T04:04:56.063Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          },
+          {
+            "teamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+            "remainingHealth": 1,
+            "maxHealth": 40,
+            "lifePercent": 2.5,
+            "eliminated": false
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Carlos",
+            "displayName": "Carlos",
+            "heroId": "5438ef29-a9f4-4797-a36c-9b24f8e9ca4d",
+            "result": "LOST"
+          },
+          {
+            "teamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Jeffryepsteingo",
+            "displayName": "Jeffryepsteingo",
+            "heroId": "8b2e145a-cf61-47af-a471-bfc317b21ed0",
+            "result": "WON"
+          }
+        ]
+      },
+      "durationMs": 7385
+    },
+    {
+      "label": "E9",
+      "round": 3,
+      "matchId": "7d45dc81-2fbf-497f-9172-022e1b498f4a",
+      "roomId": "b736ed5f-9abe-4830-8ee4-ac7853f87d83",
+      "players": ["jose_mora0905", "xoo"],
+      "connected": 2,
+      "commands": 47,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+      "startedAt": "2026-10-14T04:04:48.664Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+        "finishedAt": "2026-10-14T04:04:56.937Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+            "remainingHealth": 2,
+            "maxHealth": 40,
+            "lifePercent": 5,
+            "eliminated": false
+          },
+          {
+            "teamLabel": "85abd97b-279c-4926-8bca-82b22f9e471e",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "xoo",
+            "displayName": "xoo",
+            "heroId": "26bf656e-03dd-40a6-a350-1e02f69c08d6",
+            "result": "WON"
+          },
+          {
+            "teamLabel": "85abd97b-279c-4926-8bca-82b22f9e471e",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "jose_mora0905",
+            "displayName": "jose_mora0905",
+            "heroId": "faf75bde-effa-40d3-a0ad-4ff6276bb54d",
+            "result": "LOST"
+          }
+        ]
+      },
+      "durationMs": 8273
+    },
+    {
+      "label": "E12",
+      "round": 4,
+      "matchId": "463a0d98-e11b-4792-beaf-807b8884b773",
+      "roomId": "91181831-8c86-4630-95c4-9e5039336387",
+      "players": ["xoo", "zyoyoz"],
+      "connected": 2,
+      "commands": 37,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+      "startedAt": "2026-10-14T04:14:49.344Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+        "finishedAt": "2026-10-14T04:14:56.714Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          },
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "remainingHealth": 10,
+            "maxHealth": 40,
+            "lifePercent": 25,
+            "eliminated": false
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "zyoyoz",
+            "displayName": "zyoyoz",
+            "heroId": "ba39f103-8321-4178-aa57-798f236a1716",
+            "result": "WON"
+          },
+          {
+            "teamLabel": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "xoo",
+            "displayName": "xoo",
+            "heroId": "26bf656e-03dd-40a6-a350-1e02f69c08d6",
+            "result": "LOST"
+          }
+        ]
+      },
+      "durationMs": 7370
+    },
+    {
+      "label": "E13",
+      "round": 5,
+      "matchId": "940acae6-9997-40a3-b864-7be91a1b6d05",
+      "roomId": "e8e2a161-fac9-4548-9296-b163d21571cd",
+      "players": ["Carlos", "zyoyoz"],
+      "connected": 2,
+      "commands": 29,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+      "startedAt": "2026-10-14T04:24:49.392Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+        "finishedAt": "2026-10-14T04:24:55.420Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          },
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "remainingHealth": 12,
+            "maxHealth": 40,
+            "lifePercent": 30,
+            "eliminated": false
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "zyoyoz",
+            "displayName": "zyoyoz",
+            "heroId": "ba39f103-8321-4178-aa57-798f236a1716",
+            "result": "WON"
+          },
+          {
+            "teamLabel": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Carlos",
+            "displayName": "Carlos",
+            "heroId": "5438ef29-a9f4-4797-a36c-9b24f8e9ca4d",
+            "result": "LOST"
+          }
+        ]
+      },
+      "durationMs": 6028
+    },
+    {
+      "label": "Final",
+      "round": 6,
+      "matchId": "deff8cdc-80b5-438a-bc15-4f4c301f2b73",
+      "roomId": "80354455-0a50-4608-aa5f-b1bbbbb7e7d7",
+      "players": ["Jeffryepsteingo", "zyoyoz"],
+      "connected": 2,
+      "commands": 43,
+      "reason": "ELIMINATION",
+      "winnerTeamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+      "startedAt": "2026-10-14T04:34:48.268Z",
+      "result": {
+        "reason": "ELIMINATION",
+        "outcome": "WIN",
+        "winnerTeamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+        "finishedAt": "2026-10-14T04:34:57.831Z",
+        "tiebreak": null,
+        "disconnected": null,
+        "teams": [
+          {
+            "teamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+            "remainingHealth": 7,
+            "maxHealth": 40,
+            "lifePercent": 17.5,
+            "eliminated": false
+          },
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "remainingHealth": 0,
+            "maxHealth": 40,
+            "lifePercent": 0,
+            "eliminated": true
+          }
+        ],
+        "participants": [
+          {
+            "teamLabel": "cee62367-e2d0-416a-8368-db9599883730",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "Jeffryepsteingo",
+            "displayName": "Jeffryepsteingo",
+            "heroId": "8b2e145a-cf61-47af-a471-bfc317b21ed0",
+            "result": "WON"
+          },
+          {
+            "teamLabel": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+            "seat": 0,
+            "kind": "HUMAN",
+            "playerId": "zyoyoz",
+            "displayName": "zyoyoz",
+            "heroId": "ba39f103-8321-4178-aa57-798f236a1716",
+            "result": "LOST"
+          }
+        ]
+      },
+      "durationMs": 9563
+    }
+  ],
+  "checks": [
+    "8 cupos SOLO confirmados gratuitamente; 14 encuentros publicados",
+    "4 salas distintas, dos jugadores conectados por sala; acceso de Carlos a otra sala rechazado con 403",
+    "Los ocho jugadores de la primera ronda tienen segunda batalla, por ganadores o por perdedores",
+    "14 batallas decididas por eliminación, ambas personas actuaron en cada una, 14 resultados durables y campeón",
+    "7 equipos terminan su participación; una sola final, sin reinicio de llaves",
+    "Sin créditos, experiencia, cofre, premios ni transferencias incluso tras reiniciar Combat"
+  ],
+  "tournamentId": "2f7ce387-1337-4684-9f08-c5bbf95bf1ea",
+  "champion": {
+    "heroes": [
+      {
+        "heroId": "8b2e145a-cf61-47af-a471-bfc317b21ed0",
+        "playerId": "Jeffryepsteingo"
+      }
+    ],
+    "teamId": "cee62367-e2d0-416a-8368-db9599883730",
+    "teamName": "Jeffryepsteingo",
+    "memberIds": ["Jeffryepsteingo"],
+    "declaredAt": "2026-10-14T04:34:59.529Z",
+    "finalRoomId": "80354455-0a50-4608-aa5f-b1bbbbb7e7d7",
+    "finalEncounterId": "deff8cdc-80b5-438a-bc15-4f4c301f2b73",
+    "finalResolutionId": "combat:80354455-0a50-4608-aa5f-b1bbbbb7e7d7"
+  },
+  "statistics": [
+    {
+      "teamId": "f2092dce-02ff-49fc-baa6-a4c1005e1028",
+      "memberIds": ["Carlos"],
+      "victories": 2,
+      "defeats": 2,
+      "name": "Carlos"
+    },
+    {
+      "teamId": "a31c230f-9b53-4102-af8c-42ddae9c3171",
+      "memberIds": ["GABO"],
+      "victories": 0,
+      "defeats": 2,
+      "name": "GABO"
+    },
+    {
+      "teamId": "60bc167c-25d2-4229-80f0-bf4ff93051ba",
+      "memberIds": ["Dabji"],
+      "victories": 1,
+      "defeats": 2,
+      "name": "Dabji"
+    },
+    {
+      "teamId": "85abd97b-279c-4926-8bca-82b22f9e471e",
+      "memberIds": ["jose_mora0905"],
+      "victories": 1,
+      "defeats": 2,
+      "name": "jose_mora0905"
+    },
+    {
+      "teamId": "cee62367-e2d0-416a-8368-db9599883730",
+      "memberIds": ["Jeffryepsteingo"],
+      "victories": 4,
+      "defeats": 0,
+      "name": "Jeffryepsteingo"
+    },
+    {
+      "teamId": "b9030e00-b685-4b67-877f-907932a41eb5",
+      "memberIds": ["Stichwar"],
+      "victories": 0,
+      "defeats": 2,
+      "name": "Stichwar"
+    },
+    {
+      "teamId": "6dcb508d-f7c0-466d-b456-d4269a9b1df3",
+      "memberIds": ["zyoyoz"],
+      "victories": 4,
+      "defeats": 2,
+      "name": "zyoyoz"
+    },
+    {
+      "teamId": "0f25c8cc-6fe5-464a-a8d4-ba18e4f03cad",
+      "memberIds": ["xoo"],
+      "victories": 2,
+      "defeats": 2,
+      "name": "xoo"
+    }
+  ],
+  "persisted": {
+    "before": {
+      "rooms": 14,
+      "rewards": 0,
+      "drops": 0
+    },
+    "after": {
+      "rooms": 14,
+      "rewards": 0,
+      "drops": 0
+    },
+    "events": [
+      {
+        "type": "battleStarted",
+        "count": 14
+      },
+      {
+        "type": "battleFinished",
+        "count": 14
+      },
+      {
+        "type": "basicAttackResolved",
+        "count": 567
+      }
+    ],
+    "results": 14,
+    "signedExternalRequests": 346,
+    "commitments": 28,
+    "releases": 168,
+    "snapshotsWithObjects": 28,
+    "itemTransfers": 0,
+    "economicCalls": 0
+  },
+  "code": {
+    "Web": "146ad097e28df4549d63f16422b47d9f35fdc00a",
+    "Tournament": "4c40dbbe79d91c588a8d32a26f72fc2f8a1564b3",
+    "Combat": "3ace7cb66d036866be7298bd55bed242f3992b93"
+  },
+  "mongoDatabase": "combat",
+  "postgresDatabase": "torneo_jugable_completo_20261013_verified"
+}

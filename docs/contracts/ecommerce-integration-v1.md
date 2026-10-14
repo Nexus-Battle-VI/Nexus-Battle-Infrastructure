@@ -7,7 +7,9 @@ Se mantiene la propiedad de datos de ADR-005, los puertos HTTP de ADR-006 y las 
 ## Lecturas públicas y autenticadas
 
 `GET /api/v1/catalog/products` devuelve `{items, page, pageSize:16, total}`.
-Admite `query`, `type`, `minPrice`, `maxPrice`, `currency` y `page`.
+Admite `query`, `type`, `types`, `premium`, `minPrice`, `maxPrice`, `currency` y `page`.
+`types` es una lista inclusiva separada por comas y es alternativa a `type`; Catalog
+aplica ambos filtros de tipo antes de calcular `total`, `$skip` y `$limit`.
 Los filtros se combinan con AND; la búsqueda literal no distingue mayúsculas
 y cubre nombre/descripción. Los importes son unidades menores y un intervalo
 de precio requiere `currency`. Los parámetros inválidos producen 400.
@@ -60,11 +62,13 @@ verdad de la misma regla. Commerce aplica esta política al agregar/modificar l�
 al restaurar un carrito guardado; rechaza `ITEM`/`EPICA`, no-premium, suspendido y agotado aunque se invoque
 la API directamente, sin depender de que Web los oculte.
 
-Web consume la oferta ya elegible — puede pedir el listado con los filtros que `GET /api/v1/catalog/products`
-ya admite (`type`, `currency`), y si ese endpoint no filtra por `premium`, Web omite del catálogo comercial
-(no solo deshabilita) los productos que el propio listado ya le indica como no premium/no disponibles,
-usando los campos que ya recibe por producto. Esto es presentación sobre datos ya autoritativos, no una
-segunda implementación de la regla de negocio: la autoridad de compra sigue siendo exclusivamente Commerce.
+Web solicita `premium=true` y, cuando no hay un tipo individual seleccionado,
+`types=HEROE,ARMA,ARMADURA`. Catalog aplica ese conjunto técnico antes de paginar, por lo que `items`, `total`
+y los límites de página describen el mismo universo y no aparecen huecos ni páginas fantasma por filtrar
+`ITEM`/`EPICA`/`HABILIDAD` después del `limit`. El parámetro `types` es un filtro genérico de Catalog, no un
+campo derivado de elegibilidad ni una nueva autoridad comercial. Commerce continúa revalidando tipo, premium,
+estado, precio y disponibilidad al modificar/restaurar el carrito y al pagar; Web mantiene únicamente una
+defensa visual para no presentar tipos no comprables durante un despliegue escalonado.
 
 **Moneda:** esta regla no limita el sistema a COP. El PDF contempla COP/USD/EUR según contexto geográfico
 (ver «Monedas y promociones pendientes» más abajo) y Commerce ya acepta las tres para el carrito. Este
