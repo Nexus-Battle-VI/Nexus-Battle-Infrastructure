@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "urn:nexus-battle:torneos:3.0.0",
-  "title": "Torneos torneos-v3.0.0, revisión documental 4",
+  "title": "Torneos torneos-v3.0.0, extensión de pilotos gratuitos",
   "description": "Formas normativas nuevas. Relaciones con torneo/actor, reglas temporales, importe/política y conteos requieren validación autoritativa además del schema.",
   "definitions": {
     "EntryPolicy": {
@@ -128,6 +128,9 @@
         "startsAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "isTest": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -149,6 +152,42 @@
           "required": ["entryFee"],
           "not": {
             "required": ["entryPolicy"]
+          }
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": ["isTest"],
+            "properties": {
+              "isTest": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": ["entryPolicy"],
+                "properties": {
+                  "entryPolicy": {
+                    "properties": {
+                      "free": {
+                        "const": true
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "required": ["entryFee"],
+                "properties": {
+                  "entryFee": {
+                    "const": 0
+                  }
+                }
+              }
+            ]
           }
         }
       ]
@@ -399,6 +438,9 @@
         "contractVersion": {
           "const": 3,
           "description": "Marcador interno numérico opcional. mode/teamSize son obligatorios juntos; no sustituye el contractVersion público string."
+        },
+        "isTest": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -541,6 +583,9 @@
             },
             "required": ["teamId", "memberIds"]
           }
+        },
+        "isTest": {
+          "const": false
         }
       },
       "required": ["operationId", "tournamentId", "encounterId", "teams"]
@@ -806,6 +851,9 @@
         },
         "teamSize": {
           "enum": [1, 2, 3]
+        },
+        "isTest": {
+          "type": "boolean"
         }
       },
       "allOf": [
