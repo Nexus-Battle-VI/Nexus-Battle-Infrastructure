@@ -4,6 +4,10 @@ Revisión documental 5, 7 de octubre de 2026. Estado: **especificación técnica
 
 La ampliación conserva los consumidores y torneos `torneos-hu77-84-78-hu83-v2.0.0`. La versión del contrato viaja en los datos: **las rutas continúan bajo `/api/v1`**. No se crea un prefijo HTTP `/api/v3`. Los esquemas normativos y los ejemplos de prueba están en [schema](torneos-v3.0.0.schema.json) y [fixtures](torneos-v3.0.0.fixtures.json).
 
+La [extensión de pilotos gratuitos](torneos-free-pilot-v1.md), del 13 de octubre de 2026,
+añade el booleano opcional `isTest`, su propagación firmada a Combat y su exclusión
+económica. Las reglas de 91 días y premios descritas abajo continúan para torneos oficiales.
+
 Las reglas provienen del encargo del usuario y de la [precisión vigente de HU-85](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/470#issuecomment-6039231084), reconsultada mediante GitHub API. Los nombres, formas y reserva DDL son decisiones técnicas de coordinación; no representan aprobación técnica ni aceptación funcional del PO.
 
 ## Modalidad, registro y compatibilidad
