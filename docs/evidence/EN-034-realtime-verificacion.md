@@ -1,22 +1,22 @@
-# EN-034 — Evidencia de verificación del realtime de Subasta (servidor)
+# EN-034 — Evidencia de verificación del realtime de Subasta (servidor y cliente de la Web)
 
 - **Enabler:** [Nexus-Battle-VI/Nexus-Battle-Management#523](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/523)
 - **Task:** [EN-034.5 #587](https://github.com/Nexus-Battle-VI/Nexus-Battle-Management/issues/587)
 - **Fecha de la verificación:** 2026-10-07
 - **Entorno:** Docker Desktop en Windows (máquina de desarrollo), **no** el despliegue de AWS. Imagen construida desde `Nexus-Battle-Auction` en el commit `0a954f1` (PR #99), PostgreSQL 17, Caddy 2 con el `compose/Caddyfile` real de este repositorio.
 - **Método:** ejecutado contra contenedores reales con el límite de memoria de producción (`mem_limit: 160m`, `compose/nodes/app.yml`). Los scripts están en `scripts/realtime/` de `Nexus-Battle-Auction` (PR #101) y se reproducen con su `README.md`.
-- **Alcance:** esta evidencia cubre **solo el lado del servidor**. El cliente de la Web (TASK EN-034.4, #586) no existe todavía porque el módulo de Subasta de la Web (HU-87, HU-88) no está implementado, así que los criterios que dependen de él **no están verificados**.
+- **Alcance:** la verificación del **servidor** es del 2026-10-07. La del **cliente de la Web** (TASK EN-034.4, [Web#283](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/283)) es del 2026-10-14, cuando HU-87 y HU-88 ya habían dejado el módulo de Subasta en la Web; ver «Verificación del cliente de la Web». **Ninguna se hizo en un navegador ni con dos personas.**
 
 ## Criterios de aceptación de EN-034
 
 | Criterio | Servidor | Web | Cómo se comprobó |
 | --- | --- | --- | --- |
-| CA-01 — Actualización de puja | **Cubierto** | Pendiente (#586) | Prueba de extremo a extremo de Auction#99: dos sesiones observan la misma subasta y reciben la puja con `currentBidCredits` y `bidCount`, sin acción manual |
-| CA-02 — Aislamiento por subasta | **Cubierto** | Pendiente (#586) | Eventos simultáneos de dos subastas solo llegan a quien observa cada una (Auction#99); 12 pujas y dos subastas entrelazadas conservan su propia secuencia (Auction#100) |
-| CA-03 — Reconexión | **Cubierto en servidor** | Pendiente (#586) | La caída de la conexión de escucha con PostgreSQL emite `resync` y las señales se reanudan (Auction#99); cada conexión nueva exige ticket nuevo. El refetch al reconectar es del cliente |
-| CA-04 — Cambio de estado | **Cubierto en servidor** | Pendiente (#586) | `BOUGHT_NOW`, `SETTLED` y `CANCELLED` por los caminos reales del repositorio, con la revisión siguiente; una puja posterior a la cancelación nunca se acepta (Auction#100). Que la vista deje de ofrecer acciones es del cliente |
-| CA-05 — Caché consistente | No aplica | **Pendiente (#586)** | Depende por completo de las claves de React Query de Marketplace y Detalle, que aún no existen |
-| CA-06 — Autoridad del backend | **Cubierto en servidor** | Pendiente (#586) | La señal solo invalida: no lleva datos personales ni estado autoritativo; `revision` estrictamente creciente sin huecos bajo concurrencia (Auction#100). Descartar una señal tardía o duplicada por `revision` es del cliente |
+| CA-01 — Actualización de puja | **Cubierto** | **Cubierto en jsdom contra el servidor real**; visual pendiente | Prueba de extremo a extremo de Auction#99: dos sesiones observan la misma subasta y reciben la puja con `currentBidCredits` y `bidCount`, sin acción manual |
+| CA-02 — Aislamiento por subasta | **Cubierto** | **Cubierto en jsdom contra el servidor real**; visual pendiente | Eventos simultáneos de dos subastas solo llegan a quien observa cada una (Auction#99); 12 pujas y dos subastas entrelazadas conservan su propia secuencia (Auction#100) |
+| CA-03 — Reconexión | **Cubierto en servidor** | **`resync` real cubierto**; la reconexión del socket solo con sockets simulados; visual pendiente | La caída de la conexión de escucha con PostgreSQL emite `resync` y las señales se reanudan (Auction#99); cada conexión nueva exige ticket nuevo. El refetch al reconectar es del cliente |
+| CA-04 — Cambio de estado | **Cubierto en servidor** | **Relectura real cubierta**; que la vista oculte las acciones, con datos simulados; visual pendiente | `BOUGHT_NOW`, `SETTLED` y `CANCELLED` por los caminos reales del repositorio, con la revisión siguiente; una puja posterior a la cancelación nunca se acepta (Auction#100). Que la vista deje de ofrecer acciones es del cliente |
+| CA-05 — Caché consistente | No aplica | **Parcial**: invalidación del prefijo de las listas cubierta; mezcla de filtros y páginas solo con datos simulados | Depende por completo de las claves de React Query de Marketplace y Detalle, que aún no existen |
+| CA-06 — Autoridad del backend | **Cubierto en servidor** | **Descarte por `revision` cubierto** (simulado); señales reales cubiertas; visual pendiente | La señal solo invalida: no lleva datos personales ni estado autoritativo; `revision` estrictamente creciente sin huecos bajo concurrencia (Auction#100). Descartar una señal tardía o duplicada por `revision` es del cliente |
 
 ## Medición 1 — Conexión larga a través de Caddy
 
@@ -69,8 +69,36 @@ El gateway, el hub y los tickets **reales** de la imagen sobre un servidor propi
 - **Memoria en reposo del servicio completo** se midió con 3 conexiones; el incremento por conexión se midió aparte, con 90.
 - **Un solo nodo.** Las limitaciones de réplicas de [ADR-024](../adr/ADR-024-realtime-auction.md) y [auction-realtime-v1.md](../contracts/auction-realtime-v1.md) §12 (tickets en memoria) siguen vigentes.
 
+## Verificación del cliente de la Web (2026-10-14)
+
+El hook `useAuctionRealtime` de producción ([Web#283](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/283)) se ejecutó **sin dobles de socket ni de ticket** contra Caddy (el `Caddyfile` real), Auction (imagen construida desde `develop`) y PostgreSQL. Las pruebas están en `scripts/realtime-live/` de la Web, **fuera del CI**, y se reproducen con su `README.md`. Cada "sesión" es un `QueryClient` independiente con consultas montadas, y lo que se mide es **cuántas veces se vuelve a leer**.
+
+| Prueba (realtime encendido) | Resultado |
+| --- | --- |
+| Conecta de verdad: ticket por HTTP → WebSocket → `authenticated`, y queda «en vivo» | Pasó |
+| Dos sesiones observando la misma subasta: una puja las hace releer a las dos, sin acción manual | Pasó |
+| Una puja en **otra** subasta no hace releer este detalle (y la propia sigue funcionando) | Pasó |
+| Marketplace relee la lista ante una puja de cualquier subasta | Pasó |
+| Cancelación de la subasta (cambio de estado) llega y provoca la relectura | Pasó |
+| Se mata la conexión de Auction con PostgreSQL: el servidor manda `resync`, la Web relee, y el canal sigue vivo | Pasó |
+| Al cerrar la pantalla, la Web cierra su conexión | Pasó |
+
+| Prueba (realtime **apagado** en el servidor, `AUCTION_REALTIME_ENABLED=false`) | Resultado |
+| --- | --- |
+| El ticket responde `404` por Caddy; la conexión queda `disabled`; sin reintentos ni sondeo; la pantalla lee una sola vez | Pasó |
+
+**Control de que no pasan en vacío:** contra el servidor apagado, las 7 pruebas de «encendido» **fallan**.
+
+### Qué NO demuestra
+
+- **No es un navegador.** Es el código real del hook y un cliente WebSocket real (`ws`), dentro de jsdom. No se ve la pantalla, el indicador ni el diseño.
+- **No son dos personas.** «Dos sesiones» son dos `QueryClient` en el mismo proceso.
+- **La reconexión del socket** (caída del propio WebSocket y nuevo ticket) se prueba con sockets simulados en la suite normal de la Web, no contra el servidor real. Lo que sí se probó contra el real es el `resync`.
+- **Filtros y páginas de Marketplace** (CA-05): contra el servidor real se probó que la lista se relee; que no se mezclen combinaciones de filtros/páginas se prueba solo con datos simulados.
+- **Identidad:** Auction corría con `AUTH_MODE=disabled`; todas las conexiones tienen el mismo usuario.
+
 ## Pendiente para cerrar EN-034
 
-1. **Web (TASK EN-034.4, #586):** cliente, reconexión, descarte por `revision` e invalidación de caché. Desbloquea CA-05 y la parte de cliente de CA-01 a CA-06. Depende de HU-87 y HU-88.
-2. **Prueba con dos sesiones reales en la Web** y evidencia de caché con filtros y detalle.
-3. **Verificación en el despliegue** (AWS), con el sitio público con TLS, cuando se active `AUCTION_REALTIME_ENABLED`.
+1. **Fusionar el cliente de la Web** ([Web#283](https://github.com/Nexus-Battle-VI/Nexus-Battle-Web/pull/283), TASK EN-034.4, #586).
+2. **Prueba visual con dos navegadores y dos cuentas**, viendo el indicador «En vivo», una puja reflejada sin recargar, la reconexión y un estado terminal que oculte las acciones. Con filtros y páginas de Marketplace en pantalla (CA-05).
+3. **Verificación en el despliegue** (AWS), con el sitio público con TLS y autenticación por JWT, cuando se active `AUCTION_REALTIME_ENABLED`.
