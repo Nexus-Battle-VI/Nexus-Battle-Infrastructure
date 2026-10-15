@@ -16,7 +16,7 @@ El backend es la fuente de verdad. El canal transporta **señales de invalidaci�
 | Emisión de ticket | `POST /api/v1/auctions/realtime/tickets` |
 | Enrutado | Caddy `handle /api/v1/auctions*` → `auction:3008`; sin cambios |
 | Interruptor | `AUCTION_REALTIME_ENABLED`; apagado desactiva ambos puntos |
-| Roles | `Player`, `GameMaster` (los mismos que las lecturas HTTP) |
+| Roles | `Player`, `GameMaster` (los del listado y las sugerencias de Marketplace; el detalle HTTP es solo `Player`, ver §12) |
 
 ## 3. Autenticación: ticket de un solo uso
 
@@ -171,4 +171,5 @@ Con `AUCTION_REALTIME_ENABLED` apagado, el endpoint de tickets y el WebSocket de
 - **Una sola réplica de Auction.** Los avisos de PostgreSQL llegarían a todas las réplicas (cada una escucha), pero los **tickets viven en la memoria del proceso**: un ticket emitido por una réplica no lo consume otra. Con más de una réplica hay que compartir el almacén de tickets (o dirigir la conexión a la réplica que lo emitió) y registrarlo en un ADR nuevo.
 - **Memoria.** El contenedor de Auction tiene `mem_limit: 160m`; los límites de §8 son obligatorios. Medido: 90 conexiones con 20 suscripciones cada una y 1000 señales difundidas añaden unos 3,6 MiB (ver [la evidencia](../evidence/EN-034-realtime-verificacion.md)).
 - **Verificado en servidor.** Una conexión de 75 s sin tráfico sobrevive a Caddy gracias al latido de 25 s y recibe señales después ([evidencia](../evidence/EN-034-realtime-verificacion.md)). Pendiente: el sitio público con TLS en el despliegue de AWS y el cliente de la Web (TASK EN-034.4, #586).
+- **Roles del ticket frente a las lecturas HTTP.** El ticket acepta `Player` y `GameMaster`, los mismos que `GET /v1/auctions` y `/suggestions`. El detalle (`GET /v1/auctions/{auctionId}`) es solo `Player`, de modo que un Maestro de Juego puede suscribirse al canal de una subasta concreta sin poder leer su detalle por HTTP. No filtra datos: las señales no llevan datos personales y su resumen es el mismo que muestra el listado. El rol `GameMaster` solo se acepta si el `sub` del JWT es el configurado en `GAME_MASTER_SUBJECT`. Decisión registrada en Management#584: se mantiene la unión.
 - **Web.** El módulo de Subasta de la Web (HU-87, HU-88) aún no existe.
