@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "urn:nexus-battle:torneos:3.0.0",
-  "title": "Torneos torneos-v3.0.0, extensión de pilotos gratuitos",
+  "title": "Torneos torneos-v3.0.0 con pilotos gratuitos y cierre por inactividad",
   "description": "Formas normativas nuevas. Relaciones con torneo/actor, reglas temporales, importe/política y conteos requieren validación autoritativa además del schema.",
   "definitions": {
     "EntryPolicy": {
@@ -1009,6 +1009,49 @@
             }
           }
         }
+      ]
+    },
+    "CloseTournament": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": ["operationId"]
+    },
+    "TournamentClosure": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "enum": ["INACTIVITY", "ADMINISTRATIVE"]
+        },
+        "closedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "refundStatus": {
+          "enum": ["PENDING", "COMPLETE"]
+        },
+        "refundedCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pendingCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "reason",
+        "closedAt",
+        "refundStatus",
+        "refundedCount",
+        "pendingCount"
       ]
     }
   }
