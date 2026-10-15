@@ -42,7 +42,7 @@ Se descartan Socket.IO, API Gateway WebSocket y SSE por los motivos de ADR-020. 
 
 Mismo esquema que ADR-020:
 
-1. `POST /api/v1/auctions/realtime/tickets` con `Authorization: Bearer <JWT>`, con los roles que ya exigen las lecturas HTTP (`Player`, `GameMaster`).
+1. `POST /api/v1/auctions/realtime/tickets` con `Authorization: Bearer <JWT>`, con los roles del listado de Marketplace (`Player`, `GameMaster`; este último solo si el `sub` del JWT es el configurado en `GAME_MASTER_SUBJECT`). El detalle HTTP es solo `Player`: ver «Lo que cuesta».
 2. Auction verifica el testimonio y devuelve un **ticket opaco**, ligado al `sub`, de **un solo uso** y con caducidad de **30 segundos**. Solo se guarda su hash.
 3. El cliente abre el WebSocket sin credenciales en la URL y envía `{"type":"auth","ticket":"..."}` como primer mensaje.
 4. Sin ticket válido en 5 s, el servidor cierra con código `4401`. Un ticket usado o caducado cierra igual.
@@ -106,7 +106,8 @@ El interruptor `AUCTION_REALTIME_ENABLED` desactiva el endpoint de suscripción 
 - **Auction queda en una sola réplica para esta función.** Las suscripciones viven en la memoria del proceso: con dos réplicas, un cambio confirmado en una no llegaría a los clientes conectados a la otra. Escalar exigiría un bus de difusión (por ejemplo `LISTEN/NOTIFY` de PostgreSQL) y un ADR nuevo. Mientras tanto el estado nunca queda incorrecto, solo tarda hasta el siguiente refetch.
 - **Memoria:** el contenedor tiene `mem_limit: 160m`. Con la carga de demostración (≤ 30 usuarios concurrentes, `docs/costs/assumptions.md`) las conexiones caben, pero los límites de suscripciones y conexiones son obligatorios y TASK EN-034.2 debe medir el consumo.
 - **Cada despliegue de Auction desconecta a todos los observadores.**
-- Una migración (`revision`) y un evento de dominio nuevos en Auction.
+- **Los roles del ticket no coinciden con los del detalle HTTP.** El ticket acepta `Player` y `GameMaster` (los del listado de Marketplace); el detalle (`GET /v1/auctions/{auctionId}`) es solo `Player`. Un Maestro de Juego puede suscribirse al canal de una subasta concreta sin poder leer su detalle por HTTP. No filtra datos (las señales no llevan datos personales y su resumen es el del listado). Decisión de Management#584: se mantiene la unión para que el Maestro de Juego vea el Marketplace en vivo.
+- Una migración (`revision` y los triggers que avisan con `pg_notify`) en Auction. No hace falta un evento de dominio nuevo: `BOUGHT_NOW` sale del cambio de estado.
 - La Web debe implementar reconexión, descarte por `revision` e invalidación por clave; su módulo de Subasta (HU-87 y HU-88) aún no existe.
 
 ## Alternativas consideradas
