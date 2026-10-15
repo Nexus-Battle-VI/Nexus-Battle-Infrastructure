@@ -306,3 +306,33 @@ Esta revisión sustituye el borrador local genérico v3 (prefijo /v3, memberIds/
 DDL: conservar siempre historial aplicado. B acredita instalación/upgrade desde las migraciones publicadas 001–004, no desde variantes preliminares de 007 de este borrador. Si un entorno conservado ya aplicó una de esas variantes, editar el archivo 007 no actualiza su función SQL ni sus JSON. Requiere una migración forward posterior al último nombre aplicado y una prueba específica: normalizar ausencia de pendingAcceptances a [] y failedAt ausente a null sin inventar un error, conservando rosters/recibos/operaciones/resoluciones/sorteos/salas. La reserva condicional 008 solo es válida si sigue libre al consultar el historial; no se renombra ni borra una entrada aplicada. Si no existe un entorno conservado con 007 preliminar, documentar esa comprobación; las bases descartadas de tests no prueban por sí solas ese hecho.
 
 El [registro de ejecución](../evidence/torneos-v3-20261007/registro.md) reserva DDL, identifica bases/entregas y hallazgos. La [matriz](../evidence/torneos-v3-20261007/matriz.json) distingue evidencia documental, pruebas del dueño y recorrido integrado. Ni validar el schema ni aprobar types demuestra usuarios reales, premios o aceptación funcional.
+
+## Decisiones de producto del 14 de octubre de 2026
+
+Esta ampliación permite al administrador crear cualquier cantidad de torneos, incluso con inicios simultáneos. Sustituye la separación de 91 días para todos los torneos. Conserva JWT y rol administrativo, fechas válidas, rosters e idempotencia de creación. Tournament aplica la migración forward `012-tournament-closure`; no se reescriben migraciones ni snapshots anteriores.
+
+Combat ofrece 120 segundos de entrada y reconexión en salas de torneo, incluidos los pilotos. La gracia de PvP normal sigue en 30 segundos, los turnos en 30 segundos y la batalla en seis minutos. El compromiso de héroe cubre seis minutos más la gracia correspondiente. La entrada automática de Web sigue limitada al sujeto autenticado y a su aceptación, equipo y sala.
+
+### Cierre sin campeón y reembolso
+
+El worker reconcilia primero los resultados de Combat y después cierra sin campeón los torneos con treinta minutos sin actividad. El plazo se mide desde el mayor instante entre `startsAt` y la última aceptación confirmada o evento archivado `battleStarted`, `basicAttackResolved` o `skillUsed`. Consultas, leases, reintentos y turnos agotados no reinician el plazo. Torneos futuros o con campeón confirmado quedan excluidos.
+
+El cierre conserva equipos, inscripciones, pagos, bracket y resultados ya jugados. No fabrica una victoria ni entrega premios de torneo. El estado terminal rechaza publicaciones, aceptaciones, preparación, inicio, confirmación de avance y entrega de premios. El estado operativo de una justa pendiente pasa a `TOURNAMENT_CLOSED`; su lectura conserva el archivo original.
+
+`POST /api/v1/tournaments/admin/:id/close` exige JWT administrativo y cuerpo exclusivo `{operationId}`. Repetirlo devuelve el mismo cierre. Un torneo que ya tiene campeón devuelve `409 TOURNAMENT_COMPLETED`. Las fechas, actor, razón y pendientes del cierre se guardan antes de llamar a Wallet.
+
+Las inscripciones pagadas en créditos se devuelven una sola vez al pagador original. Se reutilizan las operaciones históricas `entry:<teamId>:<paymentOperationId>:charge` y `:refund`, incluidas las compensaciones previas. Un cobro de respuesta perdida se recupera con su misma intención. La devolución solo se completa al verificar torneo, equipo, pagador, importe, cobro, operación y `status=REFUNDED`. Timeout, reinicio o recibo incorrecto conservan `PENDING` y su reintento durable. El pago simulado se anula localmente y no mueve dinero real.
+
+La lista y vista pública de torneo añaden `closure:null|{reason,closedAt,refundStatus,refundedCount,pendingCount}`. `reason` es `INACTIVITY|ADMINISTRATIVE`; `refundStatus` es `PENDING|COMPLETE`. La vista personal de inscripción añade `refunds`, filtrado por el pagador del JWT; la lista pública no expone sus identificadores ni comprobantes de Wallet. La vista de progreso también publica el resumen `closure`.
+
+### Historial personal y final
+
+Web usa `GET /api/v1/tournaments/:id/matches/mine` y `GET /api/v1/tournaments/:id/matches/mine/:matchId?afterSeq=N`. El servidor filtra por el roster registrado o por participantes de Combat, antes de leer el detalle; añade `myBattle:true`. Una batalla ajena devuelve 403 y una referencia inexistente 404. La ruta antigua de detalle aplica la misma pertenencia para jugadores; el administrador conserva acceso de revisión. La ruta anterior de listado permanece para resúmenes generales de llaves y las vistas de transmisión.
+
+El botón Ver final permanece deshabilitado mientras falte un finalista. Al seleccionarla con ambos equipos conocidos se desplaza y enfoca su detalle. Un cierre sin campeón conserva las batallas jugadas y muestra las pendientes como no disputadas.
+
+### Composición y evidencia
+
+Desplegar Combat actualizado, migración 012 y Tournament, y después Web que consume las nuevas rutas personales. El primer barrido puede cerrar los torneos antiguos inactivos y devolver sus inscripciones. Confirmar que las imágenes incluyen el piloto gratuito sin recompensas antes de una prueba con personas.
+
+El [recorrido local del 14 de octubre](../evidence/tournament-recovery-20261014.json) completó catorce batallas con ocho sesiones, conservó catorce resultados en PostgreSQL y confirmó un campeón. Account, Inventory, Wallet y JWT fueron dobles explícitos; Combat, HTTP, HMAC, motor y WebSocket fueron reales. Combat usó memoria en ese recorrido; el reinicio verificado fue el de Tournament. Esto no atribuye un despliegue, una prueba con personas reales ni aceptación funcional.
